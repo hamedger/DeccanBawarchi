@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import {
   View,
   Text,
@@ -13,11 +13,20 @@ import { computeAdminStats, formatCents, formatOrderTime } from '../../lib/admin
 import { ORDER_STATUS_LABELS } from '../../lib/admin/orderAdmin'
 import { StatCard } from '../../components/admin/StatCard'
 import { GrowthCopilotPanel } from '../../components/admin/GrowthCopilotPanel'
+import { AdminLocationFilter } from '../../components/admin/AdminLocationFilter'
+import { useAdminLocationStore } from '../../store/adminLocationStore'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 export default function AdminDashboardScreen() {
   const router = useRouter()
-  const { orders, loading } = useAdminOrders()
+  const hydrate = useAdminLocationStore((s) => s.hydrate)
+  const filterLocationId = useAdminLocationStore((s) => s.filterLocationId)
+
+  useEffect(() => {
+    hydrate()
+  }, [hydrate])
+
+  const { orders, loading } = useAdminOrders(150, filterLocationId ?? undefined)
 
   const stats = useMemo(() => computeAdminStats(orders), [orders])
   const liveOrders = orders
@@ -28,6 +37,8 @@ export default function AdminDashboardScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Dashboard</Text>
       <Text style={styles.subheading}>AI-powered growth insights and live operations</Text>
+
+      <AdminLocationFilter />
 
       <GrowthCopilotPanel />
 

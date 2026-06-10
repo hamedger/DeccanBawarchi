@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { RESTAURANT_ADDRESS } from '../../constants/config'
 import { MOCK_PICKUP_ETA_MINUTES } from '../../constants/checkout'
 import {
   getPickupDateOptions,
@@ -13,11 +12,20 @@ import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 interface PickupSchedulerProps {
   date: string
   time: string
+  pickupAddress: string
+  locationName?: string
   onDateChange: (date: string) => void
   onTimeChange: (time: string) => void
 }
 
-export function PickupScheduler({ date, time, onDateChange, onTimeChange }: PickupSchedulerProps) {
+export function PickupScheduler({
+  date,
+  time,
+  pickupAddress,
+  locationName,
+  onDateChange,
+  onTimeChange,
+}: PickupSchedulerProps) {
   const dateOptions = useMemo(() => getPickupDateOptions(), [])
   const timeSlots = useMemo(() => getPickupTimeSlotsForDate(date), [date])
 
@@ -32,8 +40,10 @@ export function PickupScheduler({ date, time, onDateChange, onTimeChange }: Pick
       <View style={styles.locationCard}>
         <Ionicons name="location-outline" size={20} color={colors.gold} />
         <View style={styles.locationBody}>
-          <Text style={styles.locationTitle}>Pickup at restaurant</Text>
-          <Text style={styles.locationAddress}>{RESTAURANT_ADDRESS}</Text>
+          <Text style={styles.locationTitle}>
+            {locationName ? `Pickup at ${locationName}` : 'Pickup at restaurant'}
+          </Text>
+          <Text style={styles.locationAddress}>{pickupAddress}</Text>
         </View>
       </View>
 

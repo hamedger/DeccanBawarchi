@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router'
 import { MenuItem } from '../../types/menu'
 import { SPICE_LABELS } from '../../constants/menu'
 import { getDishImageUrl } from '../../lib/menuImages'
+import { isMenuItemOrderable } from '../../lib/menuMerge'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 interface MenuDishEntryProps {
@@ -23,6 +24,7 @@ function buildMeta(item: MenuItem): string {
 
 export function MenuDishEntry({ item, onAdd }: MenuDishEntryProps) {
   const router = useRouter()
+  const orderable = isMenuItemOrderable(item)
   const meta = buildMeta(item)
   const price = `$${(item.price / 100).toFixed(2)}`
   const imageUri = item.imageURL || getDishImageUrl(item.id, item.name, item.category)
@@ -30,7 +32,7 @@ export function MenuDishEntry({ item, onAdd }: MenuDishEntryProps) {
   const openDetail = () => router.push(`/menu/${item.id}` as never)
 
   return (
-    <View style={styles.entry}>
+    <View style={[styles.entry, !orderable && styles.entryOut]}>
       <Pressable
         style={styles.main}
         onPress={openDetail}
@@ -47,11 +49,13 @@ export function MenuDishEntry({ item, onAdd }: MenuDishEntryProps) {
 
         <View style={styles.body}>
           <View style={styles.titleRow}>
-            <Text style={styles.name} numberOfLines={2}>
+            <Text style={[styles.name, !orderable && styles.nameOut]} numberOfLines={2}>
               {item.name}
             </Text>
-            <Text style={styles.price}>{price}</Text>
+            <Text style={[styles.price, !orderable && styles.priceOut]}>{price}</Text>
           </View>
+
+          {!orderable ? <Text style={styles.soldOut}>Out of stock</Text> : null}
 
           {item.description ? (
             <Text style={styles.description} numberOfLines={3}>
@@ -63,15 +67,21 @@ export function MenuDishEntry({ item, onAdd }: MenuDishEntryProps) {
         </View>
       </Pressable>
 
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={onAdd}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        accessibilityRole="button"
-        accessibilityLabel={`Add ${item.name}`}
-      >
-        <Text style={styles.addLabel}>Add</Text>
-      </TouchableOpacity>
+      {orderable ? (
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={onAdd}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Add ${item.name}`}
+        >
+          <Text style={styles.addLabel}>Add</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.addButton}>
+          <Text style={styles.unavailableLabel}>Unavailable</Text>
+        </View>
+      )}
     </View>
   )
 }
@@ -85,6 +95,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.background,
+  },
+  entryOut: {
+    opacity: 0.72,
   },
   main: {
     flex: 1,
@@ -119,11 +132,25 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 22,
   },
+  nameOut: {
+    color: colors.whiteMuted,
+  },
   price: {
     fontFamily: fonts.sansMedium,
     color: colors.gold,
     fontSize: 16,
     letterSpacing: 0.3,
+  },
+  priceOut: {
+    color: colors.whiteMuted,
+  },
+  soldOut: {
+    fontFamily: fonts.sansMedium,
+    color: colors.whiteMuted,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
   },
   description: {
     fontFamily: fonts.sans,
@@ -149,6 +176,13 @@ const styles = StyleSheet.create({
     color: colors.goldLight,
     fontSize: 12,
     letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  unavailableLabel: {
+    fontFamily: fonts.sansMedium,
+    color: colors.whiteMuted,
+    fontSize: 10,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
 })

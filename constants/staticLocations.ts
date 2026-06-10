@@ -1,0 +1,49 @@
+import { BUSINESS_HOURS } from './config'
+import { Location } from '../types/location'
+
+export const STATIC_LOCATIONS: Location[] = [
+  {
+    id: 'northville-mi',
+    name: 'Deccan Bawarchi — Northville',
+    address: {
+      street: '17933 Haggerty Road',
+      city: 'Northville',
+      state: 'MI',
+      zip: '48168',
+      country: 'US',
+    },
+    phone: '+12489168700',
+    website: 'https://deccanbawarchi.com',
+    hours: { ...BUSINESS_HOURS },
+    isActive: true,
+    acceptsDelivery: true,
+    acceptsPickup: true,
+    acceptsReservations: true,
+    acceptsCatering: true,
+    deliveryRadius: 10,
+    timezone: 'America/Detroit',
+  },
+  {
+    id: 'farmington-hills-mi',
+    name: 'Deccan Bawarchi — Farmington Hills',
+    address: {
+      street: '24234 Orchard Lake Road',
+      city: 'Farmington Hills',
+      state: 'MI',
+      zip: '48336',
+      country: 'US',
+    },
+    phone: '+12489168700',
+    website: 'https://deccanbawarchi.com',
+    hours: { ...BUSINESS_HOURS },
+    isActive: true,
+    acceptsDelivery: true,
+    acceptsPickup: true,
+    acceptsReservations: true,
+    acceptsCatering: true,
+    deliveryRadius: 10,
+    timezone: 'America/Detroit',
+  },
+]
+
+export const STATIC_LOCATION_IDS = STATIC_LOCATIONS.map((l) => l.id)

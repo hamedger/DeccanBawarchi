@@ -12,6 +12,7 @@ export interface ReservationInput {
   time: string
   occasion?: string
   specialRequests?: string
+  locationId?: string
 }
 
 export interface ReservationValidationResult {
@@ -80,7 +81,7 @@ export async function submitReservation(input: ReservationInput): Promise<string
     time: input.time.trim(),
     occasion: input.occasion?.trim() ?? '',
     specialRequests: input.specialRequests?.trim() ?? '',
-    locationId: DEFAULT_LOCATION_ID,
+    locationId: input.locationId ?? DEFAULT_LOCATION_ID,
     status: 'pending',
     createdAt: serverTimestamp(),
   })

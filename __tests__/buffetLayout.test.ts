@@ -29,12 +29,13 @@ describe('buffetLayout', () => {
     },
   ]
 
-  it('groups serving dishes by buffet section in layout order', () => {
+  it('groups all buffet dishes by section with paused items last', () => {
     const groups = groupBuffetDishesForCustomer(sampleDishes)
-    expect(groups.map((g) => g.id)).toEqual(['veg-vegan-starters', 'chicken-options'])
+    expect(groups.map((g) => g.id)).toEqual(['veg-vegan-starters', 'vegan-entrees', 'chicken-options'])
     expect(groups[0].dishes.map((d) => d.menuItemId)).toEqual(['veg-samosa'])
     expect(groups[0].dishes[0].name).toBe('Samosa (Vegan)')
-    expect(groups[1].dishes.map((d) => d.menuItemId)).toEqual(['butter-chicken'])
+    expect(groups[1].dishes.map((d) => d.menuItemId)).toEqual(['tarka-dal'])
+    expect(groups[2].dishes.map((d) => d.menuItemId)).toEqual(['butter-chicken'])
   })
 
   it('builds default buffet dishes from static menu ids', () => {

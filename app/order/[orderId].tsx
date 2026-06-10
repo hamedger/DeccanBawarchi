@@ -6,6 +6,8 @@ import { useOrder } from '../../hooks/useOrders'
 import { useOrderStore } from '../../store/orderStore'
 import { OrderStatus } from '../../types/order'
 import { colors, spacing, borderRadius } from '../../constants/theme'
+import { Button } from '../../components/ui/Button'
+import { reorderToCart } from '../../lib/reorder'
 
 const STEPS: { status: OrderStatus; label: string; icon: string }[] = [
   { status: 'confirmed', label: 'Order Confirmed', icon: 'checkmark-circle' },
@@ -18,6 +20,7 @@ const STEPS: { status: OrderStatus; label: string; icon: string }[] = [
 const STATUS_ORDER: OrderStatus[] = ['confirmed', 'preparing', 'ready', 'picked_up', 'delivered']
 
 export default function OrderTrackingScreen() {
+  const router = useRouter()
   const { orderId } = useLocalSearchParams<{ orderId: string }>()
   const { activeOrder: order } = useOrderStore()
   useOrder(orderId)
@@ -30,7 +33,8 @@ export default function OrderTrackingScreen() {
     )
   }
 
-  const currentIndex = STATUS_ORDER.indexOf(order.status as OrderStatus)
+  const effectiveStatus = order.status === 'pending' ? 'confirmed' : order.status
+  const currentIndex = STATUS_ORDER.indexOf(effectiveStatus as OrderStatus)
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -89,6 +93,17 @@ export default function OrderTrackingScreen() {
       <View style={styles.totals}>
         <TotalsRow label="Total" value={order.total} bold />
       </View>
+
+      <Button
+        label="Reorder"
+        onPress={() => {
+          reorderToCart(order)
+          router.push('/(tabs)/cart' as never)
+        }}
+        fullWidth
+        size="lg"
+        style={{ marginTop: spacing.lg }}
+      />
     </ScrollView>
   )
 }

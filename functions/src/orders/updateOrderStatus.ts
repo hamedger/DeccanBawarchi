@@ -22,18 +22,7 @@ export const updateOrderStatus = functions.https.onCall(async (request) => {
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   })
 
-  // Award loyalty points on delivery
-  if (status === 'delivered') {
-    const orderSnap = await db.collection('orders').doc(orderId).get()
-    const order = orderSnap.data()
-    if (order?.userId && order.userId !== 'guest' && order.loyaltyPointsEarned > 0) {
-      await db.collection('users').doc(order.userId).update({
-        loyaltyPoints: admin.firestore.FieldValue.increment(order.loyaltyPointsEarned),
-        totalOrderCount: admin.firestore.FieldValue.increment(1),
-        totalSpend: admin.firestore.FieldValue.increment(order.total),
-      })
-    }
-  }
+  // Loyalty points are awarded by the awardLoyaltyOnDelivery Firestore trigger.
 
   return { success: true }
 })

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useAuthStore } from '../store/authStore'
+import { useSelectedLocation } from './useSelectedLocation'
 import {
   submitReservation,
   validateReservation,
@@ -8,6 +9,7 @@ import {
 
 export function useReservation() {
   const { firebaseUser, userProfile } = useAuthStore()
+  const { locationId } = useSelectedLocation()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -27,7 +29,7 @@ export function useReservation() {
 
       setLoading(true)
       try {
-        const id = await submitReservation(payload)
+        const id = await submitReservation({ ...payload, locationId })
         return id
       } catch (e) {
         const message = e instanceof Error ? e.message : 'Failed to submit reservation'
@@ -37,7 +39,7 @@ export function useReservation() {
         setLoading(false)
       }
     },
-    [firebaseUser],
+    [firebaseUser, locationId],
   )
 
   const defaultName = userProfile?.displayName ?? ''

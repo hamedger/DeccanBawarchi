@@ -11,11 +11,15 @@ import { useRouter } from 'expo-router'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { useCart } from '../../hooks/useCart'
+import { useAuth } from '../../hooks/useAuth'
 import { FulfillmentSelector } from '../../components/cart/FulfillmentSelector'
+import { LoyaltyRedeem } from '../../components/cart/LoyaltyRedeem'
+import { loyaltyDiscountCents } from '../../lib/services/loyaltyService'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { Button } from '../../components/ui/Button'
 import { OrderItem } from '../../types/order'
+import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 
 function CartRow({
   item,
@@ -106,8 +110,12 @@ function SummaryRow({
 export default function CartScreen() {
   const router = useRouter()
   const cart = useCart()
+  const { firebaseUser, userProfile } = useAuth()
   const [promoInput, setPromoInput] = useState('')
   const itemCount = cart.itemCount()
+  const showLoyalty = !!firebaseUser && !userProfile?.isGuest
+  const loyaltyDiscount = loyaltyDiscountCents(cart.loyaltyPointsToRedeem)
+  const { location } = useSelectedLocation()
 
   if (cart.items.length === 0) {
     return (
@@ -137,6 +145,7 @@ export default function CartScreen() {
             <Text style={styles.heading}>Your Cart</Text>
             <Text style={styles.subheading}>
               {itemCount} {itemCount === 1 ? 'item' : 'items'}
+              {location ? ` · ${location.name}` : ''}
             </Text>
           </View>
 
@@ -172,6 +181,13 @@ export default function CartScreen() {
               </TouchableOpacity>
             </View>
 
+            {showLoyalty && (
+              <LoyaltyRedeem
+                pointsToRedeem={cart.loyaltyPointsToRedeem}
+                onChange={cart.setLoyaltyPoints}
+              />
+            )}
+
             <SummaryRow label="Subtotal" value={cart.subtotal()} />
             <SummaryRow label="Tax (6%)" value={cart.tax} />
             <SummaryRow label="Service Fee" value={cart.serviceFee} />
@@ -184,6 +200,9 @@ export default function CartScreen() {
             )}
             {cart.promoDiscount > 0 && (
               <SummaryRow label="Promo Discount" value={-cart.promoDiscount} gold />
+            )}
+            {loyaltyDiscount > 0 && (
+              <SummaryRow label="Loyalty Discount" value={-loyaltyDiscount} gold />
             )}
             <View style={styles.divider} />
             <SummaryRow label="Total" value={cart.total} bold />

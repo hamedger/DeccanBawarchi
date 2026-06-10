@@ -1,7 +1,7 @@
 export const APP_NAME = 'Deccan Bawarchi'
 export const APP_TAGLINE = 'Authentic Hyderabadi Cuisine'
 export const RESTAURANT_PHONE = '+12489168700'
-export const RESTAURANT_ADDRESS = '17933 Haggerty Rd, Northville Township, MI 48168'
+export const RESTAURANT_ADDRESS = '17933 Haggerty Road, Northville, MI 48168'
 export const RESTAURANT_WEBSITE = 'https://deccanbawarchi.com'
 export const SUPPORT_EMAIL = 'support@deccanbawarchi.com'
 export const ORDERS_EMAIL = 'orders@deccanbawarchi.com'

@@ -37,6 +37,7 @@ export interface Order {
   promoDiscount: number
   loyaltyPointsUsed: number
   loyaltyPointsEarned: number
+  loyaltyAwarded?: boolean
   giftCardAmount: number
   total: number
   fulfillmentType: FulfillmentType

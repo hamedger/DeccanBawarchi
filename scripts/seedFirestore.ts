@@ -10,6 +10,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore'
 import { readFileSync } from 'fs'
 import * as dotenv from 'dotenv'
 import { STATIC_MENU } from '../constants/staticMenu'
+import { STATIC_LOCATIONS, STATIC_LOCATION_IDS } from '../constants/staticLocations'
 import { createDefaultBuffetDishes } from '../lib/buffetLayout'
 
 dotenv.config()
@@ -30,7 +31,7 @@ if (!getApps().length) {
 }
 
 const db = getFirestore()
-const LOC = 'northville-mi'
+const LOC = STATIC_LOCATION_IDS
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 const ts = () => FieldValue.serverTimestamp()
@@ -71,7 +72,7 @@ function item(
     isBuffetItem: opts.isBuffetItem ?? false,
     rating: 0,
     reviewCount: 0,
-    locationIds: [LOC],
+    locationIds: [...LOC],
   }
 }
 
@@ -341,58 +342,33 @@ const menuItems = [
 
 // ─── SEED ────────────────────────────────────────────────────────────────────
 async function seed() {
-  // Location — real address from menu
-  await db.collection('locations').doc(LOC).set({
-    id: LOC,
-    name: 'Deccan Bawarchi — Northville',
-    address: {
-      street: '17933 Haggerty Rd',
-      city: 'Northville Township',
-      state: 'MI',
-      zip: '48168',
-      country: 'US',
-    },
-    phone: '+12489168700',
-    website: 'https://deccanbawarchi.com',
-    hours: {
-      // Open 7 days — 11:30 AM to 1:00 AM
-      0: { open: '11:30', close: '01:00' },
-      1: { open: '11:30', close: '01:00' },
-      2: { open: '11:30', close: '01:00' },
-      3: { open: '11:30', close: '01:00' },
-      4: { open: '11:30', close: '01:00' },
-      5: { open: '11:30', close: '01:00' },
-      6: { open: '11:30', close: '01:00' },
-    },
-    isActive: true,
-    acceptsDelivery: true,
-    acceptsPickup: true,
-    acceptsReservations: true,
-    acceptsCatering: true,
-    deliveryRadius: 10,
-    timezone: 'America/Detroit',
-  })
-  console.log('✓ Location seeded')
+  for (const location of STATIC_LOCATIONS) {
+    await db.collection('locations').doc(location.id).set({
+      ...location,
+      updatedAt: ts(),
+      createdAt: ts(),
+    })
+    console.log(`✓ Location seeded: ${location.name}`)
 
-  // Buffet config — open 7 days per ad copy ("Everyday Like Never Before")
-  await db.collection('buffet').doc(LOC).set({
-    locationId: LOC,
-    weekdayLunchPrice: 1799,
-    weekdayDinnerPrice: 1799,
-    weekendLunchPrice: 2499,
-    weekendDinnerPrice: 2499,
-    lunchStart: '11:30',
-    lunchEnd: '15:00',
-    dinnerStart: '17:00',
-    dinnerEnd: '21:00',
-    buffetDays: [0, 1, 2, 3, 4, 5, 6], // every day
-    todaysDishes: createDefaultBuffetDishes(STATIC_MENU),
-    isLunchActive: false,
-    isDinnerActive: false,
-    specialNote: 'Lunch Buffet Everyday • 20-30+ Items • Eat All You Want!',
-    updatedAt: ts(),
-  })
-  console.log('✓ Buffet config seeded')
+    await db.collection('buffet').doc(location.id).set({
+      locationId: location.id,
+      weekdayLunchPrice: 1799,
+      weekdayDinnerPrice: 1799,
+      weekendLunchPrice: 2499,
+      weekendDinnerPrice: 2499,
+      lunchStart: '11:30',
+      lunchEnd: '15:00',
+      dinnerStart: '17:00',
+      dinnerEnd: '21:00',
+      buffetDays: [0, 1, 2, 3, 4, 5, 6],
+      todaysDishes: createDefaultBuffetDishes(STATIC_MENU),
+      isLunchActive: false,
+      isDinnerActive: false,
+      specialNote: 'Lunch Buffet Everyday • 20-30+ Items • Eat All You Want!',
+      updatedAt: ts(),
+    })
+    console.log(`✓ Buffet config seeded: ${location.id}`)
+  }
 
   // Menu items
   let count = 0
@@ -406,7 +382,7 @@ async function seed() {
     process.stdout.write(`\r✓ ${count}/${menuItems.length} menu items...`)
   }
 
-  console.log(`\n\n✅ Done! Seeded ${count} menu items, 1 location, 1 buffet config.`)
+  console.log(`\n\n✅ Done! Seeded ${count} menu items, ${STATIC_LOCATIONS.length} locations, ${STATIC_LOCATIONS.length} buffet configs.`)
   process.exit(0)
 }
 

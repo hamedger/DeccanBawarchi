@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
-import { getAuth, Auth } from 'firebase/auth'
+import { getAuth, initializeAuth, browserLocalPersistence, Auth } from 'firebase/auth'
 import { getFirestore, Firestore } from 'firebase/firestore'
 import { getStorage, FirebaseStorage } from 'firebase/storage'
 import { Platform } from 'react-native'
@@ -28,7 +28,18 @@ const safeConfig = isFirebaseConfigured
 const app: FirebaseApp =
   getApps().length === 0 ? initializeApp(safeConfig) : getApps()[0]
 
-export const auth: Auth = getAuth(app)
+function createAuth(firebaseApp: FirebaseApp): Auth {
+  if (Platform.OS === 'web') {
+    try {
+      return initializeAuth(firebaseApp, { persistence: browserLocalPersistence })
+    } catch {
+      return getAuth(firebaseApp)
+    }
+  }
+  return getAuth(firebaseApp)
+}
+
+export const auth: Auth = createAuth(app)
 export const db: Firestore = getFirestore(app)
 export const storage: FirebaseStorage = getStorage(app)
 

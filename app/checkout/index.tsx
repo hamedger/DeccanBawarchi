@@ -1,23 +1,31 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, StyleSheet } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useCart } from '../../hooks/useCart'
+import { useAuth } from '../../hooks/useAuth'
 import { FulfillmentSelector } from '../../components/cart/FulfillmentSelector'
 import { PickupScheduler } from '../../components/checkout/PickupScheduler'
 import { Input } from '../../components/ui/Input'
 import { formatPickupSchedule, isPickupScheduleValid } from '../../lib/services/pickupScheduling'
+import { submitOrder } from '../../lib/services/orderService'
+import { loyaltyDiscountCents } from '../../lib/services/loyaltyService'
 import { Button } from '../../components/ui/Button'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
-import { RESTAURANT_ADDRESS } from '../../constants/config'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
+import { useSelectedLocation } from '../../hooks/useSelectedLocation'
+import { LocationConfirmCard } from '../../components/location/LocationConfirmCard'
+import { formatLocationAddress } from '../../lib/locationUtils'
 
 export default function CheckoutIndex() {
   const router = useRouter()
   const cart = useCart()
+  const { firebaseUser } = useAuth()
+  const { location, locationId, locations, loading: locationsLoading, hasSelection } = useSelectedLocation()
   const [street, setStreet] = useState('123 Main St')
   const [city, setCity] = useState('Northville')
   const [zip, setZip] = useState('48167')
+  const [loading, setLoading] = useState(false)
 
   if (cart.items.length === 0) {
     router.replace('/(tabs)/cart' as never)
@@ -25,25 +33,84 @@ export default function CheckoutIndex() {
   }
 
   const isDelivery = cart.fulfillmentType === 'delivery'
-  const canPlace = isDelivery
-    ? Boolean(street.trim() && city.trim() && zip.trim())
-    : isPickupScheduleValid(cart.pickupDate, cart.pickupTime)
+  const canPlace =
+    hasSelection &&
+    (isDelivery
+      ? Boolean(street.trim() && city.trim() && zip.trim())
+      : isPickupScheduleValid(cart.pickupDate, cart.pickupTime))
 
-  const handlePlaceOrder = () => {
-    router.push({
-      pathname: '/checkout/success',
-      params: {
-        fulfillment: cart.fulfillmentType,
-        eta: String(cart.deliveryEtaMinutes),
-        address: isDelivery ? `${street}, ${city}, MI ${zip}` : RESTAURANT_ADDRESS,
-        pickupSchedule: isDelivery
-          ? ''
-          : formatPickupSchedule(cart.pickupDate, cart.pickupTime),
-        pickupDate: cart.pickupDate,
-        pickupTime: cart.pickupTime,
-        total: String(cart.total),
-      },
-    } as never)
+  const handlePlaceOrder = async () => {
+    if (!hasSelection || !location) {
+      Alert.alert('Select a location', 'Please choose which restaurant you are ordering from.')
+      return
+    }
+
+    if (!firebaseUser) {
+      Alert.alert('Sign in required', 'Please sign in or continue as guest to place your order.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Sign In', onPress: () => router.push('/(auth)/login' as never) },
+        { text: 'Guest', onPress: () => router.push('/(auth)/guest' as never) },
+      ])
+      return
+    }
+
+    setLoading(true)
+    const fulfillment = cart.fulfillmentType
+    const eta = String(cart.deliveryEtaMinutes)
+    const pickupAddress = formatLocationAddress(location.address)
+    const address = isDelivery ? `${street}, ${city}, MI ${zip}` : pickupAddress
+    const pickupSchedule = isDelivery
+      ? ''
+      : formatPickupSchedule(cart.pickupDate, cart.pickupTime)
+    const total = String(cart.total)
+
+    try {
+      const orderId = await submitOrder({
+        items: cart.items,
+        subtotal: cart.subtotal(),
+        tax: cart.tax,
+        serviceFee: cart.serviceFee,
+        deliveryFee: cart.deliveryFee,
+        tip: cart.tip,
+        total: cart.total,
+        promoCode: cart.promoCode,
+        promoDiscount: cart.promoDiscount,
+        loyaltyPointsUsed: cart.loyaltyPointsToRedeem,
+        giftCardAmount: cart.giftCardAmount,
+        fulfillmentType: fulfillment,
+        deliveryAddress: isDelivery
+          ? {
+              id: '',
+              label: 'Delivery',
+              street: street.trim(),
+              city: city.trim(),
+              state: 'MI',
+              zip: zip.trim(),
+              country: 'US',
+            }
+          : null,
+        notes: cart.notes,
+        locationId,
+      })
+
+      cart.clearCart()
+      router.replace({
+        pathname: '/checkout/success',
+        params: {
+          orderId,
+          fulfillment,
+          eta,
+          address,
+          pickupSchedule,
+          total,
+        },
+      } as never)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Could not place your order. Please try again.'
+      Alert.alert('Order Failed', message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -62,6 +129,15 @@ export default function CheckoutIndex() {
             Mock checkout — no payment required. Stripe and live DoorDash dispatch connect at launch.
           </Text>
         </View>
+
+        {location ? (
+          <LocationConfirmCard
+            location={location}
+            locations={locations}
+            selectedLocationId={locationId}
+            loading={locationsLoading}
+          />
+        ) : null}
 
         <FulfillmentSelector
           value={cart.fulfillmentType}
@@ -99,6 +175,8 @@ export default function CheckoutIndex() {
           <PickupScheduler
             date={cart.pickupDate}
             time={cart.pickupTime}
+            pickupAddress={location ? formatLocationAddress(location.address) : ''}
+            locationName={location?.name}
             onDateChange={cart.setPickupDate}
             onTimeChange={cart.setPickupTime}
           />
@@ -123,6 +201,12 @@ export default function CheckoutIndex() {
             <SummaryLine label="Tax" value={cart.tax} />
             <SummaryLine label="Service Fee" value={cart.serviceFee} />
             {isDelivery && <SummaryLine label="DoorDash Delivery" value={cart.deliveryFee} />}
+            {cart.loyaltyPointsToRedeem > 0 && (
+              <SummaryLine
+                label="Loyalty Discount"
+                value={-loyaltyDiscountCents(cart.loyaltyPointsToRedeem)}
+              />
+            )}
             <View style={styles.divider} />
             <SummaryLine label="Total" value={cart.total} bold />
           </View>
@@ -131,6 +215,7 @@ export default function CheckoutIndex() {
         <Button
           label={`Place Order · $${(cart.total / 100).toFixed(2)}`}
           onPress={handlePlaceOrder}
+          loading={loading}
           fullWidth
           size="lg"
           disabled={!canPlace}

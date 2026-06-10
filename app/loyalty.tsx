@@ -47,12 +47,11 @@ export default function LoyaltyScreen() {
       {/* How to Earn */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>How to Earn Points</Text>
-        <EarnRow label="Every $1 spent" value="1 pt" />
-        <EarnRow label="First order bonus" value="100 pts" />
-        <EarnRow label="Birthday (2× multiplier)" value="2× pts" />
-        <EarnRow label="Refer a friend" value="200 pts" />
-        <EarnRow label="Write a review" value="25 pts" />
-        <EarnRow label="Social share" value="10 pts" />
+        <EarnRow label="Every $1 spent (subtotal)" value="1 pt" />
+        <EarnRow label="Welcome bonus (new account)" value="100 pts" />
+        <Text style={styles.comingSoon}>
+          Coming soon: birthday bonus, referrals, reviews & social shares
+        </Text>
       </View>
 
       {/* Rewards */}
@@ -119,6 +118,14 @@ const styles = StyleSheet.create({
   earnRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   earnLabel: { color: colors.white, fontSize: 14 },
   earnValue: { color: colors.gold, fontWeight: '700', fontSize: 14 },
+  comingSoon: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: spacing.sm,
+    fontStyle: 'italic',
+  },
   rewardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.md, marginBottom: spacing.sm, backgroundColor: colors.backgroundCard, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.border },
   rewardUnlocked: { borderColor: colors.borderStrong },
   rewardLabel: { color: colors.white, fontSize: 14, fontWeight: '600' },

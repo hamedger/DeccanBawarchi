@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore'
+import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../lib/firebase'
 import { handleFirestoreListenerError } from '../lib/firestoreErrors'
 import { useAuthStore } from '../store/authStore'
 import { Order } from '../types/order'
 
-export function useAdminOrders(maxOrders = 150) {
+export function useAdminOrders(maxOrders = 150, locationId?: string | null) {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const { firebaseUser, isAdmin } = useAuthStore()
@@ -17,7 +17,10 @@ export function useAdminOrders(maxOrders = 150) {
       return
     }
 
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(maxOrders))
+    const base = collection(db, 'orders')
+    const q = locationId
+      ? query(base, where('locationId', '==', locationId), orderBy('createdAt', 'desc'), limit(maxOrders))
+      : query(base, orderBy('createdAt', 'desc'), limit(maxOrders))
     const unsub = onSnapshot(
       q,
       (snap) => {
@@ -32,7 +35,7 @@ export function useAdminOrders(maxOrders = 150) {
     )
 
     return unsub
-  }, [maxOrders, firebaseUser?.uid, isAdmin])
+  }, [maxOrders, locationId, firebaseUser?.uid, isAdmin])
 
   return { orders, loading }
 }

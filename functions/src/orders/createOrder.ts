@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions/v2'
 import * as admin from 'firebase-admin'
+import { calculateEarnedPoints, validateRedemption } from '../constants/loyalty'
 
 if (!admin.apps.length) admin.initializeApp()
 const db = admin.firestore()
@@ -11,7 +12,7 @@ export const createOrder = functions.https.onCall(async (request) => {
 
   const {
     items, subtotal, tax, deliveryFee = 0, serviceFee, tip = 0, promoCode = '', promoDiscount = 0,
-    loyaltyPointsUsed = 0, giftCardAmount = 0, giftCardCode = '', total, fulfillmentType,
+    loyaltyPointsUsed = 0, giftCardAmount = 0, total, fulfillmentType,
     deliveryAddress, locationId, scheduledFor, pickupTime, notes,
   } = data
 
@@ -19,7 +20,6 @@ export const createOrder = functions.https.onCall(async (request) => {
 
   const uid = auth.uid
 
-  // Rate limiting: 5 orders per user per hour
   const oneHourAgo = admin.firestore.Timestamp.fromDate(
     new Date(Date.now() - 60 * 60 * 1000),
   )
@@ -34,47 +34,74 @@ export const createOrder = functions.https.onCall(async (request) => {
   }
 
   const orderRef = db.collection('orders').doc()
+  const userRef = db.collection('users').doc(uid)
+  const loyaltyPointsEarned = calculateEarnedPoints(subtotal)
 
-  const order = {
-    id: orderRef.id,
-    userId: uid,
-    guestEmail: '',
-    guestPhone: '',
-    locationId,
-    items,
-    subtotal,
-    tax,
-    deliveryFee,
-    serviceFee,
-    tip,
-    promoCode,
-    promoDiscount,
-    loyaltyPointsUsed,
-    loyaltyPointsEarned: Math.floor(total / 100),
-    giftCardAmount,
-    total,
-    fulfillmentType,
-    scheduledFor: scheduledFor ?? null,
-    pickupTime: pickupTime ?? null,
-    deliveryAddress: deliveryAddress ?? null,
-    status: 'pending',
-    stripePaymentIntentId: '',
-    doordashDeliveryId: '',
-    doordashTrackingUrl: '',
-    driverLocation: null,
-    estimatedDeliveryTime: null,
-    notes: notes ?? '',
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-  }
+  try {
+    await db.runTransaction(async (tx) => {
+      const userSnap = await tx.get(userRef)
+      if (!userSnap.exists()) {
+        throw new Error('User profile not found')
+      }
+      const balance = userSnap.data()?.loyaltyPoints ?? 0
+      validateRedemption(loyaltyPointsUsed, balance)
 
-  await orderRef.set(order)
+      const order = {
+        id: orderRef.id,
+        userId: uid,
+        guestEmail: '',
+        guestPhone: '',
+        locationId,
+        items,
+        subtotal,
+        tax,
+        deliveryFee,
+        serviceFee,
+        tip,
+        promoCode,
+        promoDiscount,
+        loyaltyPointsUsed,
+        loyaltyPointsEarned,
+        loyaltyAwarded: false,
+        giftCardAmount,
+        total,
+        fulfillmentType,
+        scheduledFor: scheduledFor ?? null,
+        pickupTime: pickupTime ?? null,
+        deliveryAddress: deliveryAddress ?? null,
+        status: 'pending',
+        stripePaymentIntentId: '',
+        doordashDeliveryId: '',
+        doordashTrackingUrl: '',
+        driverLocation: null,
+        estimatedDeliveryTime: null,
+        notes: notes ?? '',
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }
 
-  // Deduct loyalty points used
-  if (loyaltyPointsUsed > 0) {
-    await db.collection('users').doc(uid).update({
-      loyaltyPoints: admin.firestore.FieldValue.increment(-loyaltyPointsUsed),
+      tx.set(orderRef, order)
+
+      if (loyaltyPointsUsed > 0) {
+        tx.update(userRef, {
+          loyaltyPoints: admin.firestore.FieldValue.increment(-loyaltyPointsUsed),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        })
+      }
     })
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Could not place order'
+    if (
+      message.includes('loyalty') ||
+      message.includes('Insufficient') ||
+      message.includes('increment')
+    ) {
+      throw new functions.https.HttpsError('failed-precondition', message)
+    }
+    if (message.includes('profile not found')) {
+      throw new functions.https.HttpsError('failed-precondition', message)
+    }
+    throw new functions.https.HttpsError('internal', 'Could not place order')
   }
 
   return { orderId: orderRef.id }

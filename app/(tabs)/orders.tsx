@@ -1,13 +1,14 @@
-import React, { useEffect } from 'react'
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native'
+import React from 'react'
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useOrders } from '../../hooks/useOrders'
 import { useOrderStore } from '../../store/orderStore'
-import { useAuthStore } from '../../store/authStore'
+import { useAuth } from '../../hooks/useAuth'
 import { Order, OrderStatus } from '../../types/order'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { Button } from '../../components/ui/Button'
+import { reorderToCart } from '../../lib/reorder'
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending: 'Pending',
@@ -31,35 +32,55 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 
 function OrderCard({ order }: { order: Order }) {
   const router = useRouter()
+
+  const handleReorder = () => {
+    reorderToCart(order)
+    router.push('/(tabs)/cart' as never)
+  }
+
   return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/order/${order.id}` as any)}
-    >
-      <View style={styles.cardHeader}>
-        <Text style={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</Text>
-        <View style={[styles.statusChip, { borderColor: STATUS_COLORS[order.status] + '66' }]}>
-          <Text style={[styles.statusText, { color: STATUS_COLORS[order.status] }]}>
-            {STATUS_LABELS[order.status]}
+    <View style={styles.card}>
+      <TouchableOpacity onPress={() => router.push(`/order/${order.id}` as any)}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</Text>
+          <View style={[styles.statusChip, { borderColor: STATUS_COLORS[order.status] + '66' }]}>
+            <Text style={[styles.statusText, { color: STATUS_COLORS[order.status] }]}>
+              {STATUS_LABELS[order.status]}
+            </Text>
+          </View>
+        </View>
+        <Text style={styles.items}>{order.items.map((i) => i.name).join(', ')}</Text>
+        <View style={styles.cardFooter}>
+          <Text style={styles.total}>${(order.total / 100).toFixed(2)}</Text>
+          <Text style={styles.date}>
+            {order.createdAt?.toDate?.()?.toLocaleDateString?.() ?? ''}
           </Text>
         </View>
-      </View>
-      <Text style={styles.items}>{order.items.map((i) => i.name).join(', ')}</Text>
-      <View style={styles.cardFooter}>
-        <Text style={styles.total}>${(order.total / 100).toFixed(2)}</Text>
-        <Text style={styles.date}>
-          {order.createdAt?.toDate?.()?.toLocaleDateString?.() ?? ''}
-        </Text>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+      <Button
+        label="Reorder"
+        onPress={handleReorder}
+        variant="secondary"
+        size="sm"
+        style={styles.reorderBtn}
+      />
+    </View>
   )
 }
 
 export default function OrdersScreen() {
   const router = useRouter()
-  const { firebaseUser } = useAuthStore()
+  const { firebaseUser, isLoading } = useAuth()
   const { orderHistory } = useOrderStore()
   useOrders()
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.gold} size="large" />
+      </View>
+    )
+  }
 
   if (!firebaseUser) {
     return (
@@ -122,6 +143,7 @@ const styles = StyleSheet.create({
   statusText: { fontFamily: fonts.sansMedium, fontSize: 11 },
   items: { fontFamily: fonts.sans, color: colors.whiteMuted, fontSize: 13, marginBottom: 8, lineHeight: 18 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
+  reorderBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
   total: { fontFamily: fonts.serif, color: colors.white, fontSize: 16 },
   date: { fontFamily: fonts.sans, color: colors.whiteMuted, fontSize: 12 },
   emptyIcon: { fontSize: 52, marginBottom: spacing.md },

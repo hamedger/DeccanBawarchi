@@ -1,10 +1,11 @@
 import { MenuItem } from '../types/menu'
 import { withMenuImages } from '../lib/menuImages'
+import { STATIC_LOCATION_IDS } from './staticLocations'
 
 type StaticItem = Omit<MenuItem, 'createdAt' | 'updatedAt'>
 type MenuItemInput = Omit<StaticItem, 'imageURL' | 'rating' | 'reviewCount' | 'isHalal' | 'isAvailable' | 'locationIds'>
 
-const LOC = ['northville-mi'] as const
+const LOC = STATIC_LOCATION_IDS
 
 function item(partial: MenuItemInput): StaticItem {
   return {

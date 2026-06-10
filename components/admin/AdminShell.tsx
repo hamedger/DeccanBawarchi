@@ -15,6 +15,9 @@ import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: 'grid-outline' as const, exact: true },
   { href: '/admin/orders', label: 'Orders', icon: 'receipt-outline' as const },
+  { href: '/admin/reservations', label: 'Reservations', icon: 'calendar-outline' as const },
+  { href: '/admin/catering', label: 'Catering', icon: 'people-outline' as const },
+  { href: '/admin/locations', label: 'Locations', icon: 'location-outline' as const },
   { href: '/admin/menu', label: 'Menu', icon: 'restaurant-outline' as const },
   { href: '/admin/buffet', label: 'Buffet', icon: 'fast-food-outline' as const },
 ]

@@ -1,10 +1,10 @@
 import React from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Switch, ActivityIndicator } from 'react-native'
 import { useRouter } from 'expo-router'
 import { signOut } from 'firebase/auth'
 import { Ionicons } from '@expo/vector-icons'
 import { auth } from '../../lib/firebase'
-import { useAuthStore } from '../../store/authStore'
+import { useAuth } from '../../hooks/useAuth'
 import { useNotificationStore } from '../../store/notificationStore'
 import { useLoyalty } from '../../hooks/useLoyalty'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
@@ -24,9 +24,17 @@ function Row({
 
 export default function ProfileScreen() {
   const router = useRouter()
-  const { firebaseUser, userProfile } = useAuthStore()
+  const { firebaseUser, userProfile, isLoading } = useAuth()
   const { prefs, setPrefs } = useNotificationStore()
   const { points, tier, pointsToNextTier } = useLoyalty()
+
+  if (isLoading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color={colors.gold} size="large" />
+      </View>
+    )
+  }
 
   if (!firebaseUser) {
     return (

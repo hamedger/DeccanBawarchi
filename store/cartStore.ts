@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { FulfillmentType, OrderItem } from '../types/order'
+import { FulfillmentType, Order, OrderItem } from '../types/order'
 import {
   MOCK_DELIVERY_FEE_CENTS,
   MOCK_DELIVERY_ETA_MINUTES,
@@ -36,6 +36,7 @@ interface CartState {
   setPickupDate: (date: string) => void
   setPickupTime: (time: string) => void
   clearCart: () => void
+  loadFromOrder: (order: Order) => void
 
   subtotal: () => number
   itemCount: () => number
@@ -127,6 +128,24 @@ export const useCartStore = create<CartState>((set, get) => ({
       giftCardAmount: 0,
       tip: 0,
       notes: '',
+    }),
+
+  loadFromOrder: (order) =>
+    set({
+      items: order.items.map((item) => ({ ...item })),
+      fulfillmentType: order.fulfillmentType,
+      deliveryFee: order.fulfillmentType === 'delivery' ? MOCK_DELIVERY_FEE_CENTS : 0,
+      deliveryEtaMinutes:
+        order.fulfillmentType === 'delivery' ? MOCK_DELIVERY_ETA_MINUTES : MOCK_PICKUP_ETA_MINUTES,
+      pickupDate: getDefaultPickupDate(),
+      pickupTime: PICKUP_ASAP,
+      promoCode: '',
+      promoDiscount: 0,
+      loyaltyPointsToRedeem: 0,
+      giftCardCode: '',
+      giftCardAmount: 0,
+      tip: order.tip ?? 0,
+      notes: order.notes ?? '',
     }),
 
   subtotal: () => get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),

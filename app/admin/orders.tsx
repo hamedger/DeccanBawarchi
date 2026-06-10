@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -7,7 +7,11 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native'
+import { useLocalSearchParams } from 'expo-router'
 import { useAdminOrders } from '../../hooks/useAdminOrders'
+import { useAllLocations } from '../../hooks/useLocations'
+import { useAdminLocationStore } from '../../store/adminLocationStore'
+import { AdminLocationFilter } from '../../components/admin/AdminLocationFilter'
 import {
   nextOrderStatus,
   ORDER_STATUS_LABELS,
@@ -39,7 +43,7 @@ function statusColor(status: OrderStatus): string {
   }
 }
 
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({ order, locationName }: { order: Order; locationName?: string }) {
   const [updating, setUpdating] = useState(false)
   const next = nextOrderStatus(order.status)
 
@@ -79,6 +83,8 @@ function OrderCard({ order }: { order: Order }) {
           </Text>
         </View>
       </View>
+
+      {locationName ? <Text style={styles.locationLine}>{locationName}</Text> : null}
 
       <Text style={styles.fulfillment}>
         {order.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}
@@ -120,8 +126,30 @@ function OrderCard({ order }: { order: Order }) {
 }
 
 export default function AdminOrdersScreen() {
-  const { orders, loading } = useAdminOrders()
+  const { location: locationParam } = useLocalSearchParams<{ location?: string }>()
+  const hydrate = useAdminLocationStore((s) => s.hydrate)
+  const filterLocationId = useAdminLocationStore((s) => s.filterLocationId)
+  const setFilterLocationId = useAdminLocationStore((s) => s.setFilterLocationId)
+  const { locations } = useAllLocations()
+
+  useEffect(() => {
+    hydrate()
+  }, [hydrate])
+
+  useEffect(() => {
+    if (typeof locationParam === 'string' && locationParam.trim()) {
+      setFilterLocationId(locationParam.trim())
+    }
+  }, [locationParam, setFilterLocationId])
+
+  const activeLocationId = filterLocationId ?? undefined
+  const { orders, loading } = useAdminOrders(150, activeLocationId)
   const [filter, setFilter] = useState<OrderFilter>('active')
+
+  const locationNameById = useMemo(
+    () => new Map(locations.map((l) => [l.id, l.name])),
+    [locations],
+  )
 
   const filtered = useMemo(() => {
     if (filter === 'all') return orders
@@ -138,6 +166,7 @@ export default function AdminOrdersScreen() {
         <Text style={styles.count}>{filtered.length} shown</Text>
       </View>
 
+      <AdminLocationFilter />
       <OrderFilterBar orders={orders} filter={filter} onChange={setFilter} />
 
       {loading ? (
@@ -147,7 +176,13 @@ export default function AdminOrdersScreen() {
           {filtered.length === 0 ? (
             <Text style={styles.empty}>No orders match this filter.</Text>
           ) : (
-            filtered.map((order) => <OrderCard key={order.id} order={order} />)
+            filtered.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                locationName={locationNameById.get(order.locationId)}
+              />
+            ))
           )}
         </ScrollView>
       )}
@@ -226,6 +261,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  locationLine: {
+    fontFamily: fonts.sansMedium,
+    color: colors.goldLight,
+    fontSize: 12,
   },
   fulfillment: {
     fontFamily: fonts.sansMedium,

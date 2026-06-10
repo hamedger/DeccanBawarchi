@@ -2,6 +2,8 @@ import React, { useMemo } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useBuffet } from '../../hooks/useBuffet'
+import { useSelectedLocation } from '../../hooks/useSelectedLocation'
+import { formatLocationShort } from '../../lib/locationUtils'
 import { HalalBadge } from '../../components/brand/HalalBadge'
 import { PageIntro } from '../../components/layout/PageIntro'
 import { BuffetMenuBySection } from '../../components/buffet/BuffetMenuBySection'
@@ -25,6 +27,7 @@ function StatusBadge({ isOpen, label }: { isOpen: boolean; label: string }) {
 
 export default function BuffetScreen() {
   const router = useRouter()
+  const { location } = useSelectedLocation()
   const {
     isOpen,
     currentSession,
@@ -34,7 +37,7 @@ export default function BuffetScreen() {
     countdownMinutes,
     todaysDishes,
     specialNote,
-  } = useBuffet()
+  } = useBuffet(location?.id)
 
   const buffetSections = useMemo(
     () => groupBuffetDishesForCustomer(todaysDishes),
@@ -51,7 +54,9 @@ export default function BuffetScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.halalBar}>
         <HalalBadge size="sm" />
-        <Text style={styles.halalText}>100% Zabiha Halal · Northville, Michigan</Text>
+        <Text style={styles.halalText}>
+          100% Zabiha Halal · {location ? formatLocationShort(location) : 'Michigan'}
+        </Text>
       </View>
 
       <PageIntro

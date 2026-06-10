@@ -1,5 +1,5 @@
 import React from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { MENU_CATEGORIES } from '../../constants/menu'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
@@ -27,11 +27,7 @@ export function MenuCategoryList({
 
   return (
     <View style={styles.wrap}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scroll}
-      >
+      <View style={styles.grid}>
         {items.map((item) => {
           const active = activeCategory === item.id
           return (
@@ -51,7 +47,7 @@ export function MenuCategoryList({
             </TouchableOpacity>
           )
         })}
-      </ScrollView>
+      </View>
     </View>
   )
 }
@@ -62,32 +58,33 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     backgroundColor: colors.background,
   },
-  scroll: {
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
-    alignItems: 'center',
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 4,
     borderRadius: borderRadius.full,
     borderWidth: 1,
     borderColor: colors.border,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
   chipActive: {
     borderColor: colors.gold,
     backgroundColor: 'rgba(212, 175, 55, 0.1)',
   },
   chipLabel: {
-    fontFamily: fonts.sans,
-    color: colors.whiteMuted,
-    fontSize: 13,
-    letterSpacing: 0.2,
+    fontFamily: fonts.sansMedium,
+    color: colors.white,
+    fontSize: 14,
+    letterSpacing: 0.15,
   },
   chipLabelActive: {
     fontFamily: fonts.sansMedium,

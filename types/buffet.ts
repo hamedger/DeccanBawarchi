@@ -7,7 +7,7 @@ export interface BuffetDish {
   isVegetarian: boolean
   isNew: boolean
   sortOrder: number
-  /** When false, hidden from the customer buffet page. Defaults to true. */
+  /** When false, shown as out of stock on the customer buffet page. Defaults to true. */
   isServing?: boolean
   /** Display section on the buffet board. */
   buffetCategory?: BuffetSectionId

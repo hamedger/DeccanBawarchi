@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback } from 'react'
-import { View, Platform } from 'react-native'
+import { View, ActivityIndicator } from 'react-native'
 import { Stack, usePathname } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StatusBar } from 'expo-status-bar'
@@ -19,6 +19,27 @@ SplashScreen.preventAutoHideAsync()
 
 const queryClient = new QueryClient()
 
+function AuthReadyGate({ children }: { children: React.ReactNode }) {
+  const isLoading = useAuthStore((s) => s.isLoading)
+
+  if (isLoading && isFirebaseConfigured) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <ActivityIndicator color={colors.gold} size="large" />
+      </View>
+    )
+  }
+
+  return children
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useAppFonts()
   const pathname = usePathname()
@@ -35,21 +56,24 @@ export default function RootLayout() {
     }
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
       setFirebaseUser(firebaseUser)
-      if (firebaseUser) {
-        await firebaseUser.getIdToken(true)
-        const tokenResult = await getIdTokenResult(firebaseUser)
-        setAdmin(isAdminUser(firebaseUser, tokenResult.claims))
-        try {
-          const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
-          if (snap.exists()) setUserProfile(snap.data() as User)
-        } catch {
+      try {
+        if (firebaseUser) {
+          const tokenResult = await getIdTokenResult(firebaseUser)
+          setAdmin(isAdminUser(firebaseUser, tokenResult.claims))
+          try {
+            const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
+            if (snap.exists()) setUserProfile(snap.data() as User)
+            else setUserProfile(null)
+          } catch {
+            setUserProfile(null)
+          }
+        } else {
           setUserProfile(null)
+          setAdmin(false)
         }
-      } else {
-        setUserProfile(null)
-        setAdmin(false)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
     return unsub
   }, [])
@@ -68,6 +92,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <View style={{ flex: 1 }} onLayout={onLayoutReady}>
         <StatusBar style="light" />
+        <AuthReadyGate>
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: colors.background },
@@ -91,6 +116,7 @@ export default function RootLayout() {
           <Stack.Screen name="loyalty" options={{ title: 'My Rewards' }} />
           <Stack.Screen name="admin" options={{ headerShown: false }} />
         </Stack>
+        </AuthReadyGate>
       </View>
     </QueryClientProvider>
   )

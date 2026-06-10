@@ -12,6 +12,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
 import { useMenu, useMenuItem } from '../../hooks/useMenu'
+import { useSelectedLocation } from '../../hooks/useSelectedLocation'
+import { isMenuItemOrderable } from '../../lib/menuMerge'
 import { useCartStore } from '../../store/cartStore'
 import { getDishImageUrl } from '../../lib/menuImages'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
@@ -19,6 +21,7 @@ import { Badge } from '../../components/ui/Badge'
 import { HalalBadge } from '../../components/brand/HalalBadge'
 import { Button } from '../../components/ui/Button'
 import { HomeButton } from '../../components/navigation/HomeButton'
+import { DishPhotoDisclaimer } from '../../components/menu/DishPhotoDisclaimer'
 
 const CONTENT_MAX = 640
 const SPICE_ICONS = ['', '🌶️', '🌶️🌶️', '🌶️🌶️🌶️']
@@ -27,8 +30,9 @@ export default function ItemDetailScreen() {
   const { itemId } = useLocalSearchParams<{ itemId: string }>()
   const router = useRouter()
   const { width: windowWidth } = useWindowDimensions()
+  const { locationId } = useSelectedLocation()
   const { data: item, isLoading } = useMenuItem(itemId)
-  const { data: menuItems = [] } = useMenu()
+  const { data: menuItems = [] } = useMenu(locationId)
 
   const { prevId, nextId } = useMemo(() => {
     if (!item) return { prevId: null, nextId: null }
@@ -54,7 +58,10 @@ export default function ItemDetailScreen() {
   }, [cartQty, itemId])
 
   const contentWidth = Math.min(windowWidth, CONTENT_MAX)
-  const imageHeight = Math.round(contentWidth * 0.56)
+  const arrowWidth = 40
+  const imageGap = spacing.xs
+  const imageInnerWidth = Math.max(200, contentWidth - arrowWidth * 2 - imageGap * 2)
+  const imageHeight = Math.round(imageInnerWidth * 0.56)
 
   if (isLoading) {
     return (
@@ -75,11 +82,16 @@ export default function ItemDetailScreen() {
   const imageUri = item.imageURL || getDishImageUrl(item.id, item.name, item.category)
   const unitPrice = (item.price / 100).toFixed(2)
   const lineTotal = ((item.price * qty) / 100).toFixed(2)
+  const orderable = isMenuItemOrderable(item)
 
   const decrement = () => setQty((n) => Math.max(1, n - 1))
-  const increment = () => setQty((n) => n + 1)
+  const increment = () => {
+    if (!orderable) return
+    setQty((n) => n + 1)
+  }
 
   const handleAddToCart = () => {
+    if (!orderable) return
     if (cartQty > 0) {
       updateQuantity(item.id, qty)
     } else {
@@ -102,48 +114,7 @@ export default function ItemDetailScreen() {
   return (
     <View style={styles.screen}>
       <View style={[styles.navBar, { maxWidth: CONTENT_MAX }]}>
-        <View style={styles.navLeft}>
-          <TouchableOpacity
-            style={styles.navBtn}
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Ionicons name="arrow-back" size={22} color={colors.gold} />
-          </TouchableOpacity>
-          <HomeButton />
-        </View>
-
-        <View style={styles.navArrows}>
-          <TouchableOpacity
-            style={[styles.navBtn, !prevId && styles.navBtnDisabled]}
-            onPress={() => goToItem(prevId)}
-            disabled={!prevId}
-            accessibilityRole="button"
-            accessibilityLabel="Previous dish"
-            accessibilityState={{ disabled: !prevId }}
-          >
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color={prevId ? colors.gold : colors.whiteMuted}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.navBtn, !nextId && styles.navBtnDisabled]}
-            onPress={() => goToItem(nextId)}
-            disabled={!nextId}
-            accessibilityRole="button"
-            accessibilityLabel="Next dish"
-            accessibilityState={{ disabled: !nextId }}
-          >
-            <Ionicons
-              name="chevron-forward"
-              size={24}
-              color={nextId ? colors.gold : colors.whiteMuted}
-            />
-          </TouchableOpacity>
-        </View>
+        <HomeButton />
       </View>
 
       <ScrollView
@@ -152,19 +123,58 @@ export default function ItemDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.sheet, { maxWidth: CONTENT_MAX }]}>
-          <View style={[styles.imageFrame, { width: contentWidth, height: imageHeight }]}>
-            <Image
-              source={{ uri: imageUri }}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              transition={200}
-              accessibilityIgnoresInvertColors
-            />
+          <View style={[styles.imageRow, { width: contentWidth }]}>
+            <TouchableOpacity
+              style={[styles.imageArrow, !prevId && styles.imageArrowDisabled]}
+              onPress={() => goToItem(prevId)}
+              disabled={!prevId}
+              accessibilityRole="button"
+              accessibilityLabel="Previous dish"
+              accessibilityState={{ disabled: !prevId }}
+            >
+              <Ionicons
+                name="chevron-back"
+                size={28}
+                color={prevId ? colors.gold : colors.whiteMuted}
+              />
+            </TouchableOpacity>
+
+            <View style={[styles.imageFrame, { width: imageInnerWidth, height: imageHeight }]}>
+              <Image
+                source={{ uri: imageUri }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                transition={200}
+                accessibilityIgnoresInvertColors
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.imageArrow, !nextId && styles.imageArrowDisabled]}
+              onPress={() => goToItem(nextId)}
+              disabled={!nextId}
+              accessibilityRole="button"
+              accessibilityLabel="Next dish"
+              accessibilityState={{ disabled: !nextId }}
+            >
+              <Ionicons
+                name="chevron-forward"
+                size={28}
+                color={nextId ? colors.gold : colors.whiteMuted}
+              />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.body}>
             <Text style={styles.name}>{item.name}</Text>
             <Text style={styles.price}>${unitPrice}</Text>
+
+            {!orderable ? (
+              <View style={styles.soldOutRow}>
+                <Badge label="OUT OF STOCK" variant="muted" size="md" />
+                <Text style={styles.soldOutHint}>This item is temporarily unavailable.</Text>
+              </View>
+            ) : null}
 
             {(item.isVegetarian || item.isHalal || item.isSpicy || item.tags?.includes('bestseller')) && (
               <View style={styles.badgeRow}>
@@ -183,6 +193,8 @@ export default function ItemDetailScreen() {
               <Text style={styles.desc}>{item.description}</Text>
             ) : null}
 
+            <DishPhotoDisclaimer />
+
             {!!item.calories && item.calories > 0 && (
               <Text style={styles.calories}>{item.calories} cal</Text>
             )}
@@ -199,38 +211,47 @@ export default function ItemDetailScreen() {
 
       <View style={styles.footer}>
         <View style={[styles.footerInner, { maxWidth: CONTENT_MAX }]}>
-          <View style={styles.qtyRow}>
-            <TouchableOpacity
-              style={[styles.qtyBtn, qty <= 1 && styles.qtyBtnDisabled]}
-              onPress={decrement}
-              disabled={qty <= 1}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: qty <= 1 }}
-              accessibilityLabel="Decrease quantity"
-            >
-              <Ionicons
-                name="remove"
-                size={18}
-                color={qty <= 1 ? colors.whiteMuted : colors.gold}
-              />
-            </TouchableOpacity>
-            <Text style={styles.qtyValue}>{qty}</Text>
-            <TouchableOpacity
-              style={styles.qtyBtn}
-              onPress={increment}
-              accessibilityRole="button"
-              accessibilityLabel="Increase quantity"
-            >
-              <Ionicons name="add" size={18} color={colors.gold} />
-            </TouchableOpacity>
-          </View>
+          {orderable ? (
+            <>
+              <View style={styles.qtyRow}>
+                <TouchableOpacity
+                  style={[styles.qtyBtn, qty <= 1 && styles.qtyBtnDisabled]}
+                  onPress={decrement}
+                  disabled={qty <= 1}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: qty <= 1 }}
+                  accessibilityLabel="Decrease quantity"
+                >
+                  <Ionicons
+                    name="remove"
+                    size={18}
+                    color={qty <= 1 ? colors.whiteMuted : colors.gold}
+                  />
+                </TouchableOpacity>
+                <Text style={styles.qtyValue}>{qty}</Text>
+                <TouchableOpacity
+                  style={styles.qtyBtn}
+                  onPress={increment}
+                  accessibilityRole="button"
+                  accessibilityLabel="Increase quantity"
+                >
+                  <Ionicons name="add" size={18} color={colors.gold} />
+                </TouchableOpacity>
+              </View>
 
-          <Button
-            label={cartQty > 0 ? `Update Cart · $${lineTotal}` : `Add to Cart · $${lineTotal}`}
-            onPress={handleAddToCart}
-            size="lg"
-            style={styles.addBtn}
-          />
+              <Button
+                label={cartQty > 0 ? `Update Cart · $${lineTotal}` : `Add to Cart · $${lineTotal}`}
+                onPress={handleAddToCart}
+                size="lg"
+                style={styles.addBtn}
+              />
+            </>
+          ) : (
+            <View style={styles.unavailableFooter}>
+              <Text style={styles.unavailableTitle}>Out of stock</Text>
+              <Text style={styles.unavailableText}>Check back later or browse other dishes.</Text>
+            </View>
+          )}
         </View>
       </View>
     </View>
@@ -247,33 +268,25 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
-  navLeft: {
+  imageRow: {
+    alignSelf: 'center',
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  navArrows: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  navBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.backgroundSecondary,
+    gap: spacing.xs,
   },
-  navBtnDisabled: {
-    opacity: 0.45,
+  imageArrow: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageArrowDisabled: {
+    opacity: 0.4,
   },
   scroll: {
     flex: 1,
@@ -317,6 +330,16 @@ const styles = StyleSheet.create({
     color: colors.gold,
     fontSize: 22,
     letterSpacing: 0.3,
+  },
+  soldOutRow: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  soldOutHint: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 13,
+    lineHeight: 18,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -372,6 +395,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+  },
+  unavailableFooter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    gap: spacing.xs,
+  },
+  unavailableTitle: {
+    fontFamily: fonts.sansMedium,
+    color: colors.whiteMuted,
+    fontSize: 14,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  unavailableText: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 13,
+    textAlign: 'center',
   },
   qtyRow: {
     flexDirection: 'row',

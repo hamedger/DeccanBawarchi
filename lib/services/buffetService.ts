@@ -100,8 +100,7 @@ export function computeBuffetStatus({
       dayOfWeek === 0 ? 'Opens Monday 11:00 AM' : 'Next Buffet: Tomorrow Lunch 11 AM'
   }
 
-  const allDishes = config?.todaysDishes ?? []
-  const todaysDishes = allDishes.filter((d) => d.isServing !== false)
+  const todaysDishes = config?.todaysDishes ?? []
 
   return {
     isOpen,

@@ -3,6 +3,19 @@ import { STATIC_MENU } from '../constants/staticMenu'
 import { DEFAULT_LOCATION_ID } from '../constants/config'
 import { getDishImageUrl, hasLocalDishImage } from './menuImages'
 
+export function isMenuItemOrderable(item: MenuItem): boolean {
+  return item.isAvailable !== false
+}
+
+/** Shared-menu rule: items at the flagship store are offered at new locations until restricted. */
+export function itemAvailableAtLocation(item: MenuItem, locationId: string): boolean {
+  const ids = item.locationIds ?? []
+  if (ids.length === 0) return true
+  if (ids.includes(locationId)) return true
+  if (locationId !== DEFAULT_LOCATION_ID && ids.includes(DEFAULT_LOCATION_ID)) return true
+  return false
+}
+
 function ensureImage(item: MenuItem): MenuItem {
   if (hasLocalDishImage(item.id) || !item.imageURL) {
     return {
@@ -19,7 +32,7 @@ export function getStaticMenuCatalog(
 ): MenuItem[] {
   return (STATIC_MENU as MenuItem[])
     .filter((i) => {
-      if (!i.locationIds.includes(locationId)) return false
+      if (!itemAvailableAtLocation(i, locationId)) return false
       if (!opts?.includeUnavailable && !i.isAvailable) return false
       if (opts?.category && i.category !== opts.category) return false
       return true
@@ -51,9 +64,13 @@ export function filterMenuForDisplay(
   category?: string,
 ): MenuItem[] {
   return items
-    .filter((i) => i.locationIds?.includes(locationId) && i.isAvailable !== false)
+    .filter((i) => itemAvailableAtLocation(i, locationId))
     .filter((i) => !category || i.category === category)
-    .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
+    .sort((a, b) => {
+      const avail = Number(isMenuItemOrderable(b)) - Number(isMenuItemOrderable(a))
+      if (avail !== 0) return avail
+      return a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
+    })
 }
 
 export function sortMenuItems(items: MenuItem[]): MenuItem[] {

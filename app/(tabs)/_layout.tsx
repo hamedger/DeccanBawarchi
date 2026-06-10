@@ -1,18 +1,24 @@
 import React from 'react'
 import { Tabs } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { Platform, View } from 'react-native'
+import { Platform, View, useWindowDimensions } from 'react-native'
 import { Logo } from '../../components/brand/Logo'
 import { TabHomeIcon } from '../../components/navigation/TabHomeIcon'
 import { blurActiveElementOnWeb } from '../../lib/a11y'
 import { colors, fonts } from '../../constants/theme'
 import { useCartStore } from '../../store/cartStore'
 import { CartBadge } from '../../components/cart/CartBadge'
+import { LocationGate } from '../../components/location/LocationGate'
+import { LocationHeaderButton } from '../../components/location/LocationHeaderButton'
 
 export default function TabLayout() {
   const itemCount = useCartStore((s) => s.itemCount())
+  const { width } = useWindowDimensions()
+  const logoHeight =
+    Platform.OS === 'web' ? Math.min(64, Math.max(52, Math.round(width * 0.042))) : 44
 
   return (
+    <LocationGate>
     <Tabs
       detachInactiveScreens={Platform.OS !== 'web'}
       screenListeners={{
@@ -31,10 +37,14 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.gold,
         tabBarInactiveTintColor: colors.whiteMuted,
         tabBarLabelStyle: { fontFamily: fonts.sansMedium, fontSize: 10 },
-        headerStyle: { backgroundColor: colors.background },
+        headerStyle: {
+          backgroundColor: colors.background,
+          ...(Platform.OS === 'web' ? { height: logoHeight + 20 } : null),
+        },
         headerShadowVisible: false,
-        headerTitle: () => <Logo variant="full" height={36} />,
+        headerTitle: () => <Logo variant="full" height={logoHeight} />,
         headerTitleAlign: 'center',
+        headerRight: () => <LocationHeaderButton />,
       }}
     >
       <Tabs.Screen
@@ -85,5 +95,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </LocationGate>
   )
 }

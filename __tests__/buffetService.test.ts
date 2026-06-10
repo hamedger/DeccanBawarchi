@@ -87,7 +87,7 @@ describe('buffetService', () => {
       expect(status.nextSessionLabel).toContain('Monday')
     })
 
-    it('only exposes serving dishes on the customer buffet list', () => {
+    it('includes paused dishes on the customer buffet list', () => {
       const mondayNoon = new Date('2026-06-08T12:00:00')
       const status = computeBuffetStatus({
         config: {
@@ -121,7 +121,7 @@ describe('buffetService', () => {
         timezone: RESTAURANT_TIMEZONE,
       })
 
-      expect(status.todaysDishes.map((d) => d.menuItemId)).toEqual(['a', 'c'])
+      expect(status.todaysDishes.map((d) => d.menuItemId)).toEqual(['a', 'b', 'c'])
     })
   })
 

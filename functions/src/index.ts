@@ -1,6 +1,8 @@
 // Export all Cloud Functions
 export { createOrder } from './orders/createOrder'
 export { updateOrderStatus } from './orders/updateOrderStatus'
+export { awardLoyaltyOnDelivery } from './loyalty/awardOnDelivery'
+export { onUserCreated } from './auth/onUserCreated'
 export { doordashQuote } from './delivery/doordashQuote'
 export { doordashDispatch } from './delivery/doordashDispatch'
 export { doordashWebhook } from './delivery/doordashWebhook'

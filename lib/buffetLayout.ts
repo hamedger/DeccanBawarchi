@@ -29,6 +29,13 @@ function enrichDishName(dish: BuffetDish): BuffetDish {
   }
 }
 
+function sortForCustomerDisplay(dishes: BuffetDish[], sectionId: BuffetSectionId): BuffetDish[] {
+  const sorted = sortByLayoutOrder(dishes, sectionId)
+  const serving = sorted.filter(isBuffetDishServing)
+  const paused = sorted.filter((d) => !isBuffetDishServing(d))
+  return [...serving, ...paused]
+}
+
 function sortByLayoutOrder(dishes: BuffetDish[], sectionId: BuffetSectionId): BuffetDish[] {
   const section = BUFFET_SECTIONS.find((s) => s.id === sectionId)
   if (!section) {
@@ -44,10 +51,10 @@ function sortByLayoutOrder(dishes: BuffetDish[], sectionId: BuffetSectionId): Bu
   })
 }
 
-/** Group buffet dishes for the customer page (serving only, layout order). */
+/** Group today's buffet dishes for the customer page (layout order; paused dishes last). */
 export function groupBuffetDishesForCustomer(dishes: BuffetDish[]): BuffetSectionGroup[] {
-  const serving = dishes.filter(isBuffetDishServing).map(enrichDishName)
-  const byId = new Map(serving.map((d) => [d.menuItemId, d]))
+  const enriched = dishes.map(enrichDishName)
+  const byId = new Map(enriched.map((d) => [d.menuItemId, d]))
   const used = new Set<string>()
   const groups: BuffetSectionGroup[] = []
 
@@ -61,13 +68,13 @@ export function groupBuffetDishesForCustomer(dishes: BuffetDish[]): BuffetSectio
       groups.push({
         id: section.id,
         title: section.title,
-        dishes: sectionDishes,
+        dishes: sortForCustomerDisplay(sectionDishes, section.id),
       })
     }
   }
 
-  const other = sortByLayoutOrder(
-    serving.filter((d) => !used.has(d.menuItemId)),
+  const other = sortForCustomerDisplay(
+    enriched.filter((d) => !used.has(d.menuItemId)),
     'other',
   )
   if (other.length > 0) {

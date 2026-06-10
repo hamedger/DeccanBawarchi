@@ -17,9 +17,28 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == userId;
     }
 
-    // Users — own document only
+    function protectedUserFields() {
+      return ['loyaltyPoints', 'loyaltyTier', 'totalOrderCount', 'totalSpend', 'createdAt'];
+    }
+
+    function clientSafeUserCreate() {
+      let data = request.resource.data;
+      return data.uid == userId
+        && data.keys().hasAll(['uid', 'email', 'displayName'])
+        && !data.keys().hasAny(protectedUserFields());
+    }
+
+    function clientSafeUserUpdate() {
+      return !request.resource.data.diff(resource.data).affectedKeys()
+        .hasAny(protectedUserFields());
+    }
+
+    // Users — profile fields client-writable; loyalty & stats server-only
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAdmin() || (isOwner(userId) && clientSafeUserCreate());
+      allow update: if isAdmin() || (isOwner(userId) && clientSafeUserUpdate());
+      allow delete: if isAdmin();
     }
 
     // Menu — public read, admin write
@@ -34,9 +53,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Orders — authenticated create/read own, admin all
+    // Orders — authenticated create/read own, admin manage; loyalty fields server-only on update
     match /orders/{orderId} {
-      allow create: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.loyaltyAwarded == false;
       allow read: if isAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
       allow update: if isAdmin();
     }
@@ -80,7 +101,7 @@ service cloud.firestore {
         && request.resource.data.headcount is int
         && request.resource.data.headcount >= 10
         && request.resource.data.status == 'pending';
-      allow read: if isAdmin();
+      allow read, update: if isAdmin();
     }
 
     // Locations — public read, admin write

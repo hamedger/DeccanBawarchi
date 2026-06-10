@@ -4,6 +4,7 @@ import {
   pointsToDollarValue,
   getMaxRedeemablePoints,
   calculateEarnedPoints,
+  loyaltyDiscountCents,
 } from '../lib/services/loyaltyService'
 
 describe('loyaltyService', () => {
@@ -42,6 +43,14 @@ describe('loyaltyService', () => {
     it('awards 1 point per dollar spent', () => {
       expect(calculateEarnedPoints(2500)).toBe(25)
       expect(calculateEarnedPoints(999)).toBe(9)
+    })
+  })
+
+  describe('loyaltyDiscountCents', () => {
+    it('converts redeemed points to cents at 100 pts per dollar', () => {
+      expect(loyaltyDiscountCents(500)).toBe(500)
+      expect(loyaltyDiscountCents(250)).toBe(200)
+      expect(loyaltyDiscountCents(0)).toBe(0)
     })
   })
 })

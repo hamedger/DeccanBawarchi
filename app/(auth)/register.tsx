@@ -41,25 +41,23 @@ export default function RegisterScreen() {
       await updateProfile(cred.user, { displayName: name })
       await sendEmailVerification(cred.user)
 
-      const profile = {
-        uid: cred.user.uid,
-        email: email.trim(),
-        phone,
-        displayName: name,
-        photoURL: '',
-        isGuest: false,
-        addresses: [],
-        defaultAddressId: '',
-        loyaltyPoints: 100,
-        loyaltyTier: 'bronze' as const,
-        totalOrderCount: 0,
-        totalSpend: 0,
-        dietaryPreferences: [],
-        pushToken: '',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }
-      await setDoc(doc(db, 'users', cred.user.uid), profile)
+      await setDoc(
+        doc(db, 'users', cred.user.uid),
+        {
+          uid: cred.user.uid,
+          email: email.trim(),
+          phone,
+          displayName: name,
+          photoURL: '',
+          isGuest: false,
+          addresses: [],
+          defaultAddressId: '',
+          dietaryPreferences: [],
+          pushToken: '',
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      )
       const snap = await getDoc(doc(db, 'users', cred.user.uid))
       if (snap.exists()) setUserProfile(snap.data() as User)
       router.replace('/(tabs)/' as any)

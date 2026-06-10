@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, LayoutChangeEvent } from 'react-native'
 import { useRouter } from 'expo-router'
 import { HeroSplash } from './HeroSplash'
+import { OrderOnlinePicker } from '../location/OrderOnlinePicker'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { APP_TAGLINE } from '../../constants/config'
 import { blurActiveElementOnWeb } from '../../lib/a11y'
@@ -36,17 +37,21 @@ export function HeroSection() {
             Northville.
           </Text>
           <View style={styles.ctaRow}>
-            <TouchableOpacity
-              style={styles.primaryCta}
-              onPress={() => {
-                blurActiveElementOnWeb()
-                router.push('/(tabs)/menu' as never)
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Order online now"
-            >
-              <Text style={styles.primaryCtaText}>Order Online</Text>
-            </TouchableOpacity>
+            <OrderOnlinePicker>
+              {(startOrder) => (
+                <TouchableOpacity
+                  style={styles.primaryCta}
+                  onPress={() => {
+                    blurActiveElementOnWeb()
+                    startOrder()
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Order online now"
+                >
+                  <Text style={styles.primaryCtaText}>Order Online</Text>
+                </TouchableOpacity>
+              )}
+            </OrderOnlinePicker>
             <TouchableOpacity
               style={styles.secondaryCta}
               onPress={() => {

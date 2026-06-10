@@ -12,6 +12,7 @@ export default function CheckoutSuccessScreen() {
   const router = useRouter()
   const clearCart = useCartStore((s) => s.clearCart)
   const params = useLocalSearchParams<{
+    orderId?: string
     fulfillment?: string
     eta?: string
     address?: string
@@ -24,7 +25,8 @@ export default function CheckoutSuccessScreen() {
   }, [clearCart])
 
   const isDelivery = params.fulfillment === 'delivery'
-  const orderId = `DB${Date.now().toString().slice(-6)}`
+  const orderId = params.orderId ?? `DB${Date.now().toString().slice(-6)}`
+  const displayOrderId = orderId.length > 6 ? orderId.slice(-6).toUpperCase() : orderId
   const total = params.total ? Number(params.total) : 0
 
   return (
@@ -38,7 +40,7 @@ export default function CheckoutSuccessScreen() {
         </View>
 
         <Text style={styles.title}>Order Placed!</Text>
-        <Text style={styles.orderId}>Order #{orderId}</Text>
+        <Text style={styles.orderId}>Order #{displayOrderId}</Text>
 
         <View style={styles.detailCard}>
           <DetailRow
@@ -82,9 +84,16 @@ export default function CheckoutSuccessScreen() {
           style={{ marginTop: spacing.lg }}
         />
         <Button
-          label="View Orders"
-          onPress={() => router.replace('/(tabs)/orders' as never)}
+          label="Track Order"
+          onPress={() => router.replace(`/order/${orderId}` as never)}
           variant="secondary"
+          fullWidth
+          style={{ marginTop: spacing.sm }}
+        />
+        <Button
+          label="View All Orders"
+          onPress={() => router.replace('/(tabs)/orders' as never)}
+          variant="ghost"
           fullWidth
           style={{ marginTop: spacing.sm }}
         />

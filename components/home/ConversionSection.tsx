@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { useRouter } from 'expo-router'
+import { OrderOnlinePicker } from '../location/OrderOnlinePicker'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 interface ConversionCard {
@@ -53,13 +54,27 @@ export function ConversionSection() {
         >
           <Text style={styles.cardTitle}>{card.title}</Text>
           <Text style={styles.cardDescription}>{card.description}</Text>
-          <TouchableOpacity
-            onPress={() => router.push(card.route as never)}
-            accessibilityRole="button"
-            accessibilityLabel={card.cta}
-          >
-            <Text style={styles.cardCta}>{card.cta} →</Text>
-          </TouchableOpacity>
+          {card.accent ? (
+            <OrderOnlinePicker>
+              {(startOrder) => (
+                <TouchableOpacity
+                  onPress={startOrder}
+                  accessibilityRole="button"
+                  accessibilityLabel={card.cta}
+                >
+                  <Text style={styles.cardCta}>{card.cta} →</Text>
+                </TouchableOpacity>
+              )}
+            </OrderOnlinePicker>
+          ) : (
+            <TouchableOpacity
+              onPress={() => router.push(card.route as never)}
+              accessibilityRole="button"
+              accessibilityLabel={card.cta}
+            >
+              <Text style={styles.cardCta}>{card.cta} →</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ))}
     </View>

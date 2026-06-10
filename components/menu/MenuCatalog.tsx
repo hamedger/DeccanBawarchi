@@ -12,6 +12,7 @@ import { MenuToolbar } from './MenuToolbar'
 import { MenuCategoryTitle } from './MenuCategoryTitle'
 import { MenuDishCard } from './MenuDishCard'
 import { useMenu } from '../../hooks/useMenu'
+import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { MenuItem } from '../../types/menu'
 import { MENU_CATEGORIES } from '../../constants/menu'
 import {
@@ -30,7 +31,8 @@ export function MenuCatalog() {
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [quickFilter, setQuickFilter] = useState<MenuQuickFilter>('all')
 
-  const { data: items = [], isLoading } = useMenu()
+  const { locationId } = useSelectedLocation()
+  const { data: items = [], isLoading } = useMenu(locationId)
 
   const gridGap = spacing.sm
   const gridPad = spacing.md

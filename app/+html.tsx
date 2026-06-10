@@ -34,6 +34,13 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="twitter:title" content="Deccan Bawarchi — Authentic Hyderabadi Cuisine" />
         <meta name="twitter:description" content="Order Dum Biryani, Haleem & Marag online. Daily Buffet. 100% Zabiha Halal. Northville, MI." />
         <meta name="twitter:image" content="https://deccanbawarchi.com/assets/og-image.png" />
+
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body style={{ backgroundColor: '#0c0a08' }}>
         {children}

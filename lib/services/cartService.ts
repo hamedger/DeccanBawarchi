@@ -1,3 +1,5 @@
+import { loyaltyDiscountCents } from './loyaltyService'
+
 export const TAX_RATE = 0.06
 export const SERVICE_FEE_RATE = 0.03
 
@@ -28,8 +30,9 @@ export function calculateOrderTotal(input: OrderTotalsInput): number {
 
   const tax = calculateTax(subtotal)
   const serviceFee = calculateServiceFee(subtotal)
+  const loyaltyDiscount = loyaltyDiscountCents(loyaltyPointsToRedeem)
   const total =
-    subtotal + tax + serviceFee + tip - promoDiscount - loyaltyPointsToRedeem - giftCardAmount
+    subtotal + tax + serviceFee + tip - promoDiscount - loyaltyDiscount - giftCardAmount
 
   return Math.max(0, total)
 }

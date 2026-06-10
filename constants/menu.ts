@@ -26,3 +26,7 @@ export const SPICE_LABELS = {
 export const ALLERGENS = [
   'gluten', 'dairy', 'eggs', 'nuts', 'peanuts', 'soy', 'shellfish', 'sesame',
 ] as const
+
+/** Shown below dish descriptions — photo is illustrative, not exact plating. */
+export const DISH_PHOTO_DISCLAIMER =
+  'This photo is our closest representation of the dish; your order may vary in appearance.'

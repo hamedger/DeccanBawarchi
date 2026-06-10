@@ -31,3 +31,9 @@ export function getMaxRedeemablePoints(points: number): number {
 export function calculateEarnedPoints(orderSubtotalCents: number): number {
   return Math.floor((orderSubtotalCents / 100) * LOYALTY.pointsPerDollar)
 }
+
+/** Convert redeemed points to order discount in cents (100 pts = $1 off). */
+export function loyaltyDiscountCents(pointsRedeemed: number): number {
+  if (pointsRedeemed <= 0) return 0
+  return Math.floor(pointsRedeemed / LOYALTY.pointsToDollar) * 100
+}
