@@ -1,27 +1,39 @@
 /**
- * Run: npx ts-node -e "require('dotenv').config(); require('./scripts/seedFirestore.ts')"
- * Or:  npx ts-node --require dotenv/config scripts/seedFirestore.ts
+ * Seed Firestore with location, buffet config, and menu items.
+ *
+ * Usage:
+ *   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/serviceAccount.json
+ *   npm run seed
  */
-import { initializeApp } from 'firebase/app'
-import { getFirestore, setDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { initializeApp, getApps, cert } from 'firebase-admin/app'
+import { getFirestore, FieldValue } from 'firebase-admin/firestore'
+import { readFileSync } from 'fs'
 import * as dotenv from 'dotenv'
 import { STATIC_MENU } from '../constants/staticMenu'
 import { createDefaultBuffetDishes } from '../lib/buffetLayout'
+
 dotenv.config()
 
-const app = initializeApp({
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
-})
-const db = getFirestore(app)
+const projectId =
+  process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID ??
+  process.env.GCLOUD_PROJECT ??
+  'deccanbawarchi-d04cc'
+
+if (!getApps().length) {
+  const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS
+  if (credPath) {
+    const serviceAccount = JSON.parse(readFileSync(credPath, 'utf8'))
+    initializeApp({ credential: cert(serviceAccount), projectId })
+  } else {
+    initializeApp({ projectId })
+  }
+}
+
+const db = getFirestore()
 const LOC = 'northville-mi'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-const ts = () => serverTimestamp()
+const ts = () => FieldValue.serverTimestamp()
 function item(
   id: string,
   name: string,
@@ -330,7 +342,7 @@ const menuItems = [
 // ─── SEED ────────────────────────────────────────────────────────────────────
 async function seed() {
   // Location — real address from menu
-  await setDoc(doc(db, 'locations', LOC), {
+  await db.collection('locations').doc(LOC).set({
     id: LOC,
     name: 'Deccan Bawarchi — Northville',
     address: {
@@ -363,7 +375,7 @@ async function seed() {
   console.log('✓ Location seeded')
 
   // Buffet config — open 7 days per ad copy ("Everyday Like Never Before")
-  await setDoc(doc(db, 'buffet', LOC), {
+  await db.collection('buffet').doc(LOC).set({
     locationId: LOC,
     weekdayLunchPrice: 1799,
     weekdayDinnerPrice: 1799,
@@ -385,7 +397,7 @@ async function seed() {
   // Menu items
   let count = 0
   for (const { id, ...data } of menuItems) {
-    await setDoc(doc(db, 'menu', id), {
+    await db.collection('menu').doc(id).set({
       ...data,
       createdAt: ts(),
       updatedAt: ts(),

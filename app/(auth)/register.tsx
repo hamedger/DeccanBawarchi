@@ -1,17 +1,21 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native'
+import { Text, TouchableOpacity, StyleSheet, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, isFirebaseConfigured } from '../../lib/firebase'
 import { getAuthErrorMessage } from '../../lib/authErrors'
+import { useAuthStore } from '../../store/authStore'
+import { User } from '../../types/user'
 import { Logo } from '../../components/brand/Logo'
 import { Input, PasswordInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
+import { AuthScreen } from '../../components/auth/AuthScreen'
 import { colors, spacing } from '../../constants/theme'
 
 export default function RegisterScreen() {
   const router = useRouter()
+  const setUserProfile = useAuthStore((s) => s.setUserProfile)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -36,7 +40,8 @@ export default function RegisterScreen() {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password)
       await updateProfile(cred.user, { displayName: name })
       await sendEmailVerification(cred.user)
-      await setDoc(doc(db, 'users', cred.user.uid), {
+
+      const profile = {
         uid: cred.user.uid,
         email: email.trim(),
         phone,
@@ -46,14 +51,17 @@ export default function RegisterScreen() {
         addresses: [],
         defaultAddressId: '',
         loyaltyPoints: 100,
-        loyaltyTier: 'bronze',
+        loyaltyTier: 'bronze' as const,
         totalOrderCount: 0,
         totalSpend: 0,
         dietaryPreferences: [],
         pushToken: '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      })
+      }
+      await setDoc(doc(db, 'users', cred.user.uid), profile)
+      const snap = await getDoc(doc(db, 'users', cred.user.uid))
+      if (snap.exists()) setUserProfile(snap.data() as User)
       router.replace('/(tabs)/' as any)
     } catch (e) {
       Alert.alert('Registration Failed', getAuthErrorMessage(e))
@@ -63,11 +71,7 @@ export default function RegisterScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
+    <AuthScreen>
       <Logo variant="full" height={64} style={{ alignSelf: 'center', marginBottom: spacing.xl }} />
 
       <Text style={styles.title}>Create Account</Text>
@@ -76,20 +80,18 @@ export default function RegisterScreen() {
       <Input label="Full Name" value={name} onChangeText={setName} placeholder="Your name" />
       <Input label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="you@email.com" />
       <Input label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="+1 (555) 000-0000" />
-      <PasswordInput label="Password" value={password} onChangeText={setPassword} placeholder="Min. 8 characters" />
+      <PasswordInput label="Password" value={password} onChangeText={setPassword} placeholder="Min. 6 characters" />
 
       <Button label="Create Account" onPress={handleRegister} loading={loading} fullWidth size="lg" />
 
       <TouchableOpacity style={styles.link} onPress={() => router.push('/(auth)/login' as any)}>
         <Text style={styles.linkText}>Already have an account? <Text style={styles.bold}>Sign In</Text></Text>
       </TouchableOpacity>
-    </ScrollView>
+    </AuthScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl, paddingTop: spacing.xxl },
   title: { color: colors.white, fontSize: 28, fontWeight: '800', marginBottom: 6 },
   sub: { color: colors.whiteMuted, fontSize: 14, marginBottom: spacing.xl },
   link: { marginTop: spacing.md, alignItems: 'center' },

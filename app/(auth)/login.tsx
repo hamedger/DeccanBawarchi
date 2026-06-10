@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native'
+import { Text, TouchableOpacity, StyleSheet, Alert } from 'react-native'
 import { useRouter } from 'expo-router'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth, isFirebaseConfigured } from '../../lib/firebase'
@@ -7,7 +7,8 @@ import { getAuthErrorMessage } from '../../lib/authErrors'
 import { Logo } from '../../components/brand/Logo'
 import { Input, PasswordInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
-import { colors, spacing, borderRadius } from '../../constants/theme'
+import { AuthScreen } from '../../components/auth/AuthScreen'
+import { colors, spacing } from '../../constants/theme'
 
 export default function LoginScreen() {
   const router = useRouter()
@@ -36,11 +37,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
+    <AuthScreen>
       <Logo variant="full" height={64} style={{ alignSelf: 'center', marginBottom: spacing.xl }} />
 
       <Text style={styles.title}>Welcome Back</Text>
@@ -69,13 +66,11 @@ export default function LoginScreen() {
       <TouchableOpacity style={styles.link} onPress={() => router.push('/(auth)/guest' as any)}>
         <Text style={styles.linkText}>Continue as <Text style={styles.linkBold}>Guest</Text></Text>
       </TouchableOpacity>
-    </ScrollView>
+    </AuthScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl, paddingTop: spacing.xxl },
   title: { color: colors.white, fontSize: 28, fontWeight: '800', marginBottom: 6 },
   sub: { color: colors.whiteMuted, fontSize: 14, marginBottom: spacing.xl },
   link: { marginTop: spacing.md, alignItems: 'center' },

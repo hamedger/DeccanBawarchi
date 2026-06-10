@@ -13,6 +13,7 @@ import { colors } from '../constants/theme'
 import { useAppFonts } from '../lib/fonts'
 import { blurActiveElementOnWeb } from '../lib/a11y'
 import { isAdminUser } from '../lib/adminAuth'
+import { HomeButton } from '../components/navigation/HomeButton'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -74,11 +75,12 @@ export default function RootLayout() {
             headerTitleStyle: { color: colors.white, fontWeight: '700' },
             contentStyle: { backgroundColor: colors.background },
             headerShadowVisible: false,
+            headerLeft: () => <HomeButton inHeader />,
           }}
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="menu/[itemId]" options={{ title: '' }} />
+          <Stack.Screen name="menu/[itemId]" options={{ headerShown: false }} />
           <Stack.Screen name="checkout/index" options={{ title: 'Checkout' }} />
           <Stack.Screen name="checkout/delivery" options={{ title: 'Delivery Details' }} />
           <Stack.Screen name="checkout/payment" options={{ title: 'Payment' }} />

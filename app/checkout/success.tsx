@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useCartStore } from '../../store/cartStore'
 import { Button } from '../../components/ui/Button'
+import { HomeButton } from '../../components/navigation/HomeButton'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
@@ -28,6 +29,9 @@ export default function CheckoutSuccessScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.topBar}>
+        <HomeButton />
+      </View>
       <View style={styles.inner}>
         <View style={styles.iconCircle}>
           <Ionicons name="checkmark" size={36} color={colors.background} />
@@ -120,6 +124,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
+  },
+  topBar: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
+    zIndex: 1,
   },
   inner: {
     width: '100%',

@@ -3,7 +3,7 @@
 # Deccan Bawarchi — Claude Code Guide
 
 ## What this is
-Full-stack restaurant ordering app + website for Deccan Bawarchi, an authentic Hyderabadi cuisine restaurant in Northville, MI. Single codebase: React Native (Expo) targets iOS, Android, and Web.
+Full-stack restaurant ordering website for Deccan Bawarchi, an authentic Hyderabadi cuisine restaurant in Northville, MI. Built with **Expo SDK 56 + React Native Web** — **web is the launch target** (Firebase Hosting). iOS/Android are not in scope for launch; the codebase still uses Expo/RN primitives that compile to the browser.
 
 ## Tech Stack
 - **Expo SDK 56** + **Expo Router** (file-based routing, `app/` directory)
@@ -39,15 +39,22 @@ Full-stack restaurant ordering app + website for Deccan Bawarchi, an authentic H
 
 ## Running Locally
 ```bash
-npm run web      # Web browser
-npm run ios      # iOS simulator
-npm run android  # Android
+npm run web
+npm run build
 
-# Functions emulator
 cd functions && npm install && npm run serve
+```
+
+## Deploy Web
+Run these as **separate commands** (do not paste inline `#` comments on the same line):
+
+```bash
+npm run build
+firebase deploy --only hosting
 ```
 
 ## Seeding Firestore
 ```bash
-npx ts-node scripts/seedFirestore.ts
+export GOOGLE_APPLICATION_CREDENTIALS=/path/to/serviceAccount.json
+npm run seed
 ```

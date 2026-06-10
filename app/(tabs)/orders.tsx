@@ -73,6 +73,7 @@ export default function OrdersScreen() {
   return (
     <View style={styles.container}>
       <FlatList
+        style={styles.listView}
         data={orderHistory}
         keyExtractor={(o) => o.id}
         contentContainerStyle={styles.list}
@@ -91,8 +92,19 @@ export default function OrdersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  list: { paddingHorizontal: spacing.lg },
+  listView: { flex: 1, backgroundColor: colors.background },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+    backgroundColor: colors.background,
+  },
+  list: {
+    flexGrow: 1,
+    backgroundColor: colors.background,
+    paddingHorizontal: spacing.lg,
+  },
   card: {
     backgroundColor: colors.background,
     borderBottomWidth: 1,

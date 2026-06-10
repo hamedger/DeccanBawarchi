@@ -1,16 +1,20 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, StyleSheet } from 'react-native'
+import { Text, StyleSheet } from 'react-native'
 import { useRouter } from 'expo-router'
 import { signInAnonymously, updateProfile } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../../lib/firebase'
+import { useAuthStore } from '../../store/authStore'
+import { User } from '../../types/user'
 import { Logo } from '../../components/brand/Logo'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
+import { AuthScreen } from '../../components/auth/AuthScreen'
 import { colors, spacing } from '../../constants/theme'
 
 export default function GuestScreen() {
   const router = useRouter()
+  const setUserProfile = useAuthStore((s) => s.setUserProfile)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -22,21 +26,30 @@ export default function GuestScreen() {
     try {
       const cred = await signInAnonymously(auth)
       await updateProfile(cred.user, { displayName: name })
-      await setDoc(doc(db, 'users', cred.user.uid), {
+
+      const profile = {
         uid: cred.user.uid,
         email: email.trim(),
         phone,
         displayName: name,
+        photoURL: '',
         isGuest: true,
+        addresses: [],
+        defaultAddressId: '',
         loyaltyPoints: 0,
-        loyaltyTier: 'bronze',
+        loyaltyTier: 'bronze' as const,
         totalOrderCount: 0,
         totalSpend: 0,
+        dietaryPreferences: [],
+        pushToken: '',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      })
+      }
+      await setDoc(doc(db, 'users', cred.user.uid), profile)
+      const snap = await getDoc(doc(db, 'users', cred.user.uid))
+      if (snap.exists()) setUserProfile(snap.data() as User)
       router.back()
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error(e)
     } finally {
       setLoading(false)
@@ -44,11 +57,7 @@ export default function GuestScreen() {
   }
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      keyboardShouldPersistTaps="handled"
-    >
+    <AuthScreen>
       <Logo variant="full" height={64} style={{ alignSelf: 'center', marginBottom: spacing.xl }} />
       <Text style={styles.title}>Guest Checkout</Text>
       <Text style={styles.sub}>We need your details to send order updates</Text>
@@ -58,13 +67,11 @@ export default function GuestScreen() {
       <Input label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="for delivery updates" />
 
       <Button label="Continue to Checkout" onPress={handleContinue} loading={loading} fullWidth size="lg" />
-    </ScrollView>
+    </AuthScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.xl, paddingTop: spacing.xxl },
   title: { color: colors.white, fontSize: 28, fontWeight: '800', marginBottom: 6 },
   sub: { color: colors.whiteMuted, fontSize: 14, marginBottom: spacing.xl },
 })

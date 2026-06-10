@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -11,13 +11,14 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Image } from 'expo-image'
 import { Ionicons } from '@expo/vector-icons'
-import { useMenuItem } from '../../hooks/useMenu'
+import { useMenu, useMenuItem } from '../../hooks/useMenu'
 import { useCartStore } from '../../store/cartStore'
 import { getDishImageUrl } from '../../lib/menuImages'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { Badge } from '../../components/ui/Badge'
 import { HalalBadge } from '../../components/brand/HalalBadge'
 import { Button } from '../../components/ui/Button'
+import { HomeButton } from '../../components/navigation/HomeButton'
 
 const CONTENT_MAX = 640
 const SPICE_ICONS = ['', '🌶️', '🌶️🌶️', '🌶️🌶️🌶️']
@@ -27,6 +28,18 @@ export default function ItemDetailScreen() {
   const router = useRouter()
   const { width: windowWidth } = useWindowDimensions()
   const { data: item, isLoading } = useMenuItem(itemId)
+  const { data: menuItems = [] } = useMenu()
+
+  const { prevId, nextId } = useMemo(() => {
+    if (!item) return { prevId: null, nextId: null }
+    const categoryItems = menuItems.filter((i) => i.category === item.category)
+    const index = categoryItems.findIndex((i) => i.id === item.id)
+    if (index < 0) return { prevId: null, nextId: null }
+    return {
+      prevId: index > 0 ? categoryItems[index - 1].id : null,
+      nextId: index < categoryItems.length - 1 ? categoryItems[index + 1].id : null,
+    }
+  }, [item, menuItems])
 
   const cartQty = useCartStore(
     (s) => s.items.find((i) => i.menuItemId === itemId)?.quantity ?? 0,
@@ -81,8 +94,58 @@ export default function ItemDetailScreen() {
     router.back()
   }
 
+  const goToItem = (id: string | null) => {
+    if (!id) return
+    router.replace(`/menu/${id}` as never)
+  }
+
   return (
     <View style={styles.screen}>
+      <View style={[styles.navBar, { maxWidth: CONTENT_MAX }]}>
+        <View style={styles.navLeft}>
+          <TouchableOpacity
+            style={styles.navBtn}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Ionicons name="arrow-back" size={22} color={colors.gold} />
+          </TouchableOpacity>
+          <HomeButton />
+        </View>
+
+        <View style={styles.navArrows}>
+          <TouchableOpacity
+            style={[styles.navBtn, !prevId && styles.navBtnDisabled]}
+            onPress={() => goToItem(prevId)}
+            disabled={!prevId}
+            accessibilityRole="button"
+            accessibilityLabel="Previous dish"
+            accessibilityState={{ disabled: !prevId }}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={prevId ? colors.gold : colors.whiteMuted}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.navBtn, !nextId && styles.navBtnDisabled]}
+            onPress={() => goToItem(nextId)}
+            disabled={!nextId}
+            accessibilityRole="button"
+            accessibilityLabel="Next dish"
+            accessibilityState={{ disabled: !nextId }}
+          >
+            <Ionicons
+              name="chevron-forward"
+              size={24}
+              color={nextId ? colors.gold : colors.whiteMuted}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -178,6 +241,39 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  navBar: {
+    width: '100%',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  navLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  navArrows: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  navBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.backgroundSecondary,
+  },
+  navBtnDisabled: {
+    opacity: 0.45,
   },
   scroll: {
     flex: 1,

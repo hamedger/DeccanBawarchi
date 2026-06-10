@@ -35,7 +35,7 @@ function sortByLayoutOrder(dishes: BuffetDish[], sectionId: BuffetSectionId): Bu
     return [...dishes].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
   }
 
-  const order = new Map(section.items.map((item, index) => [item.menuItemId, index]))
+  const order = new Map<string, number>(section.items.map((item, index) => [item.menuItemId, index]))
   return [...dishes].sort((a, b) => {
     const ao = order.get(a.menuItemId) ?? 999
     const bo = order.get(b.menuItemId) ?? 999
