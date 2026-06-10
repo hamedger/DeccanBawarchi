@@ -1,0 +1,5 @@
+export const MOCK_DELIVERY_FEE_CENTS = 599
+export const MOCK_DELIVERY_ETA_MINUTES = 35
+export const MOCK_PICKUP_ETA_MINUTES = 20
+
+export const CONTENT_MAX_WIDTH = 640

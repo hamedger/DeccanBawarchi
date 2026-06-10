@@ -1,0 +1,74 @@
+{
+  "expo": {
+    "name": "Deccan Bawarchi",
+    "slug": "deccan-bawarchi",
+    "version": "1.0.0",
+    "scheme": "deccanbawarchi",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0c0a08",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0c0a08"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.deccanbawarchi.app",
+      "backgroundColor": "#0c0a08",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to upload food review photos",
+        "NSLocationWhenInUseUsageDescription": "Used to find your delivery address",
+        "NSUserNotificationsUsageDescription": "Used to send order updates and buffet alerts"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundColor": "#0c0a08"
+      },
+      "package": "com.deccanbawarchi.app",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/icon.png",
+      "backgroundColor": "#0c0a08",
+      "themeColor": "#d4af37",
+      "output": "static"
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": ""
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0c0a08",
+          "imageWidth": 200
+        }
+      ],
+      "expo-status-bar",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#d4af37"
+        }
+      ],
+      "expo-apple-authentication"
+    ]
+  }
+}

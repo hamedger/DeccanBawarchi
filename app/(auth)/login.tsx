@@ -1,0 +1,84 @@
+import React, { useState } from 'react'
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native'
+import { useRouter } from 'expo-router'
+import { signInWithEmailAndPassword } from 'firebase/auth'
+import { auth, isFirebaseConfigured } from '../../lib/firebase'
+import { getAuthErrorMessage } from '../../lib/authErrors'
+import { Logo } from '../../components/brand/Logo'
+import { Input, PasswordInput } from '../../components/ui/Input'
+import { Button } from '../../components/ui/Button'
+import { colors, spacing, borderRadius } from '../../constants/theme'
+
+export default function LoginScreen() {
+  const router = useRouter()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Missing fields', 'Enter your email and password.')
+      return
+    }
+    if (!isFirebaseConfigured) {
+      Alert.alert('Configuration error', 'Firebase is not configured. Check your .env file and restart the app.')
+      return
+    }
+    setLoading(true)
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password)
+      router.replace('/(tabs)/' as any)
+    } catch (e) {
+      Alert.alert('Login Failed', getAuthErrorMessage(e))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Logo variant="full" height={64} style={{ alignSelf: 'center', marginBottom: spacing.xl }} />
+
+      <Text style={styles.title}>Welcome Back</Text>
+      <Text style={styles.sub}>Sign in to your account</Text>
+
+      <Input
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        placeholder="you@email.com"
+      />
+      <PasswordInput
+        label="Password"
+        value={password}
+        onChangeText={setPassword}
+      />
+
+      <Button label="Sign In" onPress={handleLogin} loading={loading} fullWidth size="lg" />
+
+      <TouchableOpacity style={styles.link} onPress={() => router.push('/(auth)/register' as any)}>
+        <Text style={styles.linkText}>Don't have an account? <Text style={styles.linkBold}>Register</Text></Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.link} onPress={() => router.push('/(auth)/guest' as any)}>
+        <Text style={styles.linkText}>Continue as <Text style={styles.linkBold}>Guest</Text></Text>
+      </TouchableOpacity>
+    </ScrollView>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.xl, paddingTop: spacing.xxl },
+  title: { color: colors.white, fontSize: 28, fontWeight: '800', marginBottom: 6 },
+  sub: { color: colors.whiteMuted, fontSize: 14, marginBottom: spacing.xl },
+  link: { marginTop: spacing.md, alignItems: 'center' },
+  linkText: { color: colors.whiteMuted, fontSize: 14 },
+  linkBold: { color: colors.gold, fontWeight: '700' },
+})
