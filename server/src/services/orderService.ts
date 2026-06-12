@@ -98,12 +98,49 @@ export async function createPendingOrder(
 
   await db.runTransaction(async (tx) => {
     const userSnap = await tx.get(userRef)
+    let loyaltyBalance = 0
+
     if (!userSnap.exists) {
-      throw new Error('User profile not found')
+      const email = input.customerEmail?.trim()
+      if (!email) {
+        throw new Error('Customer email is required for Clover checkout')
+      }
+
+      tx.set(userRef, {
+        uid: input.uid,
+        email,
+        displayName: input.customerName?.trim() ?? '',
+        phone: input.customerPhone?.trim() ?? '',
+        photoURL: '',
+        isGuest: true,
+        addresses: [],
+        defaultAddressId: '',
+        loyaltyPoints: 0,
+        loyaltyTier: 'bronze',
+        totalOrderCount: 0,
+        totalSpend: 0,
+        dietaryPreferences: [],
+        pushToken: '',
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+    } else {
+      loyaltyBalance = userSnap.data()?.loyaltyPoints ?? 0
+      const existingEmail = String(userSnap.data()?.email ?? '').trim()
+      const nextEmail = input.customerEmail?.trim() ?? ''
+
+      if (nextEmail && !existingEmail) {
+        tx.update(userRef, {
+          email: nextEmail,
+          ...(input.customerPhone?.trim() ? { phone: input.customerPhone.trim() } : {}),
+          ...(input.customerName?.trim() ? { displayName: input.customerName.trim() } : {}),
+          isGuest: true,
+          updatedAt: FieldValue.serverTimestamp(),
+        })
+      }
     }
 
-    const balance = userSnap.data()?.loyaltyPoints ?? 0
-    validateRedemption(loyaltyPointsUsed, balance)
+    validateRedemption(loyaltyPointsUsed, loyaltyBalance)
 
     const order = {
       id: orderRef.id,

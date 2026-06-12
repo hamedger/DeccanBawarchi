@@ -10,11 +10,13 @@ const AUTH_MESSAGES: Record<string, string> = {
   'auth/user-disabled': 'This account has been disabled.',
   'auth/too-many-requests': 'Too many attempts. Wait a few minutes and try again.',
   'auth/operation-not-allowed':
-    'Email/password sign-in is not enabled. In Firebase Console → Authentication → Sign-in method, enable Email/Password.',
+    'This sign-in method is not enabled. In Firebase Console → Authentication → Sign-in method, enable Email/Password (and optionally Anonymous for guest checkout).',
   'auth/network-request-failed': 'Network error. Check your connection and try again.',
   'auth/missing-password': 'Please enter your password.',
   'auth/weak-password': 'Password must be at least 6 characters.',
   'auth/email-already-in-use': 'An account with this email already exists. Try signing in instead.',
+  'auth/admin-restricted-operation':
+    'Guest checkout could not start. Enable Anonymous sign-in in Firebase, or use Email/Password sign-in.',
 }
 
 export function getAuthErrorMessage(error: unknown): string {

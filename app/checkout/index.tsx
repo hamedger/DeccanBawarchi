@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native'
+import { View, Text, ScrollView, StyleSheet } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useCart } from '../../hooks/useCart'
@@ -25,6 +25,7 @@ import { formatLocationAddress } from '../../lib/locationUtils'
 import { confirmOrderLocation } from '../../lib/confirmOrderLocation'
 import { TAX_LABEL } from '../../lib/services/cartService'
 import { alertUser } from '../../lib/alertUser'
+import { CHECKOUT_RETURN_PATH } from '../../lib/authReturnTo'
 
 export default function CheckoutIndex() {
   const router = useRouter()
@@ -59,29 +60,19 @@ export default function CheckoutIndex() {
     }
 
     if (!firebaseUser) {
-      if (Platform.OS === 'web') {
-        const signIn = window.confirm(
-          'Sign in required to complete payment.\n\nOpen sign in now?',
-        )
-        if (signIn) router.push('/(auth)/login' as never)
-        return
-      }
-
-      alertUser('Sign in required', 'Please sign in or continue as guest to place your order.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => router.push('/(auth)/login' as never) },
-        { text: 'Guest', onPress: () => router.push('/(auth)/guest' as never) },
-      ])
+      router.replace({
+        pathname: '/(auth)/login',
+        params: { returnTo: CHECKOUT_RETURN_PATH },
+      } as never)
       return
     }
 
     const customerEmail = userProfile?.email?.trim() || firebaseUser.email?.trim()
     if (!customerEmail) {
-      alertUser(
-        'Email required',
-        'Add an email on your profile or use guest checkout so we can send your receipt.',
-        [{ text: 'Guest Checkout', onPress: () => router.push('/(auth)/guest' as never) }],
-      )
+      router.replace({
+        pathname: '/(auth)/guest',
+        params: { returnTo: CHECKOUT_RETURN_PATH },
+      } as never)
       return
     }
 

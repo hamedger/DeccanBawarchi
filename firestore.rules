@@ -33,11 +33,19 @@ service cloud.firestore {
         .hasAny(protectedUserFields());
     }
 
+    function clientSafeProfilePatch() {
+      return request.resource.data.uid == userId
+        && request.resource.data.email is string
+        && request.resource.data.displayName is string
+        && !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(protectedUserFields());
+    }
+
     // Users — profile fields client-writable; loyalty & stats server-only
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isAdmin() || (isOwner(userId) && clientSafeUserCreate());
-      allow update: if isAdmin() || (isOwner(userId) && clientSafeUserUpdate());
+      allow update: if isAdmin() || (isOwner(userId) && (clientSafeUserUpdate() || clientSafeProfilePatch()));
       allow delete: if isAdmin();
     }
 

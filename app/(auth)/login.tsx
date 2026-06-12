@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Text, TouchableOpacity, StyleSheet, Alert } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth, isFirebaseConfigured } from '../../lib/firebase'
 import { getAuthErrorMessage } from '../../lib/authErrors'
@@ -9,9 +9,11 @@ import { Input, PasswordInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { AuthScreen } from '../../components/auth/AuthScreen'
 import { colors, spacing } from '../../constants/theme'
+import { resolveAuthReturnPath } from '../../lib/authReturnTo'
 
 export default function LoginScreen() {
   const router = useRouter()
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,7 +30,7 @@ export default function LoginScreen() {
     setLoading(true)
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password)
-      router.replace('/(tabs)/' as any)
+      router.replace(resolveAuthReturnPath(returnTo) as never)
     } catch (e) {
       Alert.alert('Login Failed', getAuthErrorMessage(e))
     } finally {
@@ -63,7 +65,15 @@ export default function LoginScreen() {
         <Text style={styles.linkText}>Don't have an account? <Text style={styles.linkBold}>Register</Text></Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.link} onPress={() => router.push('/(auth)/guest' as any)}>
+      <TouchableOpacity
+        style={styles.link}
+        onPress={() =>
+          router.push({
+            pathname: '/(auth)/guest',
+            params: returnTo ? { returnTo } : undefined,
+          } as never)
+        }
+      >
         <Text style={styles.linkText}>Continue as <Text style={styles.linkBold}>Guest</Text></Text>
       </TouchableOpacity>
     </AuthScreen>
