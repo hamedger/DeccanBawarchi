@@ -59,18 +59,10 @@ export default function CheckoutIndex() {
       return
     }
 
-    if (!firebaseUser) {
+    const customerEmail = userProfile?.email?.trim() || firebaseUser?.email?.trim()
+    if (!firebaseUser || !customerEmail) {
       router.replace({
         pathname: '/(auth)/login',
-        params: { returnTo: CHECKOUT_RETURN_PATH },
-      } as never)
-      return
-    }
-
-    const customerEmail = userProfile?.email?.trim() || firebaseUser.email?.trim()
-    if (!customerEmail) {
-      router.replace({
-        pathname: '/(auth)/guest',
         params: { returnTo: CHECKOUT_RETURN_PATH },
       } as never)
       return
