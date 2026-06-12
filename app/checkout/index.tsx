@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, StyleSheet, Alert } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useCart } from '../../hooks/useCart'
@@ -8,26 +8,35 @@ import { FulfillmentSelector } from '../../components/cart/FulfillmentSelector'
 import { PickupScheduler } from '../../components/checkout/PickupScheduler'
 import { Input } from '../../components/ui/Input'
 import { formatPickupSchedule, isPickupScheduleValid } from '../../lib/services/pickupScheduling'
-import { submitOrder } from '../../lib/services/orderService'
 import { loyaltyDiscountCents } from '../../lib/services/loyaltyService'
+import {
+  redirectToCloverCheckout,
+  saveCheckoutContext,
+  startCloverCheckout,
+} from '../../lib/services/cloverCheckout'
 import { Button } from '../../components/ui/Button'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
 import { DELIVERY_ENABLED } from '../../constants/config'
+import { isApiConfigured } from '../../constants/api'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { LocationConfirmCard } from '../../components/location/LocationConfirmCard'
 import { formatLocationAddress } from '../../lib/locationUtils'
 import { confirmOrderLocation } from '../../lib/confirmOrderLocation'
+import { TAX_LABEL } from '../../lib/services/cartService'
+import { alertUser } from '../../lib/alertUser'
 
 export default function CheckoutIndex() {
   const router = useRouter()
   const cart = useCart()
-  const { firebaseUser } = useAuth()
-  const { location, locationId, locations, loading: locationsLoading, hasSelection } = useSelectedLocation()
+  const { firebaseUser, userProfile } = useAuth()
+  const { location, locationId, locations, loading: locationsLoading, hasSelection } =
+    useSelectedLocation()
   const [street, setStreet] = useState('123 Main St')
   const [city, setCity] = useState('Northville')
   const [zip, setZip] = useState('48167')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (cart.items.length === 0) {
     router.replace('/(tabs)/cart' as never)
@@ -42,17 +51,45 @@ export default function CheckoutIndex() {
       : isPickupScheduleValid(cart.pickupDate, cart.pickupTime))
 
   const handlePlaceOrder = async () => {
+    setError(null)
+
     if (!hasSelection || !location) {
-      Alert.alert('Select a location', 'Please choose which restaurant you are ordering from.')
+      alertUser('Select a location', 'Please choose which restaurant you are ordering from.')
       return
     }
 
     if (!firebaseUser) {
-      Alert.alert('Sign in required', 'Please sign in or continue as guest to place your order.', [
+      if (Platform.OS === 'web') {
+        const signIn = window.confirm(
+          'Sign in required to complete payment.\n\nOpen sign in now?',
+        )
+        if (signIn) router.push('/(auth)/login' as never)
+        return
+      }
+
+      alertUser('Sign in required', 'Please sign in or continue as guest to place your order.', [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Sign In', onPress: () => router.push('/(auth)/login' as never) },
         { text: 'Guest', onPress: () => router.push('/(auth)/guest' as never) },
       ])
+      return
+    }
+
+    const customerEmail = userProfile?.email?.trim() || firebaseUser.email?.trim()
+    if (!customerEmail) {
+      alertUser(
+        'Email required',
+        'Add an email on your profile or use guest checkout so we can send your receipt.',
+        [{ text: 'Guest Checkout', onPress: () => router.push('/(auth)/guest' as never) }],
+      )
+      return
+    }
+
+    if (!isApiConfigured()) {
+      alertUser(
+        'Payments unavailable',
+        'The payment server is not configured for this build. Contact support.',
+      )
       return
     }
 
@@ -61,16 +98,14 @@ export default function CheckoutIndex() {
 
     setLoading(true)
     const fulfillment = cart.fulfillmentType
-    const eta = String(cart.deliveryEtaMinutes)
     const pickupAddress = formatLocationAddress(location.address)
     const address = isDelivery ? `${street}, ${city}, MI ${zip}` : pickupAddress
     const pickupSchedule = isDelivery
       ? ''
       : formatPickupSchedule(cart.pickupDate, cart.pickupTime)
-    const total = String(cart.total)
 
     try {
-      const orderId = await submitOrder({
+      const { href } = await startCloverCheckout({
         items: cart.items,
         subtotal: cart.subtotal(),
         tax: cart.tax,
@@ -80,7 +115,7 @@ export default function CheckoutIndex() {
         total: cart.total,
         promoCode: cart.promoCode,
         promoDiscount: cart.promoDiscount,
-        loyaltyPointsUsed: cart.loyaltyPointsToRedeem,
+        loyaltyPointsToRedeem: cart.loyaltyPointsToRedeem,
         giftCardAmount: cart.giftCardAmount,
         fulfillmentType: fulfillment,
         deliveryAddress: isDelivery
@@ -96,23 +131,26 @@ export default function CheckoutIndex() {
           : null,
         notes: cart.notes,
         locationId,
+        customerName: userProfile?.displayName ?? firebaseUser.displayName ?? '',
+        customerPhone: userProfile?.phone ?? '',
+        customerEmail,
+        pickupDate: isDelivery ? undefined : cart.pickupDate,
+        pickupTime: isDelivery ? undefined : cart.pickupTime,
       })
 
-      cart.clearCart()
-      router.replace({
-        pathname: '/checkout/success',
-        params: {
-          orderId,
-          fulfillment,
-          eta,
-          address,
-          pickupSchedule,
-          total,
-        },
-      } as never)
+      saveCheckoutContext({
+        fulfillment,
+        address,
+        pickupSchedule,
+        total: String(cart.total),
+      })
+
+      redirectToCloverCheckout(href)
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'Could not place your order. Please try again.'
-      Alert.alert('Order Failed', message)
+      const message =
+        e instanceof Error ? e.message : 'Could not start payment. Please try again.'
+      setError(message)
+      alertUser('Checkout Failed', message)
     } finally {
       setLoading(false)
     }
@@ -126,14 +164,14 @@ export default function CheckoutIndex() {
     >
       <View style={styles.inner}>
         <Text style={styles.heading}>Checkout</Text>
-        <Text style={styles.subheading}>Review your order and place it — demo mode</Text>
+        <Text style={styles.subheading}>Review your order, then pay securely with Clover</Text>
 
-        <View style={styles.mockBanner}>
-          <Ionicons name="information-circle-outline" size={18} color={colors.gold} />
-          <Text style={styles.mockText}>
-            Mock checkout — no payment required. Clover payments connect at launch.
-          </Text>
-        </View>
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.error} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
 
         {location ? (
           <LocationConfirmCard
@@ -204,7 +242,7 @@ export default function CheckoutIndex() {
             ))}
             <View style={styles.divider} />
             <SummaryLine label="Subtotal" value={cart.subtotal()} />
-            <SummaryLine label="Tax" value={cart.tax} />
+            <SummaryLine label={TAX_LABEL} value={cart.tax} />
             <SummaryLine label="Service Fee" value={cart.serviceFee} />
             {isDelivery && <SummaryLine label="DoorDash Delivery" value={cart.deliveryFee} />}
             {cart.loyaltyPointsToRedeem > 0 && (
@@ -219,7 +257,7 @@ export default function CheckoutIndex() {
         </View>
 
         <Button
-          label={`Place Order · $${(cart.total / 100).toFixed(2)}`}
+          label={loading ? 'Starting payment…' : `Continue to Payment · $${(cart.total / 100).toFixed(2)}`}
           onPress={handlePlaceOrder}
           loading={loading}
           fullWidth
@@ -227,6 +265,14 @@ export default function CheckoutIndex() {
           disabled={!canPlace}
           style={{ marginTop: spacing.sm }}
         />
+
+        {!canPlace ? (
+          <Text style={styles.helperText}>
+            {!hasSelection
+              ? 'Select a restaurant location to continue.'
+              : 'Choose a pickup date and time to continue.'}
+          </Text>
+        ) : null}
       </View>
     </ScrollView>
   )
@@ -264,22 +310,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: spacing.xs,
   },
-  mockBanner: {
+  errorBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: 'rgba(212,175,55,0.08)',
+    backgroundColor: 'rgba(239,68,68,0.08)',
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.error,
     padding: spacing.sm,
   },
-  mockText: {
+  errorText: {
     flex: 1,
+    fontFamily: fonts.sans,
+    color: colors.error,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  helperText: {
     fontFamily: fonts.sans,
     color: colors.whiteMuted,
     fontSize: 12,
-    lineHeight: 18,
+    textAlign: 'center',
   },
   section: { gap: spacing.sm },
   sectionTitle: {

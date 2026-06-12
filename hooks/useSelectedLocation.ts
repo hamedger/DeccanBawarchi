@@ -35,6 +35,6 @@ export function useSelectedLocation() {
     locations,
     loading: loading || !hasHydrated,
     hasHydrated,
-    hasSelection: Boolean(location),
+    hasSelection: Boolean(selectedLocationId && (location ?? PICKABLE_LOCATIONS.some((l) => l.id === selectedLocationId))),
   }
 }

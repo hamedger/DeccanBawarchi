@@ -15,6 +15,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { FulfillmentSelector } from '../../components/cart/FulfillmentSelector'
 import { LoyaltyRedeem } from '../../components/cart/LoyaltyRedeem'
 import { loyaltyDiscountCents } from '../../lib/services/loyaltyService'
+import { TAX_LABEL } from '../../lib/services/cartService'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
 import { DELIVERY_ENABLED } from '../../constants/config'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
@@ -192,7 +193,7 @@ export default function CartScreen() {
             )}
 
             <SummaryRow label="Subtotal" value={cart.subtotal()} />
-            <SummaryRow label="Tax (6%)" value={cart.tax} />
+            <SummaryRow label={TAX_LABEL} value={cart.tax} />
             <SummaryRow label="Service Fee" value={cart.serviceFee} />
             {DELIVERY_ENABLED && cart.fulfillmentType === 'delivery' && (
               <SummaryRow

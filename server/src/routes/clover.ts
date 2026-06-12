@@ -40,7 +40,12 @@ cloverRouter.post('/checkout', requireAuth, async (req: AuthedRequest, res) => {
       notes = '',
       customerName = '',
       customerPhone = '',
+      customerEmail: bodyEmail = '',
+      pickupDate = '',
+      pickupTime = '',
     } = req.body ?? {}
+
+    const customerEmail = (bodyEmail || req.userEmail)?.trim()
 
     if (!locationId || typeof locationId !== 'string') {
       res.status(400).json({ error: 'locationId is required' })
@@ -52,7 +57,7 @@ cloverRouter.post('/checkout', requireAuth, async (req: AuthedRequest, res) => {
     const pending = await createPendingOrder({
       cloverMerchantId: clover.merchantId,
       uid,
-      customerEmail: req.userEmail,
+      customerEmail,
       customerName,
       customerPhone,
       items,
@@ -70,6 +75,8 @@ cloverRouter.post('/checkout', requireAuth, async (req: AuthedRequest, res) => {
       deliveryAddress,
       locationId,
       notes,
+      pickupDate,
+      pickupTime,
     })
 
     const session = await createCheckoutSession({

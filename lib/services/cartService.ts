@@ -1,6 +1,7 @@
 import { loyaltyDiscountCents } from './loyaltyService'
 
 export const TAX_RATE = 0.06
+export const TAX_LABEL = 'Michigan Tax (6%)'
 export const SERVICE_FEE_RATE = 0.03
 
 export interface OrderTotalsInput {

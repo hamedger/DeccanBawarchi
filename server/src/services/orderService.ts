@@ -42,6 +42,8 @@ export interface CreatePendingOrderInput {
   deliveryAddress?: DeliveryAddressInput | null
   locationId: string
   notes?: string
+  pickupDate?: string
+  pickupTime?: string
 }
 
 export interface CreatePendingOrderResult {
@@ -123,8 +125,8 @@ export async function createPendingOrder(
       giftCardAmount: input.giftCardAmount ?? 0,
       total: expectedTotal,
       fulfillmentType: input.fulfillmentType,
-      scheduledFor: null,
-      pickupTime: null,
+      scheduledFor: input.pickupDate || null,
+      pickupTime: input.pickupTime || null,
       deliveryAddress: input.deliveryAddress ?? null,
       status: 'pending',
       stripePaymentIntentId: '',

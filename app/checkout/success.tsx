@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useCartStore } from '../../store/cartStore'
 import { Button } from '../../components/ui/Button'
 import { HomeButton } from '../../components/navigation/HomeButton'
+import { clearCheckoutContext, readCheckoutContext } from '../../lib/services/cloverCheckout'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
@@ -22,12 +23,16 @@ export default function CheckoutSuccessScreen() {
 
   useEffect(() => {
     clearCart()
+    clearCheckoutContext()
   }, [clearCart])
 
-  const isDelivery = params.fulfillment === 'delivery'
+  const saved = readCheckoutContext()
+  const isDelivery = (params.fulfillment ?? saved?.fulfillment) === 'delivery'
   const orderId = params.orderId ?? `DB${Date.now().toString().slice(-6)}`
   const displayOrderId = orderId.length > 6 ? orderId.slice(-6).toUpperCase() : orderId
-  const total = params.total ? Number(params.total) : 0
+  const total = params.total ? Number(params.total) : saved?.total ? Number(saved.total) : 0
+  const address = params.address ?? saved?.address ?? '—'
+  const pickupSchedule = params.pickupSchedule ?? saved?.pickupSchedule
 
   return (
     <View style={styles.container}>
@@ -39,7 +44,7 @@ export default function CheckoutSuccessScreen() {
           <Ionicons name="checkmark" size={36} color={colors.background} />
         </View>
 
-        <Text style={styles.title}>Order Placed!</Text>
+        <Text style={styles.title}>Payment Confirmed!</Text>
         <Text style={styles.orderId}>Order #{displayOrderId}</Text>
 
         <View style={styles.detailCard}>
@@ -47,7 +52,7 @@ export default function CheckoutSuccessScreen() {
             icon={isDelivery ? 'bicycle' : 'bag-handle'}
             iconColor={isDelivery ? '#FF3008' : colors.gold}
             label={isDelivery ? 'DoorDash Delivery' : 'Restaurant Pickup'}
-            value={params.address ?? '—'}
+            value={address}
           />
           <DetailRow
             icon="time-outline"
@@ -55,12 +60,12 @@ export default function CheckoutSuccessScreen() {
             value={
               isDelivery
                 ? `~${params.eta ?? '30'} minutes`
-                : (params.pickupSchedule ?? `~${params.eta ?? '20'} minutes`)
+                : (pickupSchedule ?? `~${params.eta ?? '20'} minutes`)
             }
           />
           <DetailRow
             icon="card-outline"
-            label="Total charged (mock)"
+            label="Total charged"
             value={`$${(total / 100).toFixed(2)}`}
             highlight
           />
@@ -68,7 +73,7 @@ export default function CheckoutSuccessScreen() {
 
         {isDelivery ? (
           <Text style={styles.hint}>
-            A DoorDash driver will be dispatched when live payments are connected.
+            A DoorDash driver will be dispatched when delivery launches.
           </Text>
         ) : (
           <Text style={styles.hint}>
