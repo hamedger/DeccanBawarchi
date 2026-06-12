@@ -62,10 +62,19 @@ export default function RootLayout() {
           setAdmin(isAdminUser(firebaseUser, tokenResult.claims))
           try {
             const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
-            if (snap.exists()) setUserProfile(snap.data() as User)
-            else setUserProfile(null)
+            if (snap.exists()) {
+              setUserProfile(snap.data() as User)
+            } else {
+              const existing = useAuthStore.getState().userProfile
+              if (existing?.uid !== firebaseUser.uid) {
+                setUserProfile(null)
+              }
+            }
           } catch {
-            setUserProfile(null)
+            const existing = useAuthStore.getState().userProfile
+            if (existing?.uid !== firebaseUser.uid) {
+              setUserProfile(null)
+            }
           }
         } else {
           setUserProfile(null)

@@ -14,8 +14,7 @@ import { alertUser } from '../../lib/alertUser'
 import { getAuthErrorMessage } from '../../lib/authErrors'
 import { resolveAuthReturnPath } from '../../lib/authReturnTo'
 import { signInForGuestCheckout } from '../../lib/guestAuth'
-import { isGuestProfileWriteError, patchGuestProfile } from '../../lib/guestProfile'
-import { getFirestoreErrorMessage } from '../../lib/firestoreErrors'
+import { ensureGuestProfile } from '../../lib/guestProfile'
 
 function buildGuestProfile(uid: string, name: string, email: string, phone: string): User {
   return {
@@ -66,31 +65,22 @@ export default function GuestScreen() {
       setFirebaseUser(cred.user)
 
       const guestProfile = buildGuestProfile(cred.user.uid, name, email, phone)
+      const saved = await ensureGuestProfile(cred.user.uid, {
+        email: email.trim(),
+        phone: phone.trim(),
+        displayName: name.trim(),
+      })
 
-      try {
-        await patchGuestProfile(cred.user.uid, {
-          email: email.trim(),
-          phone: phone.trim(),
-          displayName: name.trim(),
-        })
+      if (saved) {
         const snap = await getDoc(doc(db, 'users', cred.user.uid))
-        if (snap.exists()) {
-          setUserProfile(snap.data() as User)
-        } else {
-          setUserProfile(guestProfile)
-        }
-      } catch (profileError) {
-        if (isGuestProfileWriteError(profileError)) {
-          setUserProfile(guestProfile)
-        } else {
-          throw profileError
-        }
+        setUserProfile(snap.exists() ? (snap.data() as User) : guestProfile)
+      } else {
+        setUserProfile(guestProfile)
       }
 
       router.replace(resolveAuthReturnPath(returnTo) as never)
     } catch (e: unknown) {
-      const message =
-        isGuestProfileWriteError(e) ? getFirestoreErrorMessage(e) : getAuthErrorMessage(e)
+      const message = getAuthErrorMessage(e)
       setFormError(message)
       setShowSignInLink(message.includes('already exists'))
       alertUser('Guest Checkout Failed', message)
