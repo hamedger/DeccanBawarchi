@@ -1,11 +1,15 @@
+/** Render Clover checkout API — override with EXPO_PUBLIC_API_URL for local/staging. */
+export const DEFAULT_API_URL = 'https://deccanbawarchi-api.onrender.com'
+
+function resolveApiUrl(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_API_URL?.trim()
+  return fromEnv || DEFAULT_API_URL
+}
+
 export function getApiUrl(): string {
-  const url = process.env.EXPO_PUBLIC_API_URL?.trim()
-  if (!url) {
-    throw new Error('Payment is not configured. Set EXPO_PUBLIC_API_URL.')
-  }
-  return url.replace(/\/$/, '')
+  return resolveApiUrl().replace(/\/$/, '')
 }
 
 export function isApiConfigured(): boolean {
-  return Boolean(process.env.EXPO_PUBLIC_API_URL?.trim())
+  return resolveApiUrl().length > 0
 }
