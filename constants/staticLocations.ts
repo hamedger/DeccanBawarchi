@@ -6,8 +6,8 @@ export const STATIC_LOCATIONS: Location[] = [
     id: 'northville-mi',
     name: 'Deccan Bawarchi — Northville',
     address: {
-      street: '17933 Haggerty Road',
-      city: 'Northville',
+      street: '17933 Haggerty Rd',
+      city: 'Township of Northville',
       state: 'MI',
       zip: '48168',
       country: 'US',
@@ -27,7 +27,7 @@ export const STATIC_LOCATIONS: Location[] = [
     id: 'farmington-hills-mi',
     name: 'Deccan Bawarchi — Farmington Hills',
     address: {
-      street: '24234 Orchard Lake Road',
+      street: '24234 Orchard Lake Rd',
       city: 'Farmington Hills',
       state: 'MI',
       zip: '48336',

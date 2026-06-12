@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, Pressable } from 'react-native'
 import { Image } from 'expo-image'
 import { LinearGradient } from 'expo-linear-gradient'
-import { HERO_SPLASH_DISHES, HERO_SPLASH_FALLBACK, HERO_SPLASH_INTERVAL_MS } from '../../constants/heroSplash'
+import { HERO_SPLASH_DISHES, HERO_SPLASH_INTERVAL_MS } from '../../constants/heroSplash'
 import { colors, spacing, fonts } from '../../constants/theme'
 
 const PHOTO_ASPECT = 16 / 9
@@ -14,13 +14,8 @@ interface HeroSplashProps {
 
 export function HeroSplash({ width }: HeroSplashProps) {
   const [activeIndex, setActiveIndex] = useState(0)
-  const [imageUrl, setImageUrl] = useState(HERO_SPLASH_DISHES[0].imageUrl)
   const photoHeight = width / PHOTO_ASPECT
   const dish = HERO_SPLASH_DISHES[activeIndex]
-
-  useEffect(() => {
-    setImageUrl(dish.imageUrl)
-  }, [dish.imageUrl])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -39,11 +34,10 @@ export function HeroSplash({ width }: HeroSplashProps) {
     >
       <Image
         key={dish.id}
-        source={{ uri: imageUrl }}
+        source={dish.source}
         style={styles.photo}
         contentFit="cover"
         transition={700}
-        onError={() => setImageUrl(HERO_SPLASH_FALLBACK)}
         accessibilityIgnoresInvertColors
       />
 

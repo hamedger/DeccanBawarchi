@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { DEFAULT_LOCATION_ID } from '../../constants/config'
+import { STATIC_LOCATIONS } from '../../constants/staticLocations'
 import { useLocationStore } from '../../store/locationStore'
-import { useLocations } from '../../hooks/useLocations'
 import { useLocationSelection } from '../../hooks/useLocationSelection'
+import { isLocationActive } from '../../lib/locationUtils'
 import { LocationPickerModal } from './LocationPickerModal'
+
+const PICKABLE_LOCATIONS = STATIC_LOCATIONS.filter(isLocationActive)
 
 interface LocationGateProps {
   children: React.ReactNode
@@ -12,7 +16,6 @@ export function LocationGate({ children }: LocationGateProps) {
   const hydrate = useLocationStore((s) => s.hydrate)
   const hasHydrated = useLocationStore((s) => s.hasHydrated)
   const selectedLocationId = useLocationStore((s) => s.selectedLocationId)
-  const { locations, loading } = useLocations()
   const { selectLocation, applyLocation } = useLocationSelection()
   const [dismissed, setDismissed] = useState(false)
 
@@ -21,30 +24,28 @@ export function LocationGate({ children }: LocationGateProps) {
   }, [hydrate])
 
   const validSelection = useMemo(
-    () => Boolean(selectedLocationId && locations.some((l) => l.id === selectedLocationId)),
-    [locations, selectedLocationId],
+    () => Boolean(selectedLocationId && PICKABLE_LOCATIONS.some((l) => l.id === selectedLocationId)),
+    [selectedLocationId],
   )
 
   useEffect(() => {
-    if (!hasHydrated || loading || locations.length === 0) return
+    if (!hasHydrated || validSelection) return
 
-    if (validSelection) return
+    const defaultLocation =
+      PICKABLE_LOCATIONS.find((l) => l.id === DEFAULT_LOCATION_ID) ?? PICKABLE_LOCATIONS[0]
+    if (defaultLocation) applyLocation(defaultLocation.id)
+  }, [hasHydrated, validSelection, applyLocation])
 
-    if (locations.length === 1) {
-      applyLocation(locations[0].id)
-    }
-  }, [hasHydrated, loading, locations, validSelection, applyLocation])
-
-  const mustPick = hasHydrated && !loading && locations.length > 1 && !validSelection && !dismissed
+  const mustPick =
+    hasHydrated && PICKABLE_LOCATIONS.length > 1 && !validSelection && !dismissed
 
   return (
     <>
       {children}
       <LocationPickerModal
         visible={mustPick}
-        locations={locations}
+        locations={PICKABLE_LOCATIONS}
         selectedLocationId={selectedLocationId}
-        loading={loading}
         title="Select your location"
         required
         onSelect={(id) => {

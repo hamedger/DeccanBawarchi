@@ -1,64 +1,64 @@
+import type { ImageSourcePropType } from 'react-native'
+
 export interface HeroSplashDish {
   id: string
+  /** Human-readable label derived from the image filename */
   name: string
-  imageUrl: string
+  source: ImageSourcePropType
 }
 
-/** Verified working URLs — broken Unsplash/TheMealDB links removed */
+/** Turn a filename like `Boneless_Chicken_Dum_Biryani.png` into a slide label */
+export function heroSplashLabelFromFilename(filename: string): string {
+  const base = filename.replace(/\.[^.]+$/, '')
+  return base
+    .replace(/_/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s+-\s*$/g, '')
+    .trim()
+}
+
+const HERO_IMAGES = [
+  { id: 'boneless-chicken-dum-biryani', file: 'Boneless_Chicken_Dum_Biryani.png' },
+  { id: 'hyderabadi-goat-dum-biryani', file: 'hyderbadi_goat_dum_biryani.png' },
+  { id: 'chicken-majestic', file: 'Chicken_Majestic.png' },
+  { id: 'chicken-lollipop', file: 'Chicken_Lollipop.png' },
+  { id: 'veg-samosa', file: 'Veg_Samosa__2_Pieces__.png' },
+  { id: 'chilli-gobi', file: 'Chilli_Gobi.png' },
+] as const
+
 export const HERO_SPLASH_DISHES: HeroSplashDish[] = [
   {
-    id: 'hyderabadi-dum-biryani',
-    name: 'Hyderabadi Dum Biryani',
-    imageUrl: 'https://www.themealdb.com/images/media/meals/xrttsx1487339558.jpg',
+    id: HERO_IMAGES[0].id,
+    name: heroSplashLabelFromFilename(HERO_IMAGES[0].file),
+    source: require('../assets/hero/Boneless_Chicken_Dum_Biryani.png'),
   },
   {
-    id: 'mutton-haleem',
-    name: 'Haleem',
-    imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641',
+    id: HERO_IMAGES[1].id,
+    name: 'Goat Dum Biryani',
+    source: require('../assets/hero/hyderbadi_goat_dum_biryani.png'),
   },
   {
-    id: 'pathar-ka-gosht',
-    name: 'Pathar Ka Gosht',
-    imageUrl: 'https://images.unsplash.com/photo-1544025162-d76694265947',
+    id: HERO_IMAGES[2].id,
+    name: heroSplashLabelFromFilename(HERO_IMAGES[2].file),
+    source: require('../assets/hero/Chicken_Majestic.png'),
   },
   {
-    id: 'mirchi-ka-salan',
-    name: 'Mirchi Ka Salan',
-    imageUrl: 'https://www.themealdb.com/images/media/meals/sstssx1487349585.jpg',
+    id: HERO_IMAGES[3].id,
+    name: heroSplashLabelFromFilename(HERO_IMAGES[3].file),
+    source: require('../assets/hero/Chicken_Lollipop.png'),
   },
   {
-    id: 'lukhmi',
-    name: 'Lukhmi',
-    imageUrl: 'https://www.themealdb.com/images/media/meals/1529444113.jpg',
+    id: HERO_IMAGES[4].id,
+    name: 'Samosa',
+    source: require('../assets/hero/Veg_Samosa__2_Pieces__.png'),
   },
   {
-    id: 'bagara-baingan',
-    name: 'Bagara Baingan',
-    imageUrl: 'https://www.themealdb.com/images/media/meals/sywrsu1511463066.jpg',
-  },
-  {
-    id: 'mutton-marag',
-    name: 'Marag',
-    imageUrl: 'https://images.unsplash.com/photo-1547592166-23ac45744acd',
-  },
-  {
-    id: 'double-ka-meetha',
-    name: 'Double Ka Meetha',
-    imageUrl: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587',
-  },
-  {
-    id: 'qubani-ka-meetha',
-    name: 'Qubani Ka Meetha',
-    imageUrl: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb',
-  },
-  {
-    id: 'osmania-biscuits',
-    name: 'Osmania Biscuits',
-    imageUrl: 'https://images.unsplash.com/photo-1617093727343-374698b1b08d',
+    id: HERO_IMAGES[5].id,
+    name: heroSplashLabelFromFilename(HERO_IMAGES[5].file),
+    source: require('../assets/hero/Chilli_Gobi.png'),
   },
 ]
 
-export const HERO_SPLASH_FALLBACK =
-  'https://www.themealdb.com/images/media/meals/xrttsx1487339558.jpg'
+export const HERO_SPLASH_FALLBACK = HERO_SPLASH_DISHES[0].source
 
 export const HERO_SPLASH_INTERVAL_MS = 4500

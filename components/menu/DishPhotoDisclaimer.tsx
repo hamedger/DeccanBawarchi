@@ -5,11 +5,20 @@ import { colors, fonts, spacing } from '../../constants/theme'
 
 type DishPhotoDisclaimerProps = {
   style?: StyleProp<TextStyle>
+  compact?: boolean
 }
 
-export function DishPhotoDisclaimer({ style }: DishPhotoDisclaimerProps) {
+export function DishPhotoDisclaimer({ style, compact = false }: DishPhotoDisclaimerProps) {
   return (
-    <Text style={[styles.disclaimer, Platform.OS === 'web' && styles.disclaimerWeb, style]}>
+    <Text
+      style={[
+        styles.disclaimer,
+        compact && styles.disclaimerCompact,
+        Platform.OS === 'web' && !compact && styles.disclaimerWeb,
+        style,
+      ]}
+    >
+      <Text style={[styles.infoLabel, compact && styles.infoLabelCompact]}>Info: </Text>
       {DISH_PHOTO_DISCLAIMER}
     </Text>
   )
@@ -17,18 +26,26 @@ export function DishPhotoDisclaimer({ style }: DishPhotoDisclaimerProps) {
 
 const styles = StyleSheet.create({
   disclaimer: {
-    fontFamily: fonts.displayLight,
-    fontStyle: 'italic',
-    color: colors.goldLight,
-    fontSize: 14,
-    lineHeight: 22,
-    marginTop: spacing.sm,
-    opacity: 0.85,
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: spacing.xs,
+  },
+  disclaimerCompact: {
+    fontSize: 9,
+    lineHeight: 13,
+    marginTop: 4,
   },
   disclaimerWeb: {
-    fontFamily: '"Dancing Script", cursive',
-    fontStyle: 'normal',
-    fontSize: 17,
-    lineHeight: 24,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  infoLabel: {
+    fontFamily: fonts.sansMedium,
+    color: colors.goldLight,
+  },
+  infoLabelCompact: {
+    fontSize: 9,
   },
 })

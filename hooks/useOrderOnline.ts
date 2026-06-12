@@ -18,6 +18,16 @@ export function useOrderOnline() {
   const startOrder = useCallback(() => {
     if (loading) return
 
+    const currentId = useLocationStore.getState().selectedLocationId
+    const hasValidSelection = Boolean(
+      currentId && locations.some((location) => location.id === currentId),
+    )
+
+    if (hasValidSelection) {
+      goToMenu()
+      return
+    }
+
     if (locations.length <= 1) {
       if (locations[0]) selectLocation(locations[0].id, goToMenu)
       else goToMenu()

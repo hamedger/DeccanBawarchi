@@ -5,17 +5,17 @@ import { Platform, View, useWindowDimensions } from 'react-native'
 import { Logo } from '../../components/brand/Logo'
 import { TabHomeIcon } from '../../components/navigation/TabHomeIcon'
 import { blurActiveElementOnWeb } from '../../lib/a11y'
-import { colors, fonts } from '../../constants/theme'
+import { colors, fonts, spacing } from '../../constants/theme'
 import { useCartStore } from '../../store/cartStore'
 import { CartBadge } from '../../components/cart/CartBadge'
 import { LocationGate } from '../../components/location/LocationGate'
-import { LocationHeaderButton } from '../../components/location/LocationHeaderButton'
+import { HeaderPhones } from '../../components/navigation/HeaderPhones'
 
 export default function TabLayout() {
   const itemCount = useCartStore((s) => s.itemCount())
   const { width } = useWindowDimensions()
   const logoHeight =
-    Platform.OS === 'web' ? Math.min(64, Math.max(52, Math.round(width * 0.042))) : 44
+    Platform.OS === 'web' ? Math.min(76, Math.max(60, Math.round(width * 0.05) + 4)) : 56
 
   return (
     <LocationGate>
@@ -39,12 +39,16 @@ export default function TabLayout() {
         tabBarLabelStyle: { fontFamily: fonts.sansMedium, fontSize: 10 },
         headerStyle: {
           backgroundColor: colors.background,
-          ...(Platform.OS === 'web' ? { height: logoHeight + 20 } : null),
+          ...(Platform.OS === 'web' ? { height: logoHeight + 24 } : null),
         },
         headerShadowVisible: false,
-        headerTitle: () => <Logo variant="full" height={logoHeight} />,
-        headerTitleAlign: 'center',
-        headerRight: () => <LocationHeaderButton />,
+        headerTitle: '',
+        headerLeft: () => (
+          <View style={{ paddingLeft: spacing.md }}>
+            <Logo variant="full" height={logoHeight} />
+          </View>
+        ),
+        headerRight: () => <HeaderPhones />,
       }}
     >
       <Tabs.Screen
@@ -59,6 +63,13 @@ export default function TabLayout() {
         options={{
           title: 'Menu',
           tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="locations"
+        options={{
+          title: 'Our Locations',
+          tabBarIcon: ({ color, size }) => <Ionicons name="location-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

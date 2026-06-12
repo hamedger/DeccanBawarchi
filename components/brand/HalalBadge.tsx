@@ -3,16 +3,25 @@ import { View, Text, StyleSheet } from 'react-native'
 import { colors } from '../../constants/theme'
 
 interface HalalBadgeProps {
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg' | 'xl'
+  showPercent?: boolean
 }
 
-export function HalalBadge({ size = 'md' }: HalalBadgeProps) {
-  const padding = size === 'sm' ? { horizontal: 8, vertical: 3 } : size === 'lg' ? { horizontal: 16, vertical: 8 } : { horizontal: 12, vertical: 5 }
-  const fontSize = size === 'sm' ? 9 : size === 'lg' ? 14 : 11
+export function HalalBadge({ size = 'md', showPercent = false }: HalalBadgeProps) {
+  const padding =
+    size === 'sm'
+      ? { horizontal: 8, vertical: 3 }
+      : size === 'xl'
+        ? { horizontal: 20, vertical: 10 }
+        : size === 'lg'
+          ? { horizontal: 16, vertical: 8 }
+          : { horizontal: 12, vertical: 5 }
+  const fontSize = size === 'sm' ? 9 : size === 'xl' ? 18 : size === 'lg' ? 14 : 11
+  const label = showPercent ? '☽ 100% ZABIHA HALAL' : '☽ ZABIHA HALAL'
 
   return (
     <View style={[styles.badge, { paddingHorizontal: padding.horizontal, paddingVertical: padding.vertical }]}>
-      <Text style={[styles.text, { fontSize }]}>☽ ZABIHA HALAL</Text>
+      <Text style={[styles.text, { fontSize }]}>{label}</Text>
     </View>
   )
 }

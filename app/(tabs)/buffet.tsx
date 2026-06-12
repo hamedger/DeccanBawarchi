@@ -31,8 +31,8 @@ export default function BuffetScreen() {
   const {
     isOpen,
     currentSession,
-    lunchPrice,
-    dinnerPrice,
+    weekdayPrice,
+    weekendPrice,
     nextSessionLabel,
     countdownMinutes,
     todaysDishes,
@@ -74,7 +74,7 @@ export default function BuffetScreen() {
         <View style={styles.priceCard}>
           <Text style={styles.priceEyebrow}>Weekday</Text>
           <Text style={styles.priceDays}>Monday – Friday</Text>
-          <Text style={styles.priceValue}>{formatCents(lunchPrice)}</Text>
+          <Text style={styles.priceValue}>{formatCents(weekdayPrice)}</Text>
           <Text style={styles.priceUnit}>per guest</Text>
           <Text style={styles.priceHours}>11 AM – 3 PM · 5 PM – 9 PM</Text>
           <TouchableOpacity style={styles.outlineBtn} onPress={() => router.push('/reservation' as never)}>
@@ -86,7 +86,7 @@ export default function BuffetScreen() {
           <Text style={styles.featuredTag}>Popular</Text>
           <Text style={styles.priceEyebrow}>Weekend</Text>
           <Text style={styles.priceDays}>Saturday</Text>
-          <Text style={[styles.priceValue, styles.priceValueGold]}>{formatCents(dinnerPrice)}</Text>
+          <Text style={[styles.priceValue, styles.priceValueGold]}>{formatCents(weekendPrice)}</Text>
           <Text style={styles.priceUnit}>per guest</Text>
           <Text style={styles.priceHours}>11 AM – 3 PM · 5 PM – 9 PM</Text>
           <TouchableOpacity style={styles.goldBtn} onPress={() => router.push('/reservation' as never)}>

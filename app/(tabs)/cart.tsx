@@ -16,10 +16,12 @@ import { FulfillmentSelector } from '../../components/cart/FulfillmentSelector'
 import { LoyaltyRedeem } from '../../components/cart/LoyaltyRedeem'
 import { loyaltyDiscountCents } from '../../lib/services/loyaltyService'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
+import { DELIVERY_ENABLED } from '../../constants/config'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { Button } from '../../components/ui/Button'
 import { OrderItem } from '../../types/order'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
+import { formatLocationAddress } from '../../lib/locationUtils'
 
 function CartRow({
   item,
@@ -164,6 +166,7 @@ export default function CartScreen() {
           <FulfillmentSelector
             value={cart.fulfillmentType}
             onChange={cart.setFulfillmentType}
+            pickupAddress={location ? formatLocationAddress(location.address) : undefined}
           />
 
           <View style={styles.summaryCard}>
@@ -191,7 +194,7 @@ export default function CartScreen() {
             <SummaryRow label="Subtotal" value={cart.subtotal()} />
             <SummaryRow label="Tax (6%)" value={cart.tax} />
             <SummaryRow label="Service Fee" value={cart.serviceFee} />
-            {cart.fulfillmentType === 'delivery' && (
+            {DELIVERY_ENABLED && cart.fulfillmentType === 'delivery' && (
               <SummaryRow
                 label="DoorDash Delivery"
                 value={cart.deliveryFee}
@@ -218,7 +221,7 @@ export default function CartScreen() {
           </View>
           <Button
             label="Checkout"
-            onPress={() => router.push('/checkout/index' as never)}
+            onPress={() => router.push('/checkout' as never)}
             size="lg"
             style={styles.checkoutBtn}
           />

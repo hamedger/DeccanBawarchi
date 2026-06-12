@@ -29,4 +29,4 @@ export const ALLERGENS = [
 
 /** Shown below dish descriptions — photo is illustrative, not exact plating. */
 export const DISH_PHOTO_DISCLAIMER =
-  'This photo is our closest representation of the dish; your order may vary in appearance.'
+  'The product image is for illustrative purposes only. The actual product may differ in appearance.'

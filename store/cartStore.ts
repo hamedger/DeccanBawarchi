@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { FulfillmentType, Order, OrderItem } from '../types/order'
+import { DELIVERY_ENABLED } from '../constants/config'
 import {
   MOCK_DELIVERY_FEE_CENTS,
   MOCK_DELIVERY_ETA_MINUTES,
@@ -44,9 +45,9 @@ interface CartState {
 
 export const useCartStore = create<CartState>((set, get) => ({
   items: [],
-  fulfillmentType: 'delivery',
-  deliveryFee: MOCK_DELIVERY_FEE_CENTS,
-  deliveryEtaMinutes: MOCK_DELIVERY_ETA_MINUTES,
+  fulfillmentType: DELIVERY_ENABLED ? 'delivery' : 'pickup',
+  deliveryFee: DELIVERY_ENABLED ? MOCK_DELIVERY_FEE_CENTS : 0,
+  deliveryEtaMinutes: DELIVERY_ENABLED ? MOCK_DELIVERY_ETA_MINUTES : MOCK_PICKUP_ETA_MINUTES,
   pickupDate: getDefaultPickupDate(),
   pickupTime: PICKUP_ASAP,
   promoCode: '',
@@ -100,7 +101,8 @@ export const useCartStore = create<CartState>((set, get) => ({
   setTip: (tip) => set({ tip }),
   setNotes: (notes) => set({ notes }),
 
-  setFulfillmentType: (type) =>
+  setFulfillmentType: (type) => {
+    if (type === 'delivery' && !DELIVERY_ENABLED) return
     set({
       fulfillmentType: type,
       deliveryFee: type === 'delivery' ? MOCK_DELIVERY_FEE_CENTS : 0,
@@ -108,7 +110,8 @@ export const useCartStore = create<CartState>((set, get) => ({
       ...(type === 'pickup'
         ? { pickupDate: getDefaultPickupDate(), pickupTime: PICKUP_ASAP }
         : {}),
-    }),
+    })
+  },
 
   setPickupDate: (date) => set({ pickupDate: date }),
   setPickupTime: (time) => set({ pickupTime: time }),
@@ -116,9 +119,9 @@ export const useCartStore = create<CartState>((set, get) => ({
   clearCart: () =>
     set({
       items: [],
-      fulfillmentType: 'delivery',
-      deliveryFee: MOCK_DELIVERY_FEE_CENTS,
-      deliveryEtaMinutes: MOCK_DELIVERY_ETA_MINUTES,
+      fulfillmentType: DELIVERY_ENABLED ? 'delivery' : 'pickup',
+      deliveryFee: DELIVERY_ENABLED ? MOCK_DELIVERY_FEE_CENTS : 0,
+      deliveryEtaMinutes: DELIVERY_ENABLED ? MOCK_DELIVERY_ETA_MINUTES : MOCK_PICKUP_ETA_MINUTES,
       pickupDate: getDefaultPickupDate(),
       pickupTime: PICKUP_ASAP,
       promoCode: '',
@@ -130,13 +133,15 @@ export const useCartStore = create<CartState>((set, get) => ({
       notes: '',
     }),
 
-  loadFromOrder: (order) =>
+  loadFromOrder: (order) => {
+    const fulfillmentType =
+      order.fulfillmentType === 'delivery' && !DELIVERY_ENABLED ? 'pickup' : order.fulfillmentType
     set({
       items: order.items.map((item) => ({ ...item })),
-      fulfillmentType: order.fulfillmentType,
-      deliveryFee: order.fulfillmentType === 'delivery' ? MOCK_DELIVERY_FEE_CENTS : 0,
+      fulfillmentType,
+      deliveryFee: fulfillmentType === 'delivery' ? MOCK_DELIVERY_FEE_CENTS : 0,
       deliveryEtaMinutes:
-        order.fulfillmentType === 'delivery' ? MOCK_DELIVERY_ETA_MINUTES : MOCK_PICKUP_ETA_MINUTES,
+        fulfillmentType === 'delivery' ? MOCK_DELIVERY_ETA_MINUTES : MOCK_PICKUP_ETA_MINUTES,
       pickupDate: getDefaultPickupDate(),
       pickupTime: PICKUP_ASAP,
       promoCode: '',
@@ -146,7 +151,8 @@ export const useCartStore = create<CartState>((set, get) => ({
       giftCardAmount: 0,
       tip: order.tip ?? 0,
       notes: order.notes ?? '',
-    }),
+    })
+  },
 
   subtotal: () => get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
   itemCount: () => get().items.reduce((sum, i) => sum + i.quantity, 0),

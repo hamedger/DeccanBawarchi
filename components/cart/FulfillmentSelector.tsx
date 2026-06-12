@@ -2,7 +2,7 @@ import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { FulfillmentType } from '../../types/order'
-import { DELIVERY_RADIUS_MILES, RESTAURANT_ADDRESS } from '../../constants/config'
+import { DELIVERY_ENABLED, DELIVERY_RADIUS_MILES, RESTAURANT_ADDRESS } from '../../constants/config'
 import {
   MOCK_DELIVERY_FEE_CENTS,
   MOCK_DELIVERY_ETA_MINUTES,
@@ -13,40 +13,62 @@ import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 interface FulfillmentSelectorProps {
   value: FulfillmentType
   onChange: (type: FulfillmentType) => void
+  pickupAddress?: string
 }
 
 function formatFee(cents: number) {
   return cents === 0 ? 'Free' : `$${(cents / 100).toFixed(2)}`
 }
 
-export function FulfillmentSelector({ value, onChange }: FulfillmentSelectorProps) {
+export function FulfillmentSelector({ value, onChange, pickupAddress }: FulfillmentSelectorProps) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>How would you like your order?</Text>
 
       <TouchableOpacity
-        style={[styles.card, value === 'delivery' && styles.cardActive]}
-        onPress={() => onChange('delivery')}
-        activeOpacity={0.8}
+        style={[
+          styles.card,
+          value === 'delivery' && styles.cardActive,
+          !DELIVERY_ENABLED && styles.cardDisabled,
+        ]}
+        onPress={() => DELIVERY_ENABLED && onChange('delivery')}
+        activeOpacity={DELIVERY_ENABLED ? 0.8 : 1}
+        disabled={!DELIVERY_ENABLED}
       >
         <View style={styles.cardHeader}>
           <View style={[styles.iconWrap, styles.deliveryIcon]}>
             <Ionicons name="bicycle" size={20} color="#FF3008" />
           </View>
           <View style={styles.cardTitles}>
-            <Text style={styles.cardTitle}>DoorDash Delivery</Text>
-            <Text style={styles.cardBadge}>Powered by DoorDash Drive</Text>
+            <Text style={[styles.cardTitle, !DELIVERY_ENABLED && styles.cardTitleMuted]}>
+              DoorDash Delivery
+            </Text>
+            {DELIVERY_ENABLED ? (
+              <Text style={styles.cardBadge}>Powered by DoorDash Drive</Text>
+            ) : (
+              <Text style={styles.comingSoonBadge}>Coming Soon</Text>
+            )}
           </View>
-          {value === 'delivery' ? (
+          {DELIVERY_ENABLED && value === 'delivery' ? (
             <Ionicons name="checkmark-circle" size={22} color={colors.gold} />
           ) : (
             <View style={styles.radio} />
           )}
         </View>
-        <Text style={styles.cardMeta}>
-          {formatFee(MOCK_DELIVERY_FEE_CENTS)} delivery fee · Est. {MOCK_DELIVERY_ETA_MINUTES} min
-        </Text>
-        <Text style={styles.cardHint}>Delivered hot to your door within {DELIVERY_RADIUS_MILES} miles</Text>
+        {DELIVERY_ENABLED ? (
+          <>
+            <Text style={styles.cardMeta}>
+              {formatFee(MOCK_DELIVERY_FEE_CENTS)} delivery fee · Est. {MOCK_DELIVERY_ETA_MINUTES} min
+            </Text>
+            <Text style={styles.cardHint}>
+              Delivered hot to your door within {DELIVERY_RADIUS_MILES} miles
+            </Text>
+          </>
+        ) : (
+          <Text style={styles.cardHint}>
+            DoorDash delivery is coming in a future update. Pickup is available now.
+          </Text>
+        )}
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -69,7 +91,9 @@ export function FulfillmentSelector({ value, onChange }: FulfillmentSelectorProp
           )}
         </View>
         <Text style={styles.cardMeta}>Schedule date and time at checkout</Text>
-        <Text style={styles.cardHint} numberOfLines={2}>{RESTAURANT_ADDRESS}</Text>
+        <Text style={styles.cardHint} numberOfLines={2}>
+          {pickupAddress ?? RESTAURANT_ADDRESS}
+        </Text>
       </TouchableOpacity>
     </View>
   )
@@ -95,6 +119,9 @@ const styles = StyleSheet.create({
     borderColor: colors.gold,
     backgroundColor: 'rgba(212,175,55,0.06)',
   },
+  cardDisabled: {
+    opacity: 0.65,
+  },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -115,11 +142,22 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 15,
   },
+  cardTitleMuted: {
+    color: colors.whiteMuted,
+  },
   cardBadge: {
     fontFamily: fonts.sans,
     color: colors.whiteMuted,
     fontSize: 11,
     marginTop: 2,
+  },
+  comingSoonBadge: {
+    fontFamily: fonts.sansBold,
+    color: colors.gold,
+    fontSize: 11,
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   radio: {
     width: 20,

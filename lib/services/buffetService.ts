@@ -49,12 +49,13 @@ export function computeBuffetStatus({
   const isBuffetDay = BUFFET_DAYS.includes(dayOfWeek)
   const weekend = isWeekendDay(detroitNow)
 
-  const lunchPrice =
-    config?.weekdayLunchPrice ??
-    (weekend ? BUFFET_PRICING.weekend.lunch : BUFFET_PRICING.weekday.lunch)
-  const dinnerPrice =
-    config?.weekdayDinnerPrice ??
-    (weekend ? BUFFET_PRICING.weekend.dinner : BUFFET_PRICING.weekday.dinner)
+  const weekdayLunchPrice = config?.weekdayLunchPrice ?? BUFFET_PRICING.weekday.lunch
+  const weekdayDinnerPrice = config?.weekdayDinnerPrice ?? BUFFET_PRICING.weekday.dinner
+  const weekendLunchPrice = config?.weekendLunchPrice ?? BUFFET_PRICING.weekend.lunch
+  const weekendDinnerPrice = config?.weekendDinnerPrice ?? BUFFET_PRICING.weekend.dinner
+
+  const lunchPrice = weekend ? weekendLunchPrice : weekdayLunchPrice
+  const dinnerPrice = weekend ? weekendDinnerPrice : weekdayDinnerPrice
 
   let currentSession: 'lunch' | 'dinner' | null = null
   let isOpen = false
@@ -109,6 +110,8 @@ export function computeBuffetStatus({
     isWeekend: weekend,
     lunchPrice,
     dinnerPrice,
+    weekdayPrice: weekdayLunchPrice,
+    weekendPrice: weekendLunchPrice,
     nextSessionLabel,
     countdownMinutes,
     todaysDishes,

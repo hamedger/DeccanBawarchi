@@ -12,10 +12,12 @@ import { submitOrder } from '../../lib/services/orderService'
 import { loyaltyDiscountCents } from '../../lib/services/loyaltyService'
 import { Button } from '../../components/ui/Button'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
+import { DELIVERY_ENABLED } from '../../constants/config'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { LocationConfirmCard } from '../../components/location/LocationConfirmCard'
 import { formatLocationAddress } from '../../lib/locationUtils'
+import { confirmOrderLocation } from '../../lib/confirmOrderLocation'
 
 export default function CheckoutIndex() {
   const router = useRouter()
@@ -32,7 +34,7 @@ export default function CheckoutIndex() {
     return null
   }
 
-  const isDelivery = cart.fulfillmentType === 'delivery'
+  const isDelivery = DELIVERY_ENABLED && cart.fulfillmentType === 'delivery'
   const canPlace =
     hasSelection &&
     (isDelivery
@@ -53,6 +55,9 @@ export default function CheckoutIndex() {
       ])
       return
     }
+
+    const confirmed = await confirmOrderLocation(location)
+    if (!confirmed) return
 
     setLoading(true)
     const fulfillment = cart.fulfillmentType
@@ -126,7 +131,7 @@ export default function CheckoutIndex() {
         <View style={styles.mockBanner}>
           <Ionicons name="information-circle-outline" size={18} color={colors.gold} />
           <Text style={styles.mockText}>
-            Mock checkout — no payment required. Stripe and live DoorDash dispatch connect at launch.
+            Mock checkout — no payment required. Clover payments connect at launch.
           </Text>
         </View>
 
@@ -142,6 +147,7 @@ export default function CheckoutIndex() {
         <FulfillmentSelector
           value={cart.fulfillmentType}
           onChange={cart.setFulfillmentType}
+          pickupAddress={location ? formatLocationAddress(location.address) : undefined}
         />
 
         {isDelivery ? (

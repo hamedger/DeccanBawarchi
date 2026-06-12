@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, LayoutCh
 import { useRouter } from 'expo-router'
 import { HeroSplash } from './HeroSplash'
 import { OrderOnlinePicker } from '../location/OrderOnlinePicker'
+import { LocationSelector } from '../location/LocationSelector'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { APP_TAGLINE } from '../../constants/config'
 import { blurActiveElementOnWeb } from '../../lib/a11y'
@@ -34,8 +35,9 @@ export function HeroSection() {
           </Text>
           <Text style={styles.subtitle}>
             Authentic dum biryani, haleem, and royal feasts — crafted the traditional way in
-            Northville.
+            Northville and Farmington Hills.
           </Text>
+          <LocationSelector />
           <View style={styles.ctaRow}>
             <OrderOnlinePicker>
               {(startOrder) => (

@@ -46,6 +46,9 @@ export interface Order {
   deliveryAddress: Address
   status: OrderStatus
   stripePaymentIntentId: string
+  cloverMerchantId?: string
+  cloverCheckoutSessionId?: string
+  cloverPaymentId?: string
   doordashDeliveryId: string
   doordashTrackingUrl: string
   driverLocation: GeoPoint | null

@@ -74,6 +74,26 @@ describe('buffetService', () => {
       })
       expect(status.isWeekend).toBe(true)
       expect(status.lunchPrice).toBe(2499)
+      expect(status.dinnerPrice).toBe(2499)
+    })
+
+    it('uses Firestore weekday and weekend prices for display cards', () => {
+      const fridayNoon = new Date('2026-06-12T12:00:00')
+      const status = computeBuffetStatus({
+        config: {
+          weekdayLunchPrice: 1799,
+          weekdayDinnerPrice: 1799,
+          weekendLunchPrice: 2499,
+          weekendDinnerPrice: 2499,
+        } as never,
+        now: fridayNoon,
+        timezone: RESTAURANT_TIMEZONE,
+      })
+
+      expect(status.weekdayPrice).toBe(1799)
+      expect(status.weekendPrice).toBe(2499)
+      expect(status.lunchPrice).toBe(1799)
+      expect(status.dinnerPrice).toBe(1799)
     })
 
     it('reports closed on Sunday', () => {
