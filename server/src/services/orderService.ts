@@ -1,0 +1,280 @@
+import { FieldValue } from 'firebase-admin/firestore'
+import { calculateTotal, calculateTax, calculateServiceFee } from '../lib/cartTotals'
+import { calculateEarnedPoints, loyaltyDiscountCents, validateRedemption } from '../lib/loyalty'
+import { db } from '../lib/firebase'
+import { CloverLineItem } from './cloverClient'
+
+export interface OrderItemInput {
+  menuItemId: string
+  name: string
+  price: number
+  quantity: number
+  instructions?: string
+}
+
+export interface DeliveryAddressInput {
+  street: string
+  city: string
+  state: string
+  zip: string
+  country?: string
+  label?: string
+}
+
+export interface CreatePendingOrderInput {
+  cloverMerchantId?: string
+  uid: string
+  customerEmail?: string
+  customerName?: string
+  customerPhone?: string
+  items: OrderItemInput[]
+  subtotal: number
+  tax: number
+  serviceFee: number
+  deliveryFee: number
+  tip: number
+  promoCode?: string
+  promoDiscount?: number
+  loyaltyPointsUsed?: number
+  giftCardAmount?: number
+  total: number
+  fulfillmentType: 'delivery' | 'pickup'
+  deliveryAddress?: DeliveryAddressInput | null
+  locationId: string
+  notes?: string
+}
+
+export interface CreatePendingOrderResult {
+  orderId: string
+  lineItems: CloverLineItem[]
+  customer: {
+    email: string
+    firstName?: string
+    lastName?: string
+    phoneNumber?: string
+  }
+}
+
+export async function createPendingOrder(
+  input: CreatePendingOrderInput,
+): Promise<CreatePendingOrderResult> {
+  if (!input.items.length) {
+    throw new Error('Cart is empty')
+  }
+
+  const tax = calculateTax(input.subtotal)
+  const serviceFee = calculateServiceFee(input.subtotal)
+  const expectedTotal = calculateTotal({
+    subtotal: input.subtotal,
+    deliveryFee: input.deliveryFee,
+    tip: input.tip,
+    promoDiscount: input.promoDiscount,
+    loyaltyPointsUsed: input.loyaltyPointsUsed,
+    giftCardAmount: input.giftCardAmount,
+  })
+
+  if (input.tax !== tax || input.serviceFee !== serviceFee || input.total !== expectedTotal) {
+    throw new Error('Order totals do not match server calculation')
+  }
+
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+  const recentOrders = await db
+    .collection('orders')
+    .where('userId', '==', input.uid)
+    .where('createdAt', '>=', oneHourAgo)
+    .count()
+    .get()
+
+  if (recentOrders.data().count >= 5) {
+    throw new Error('Order limit reached. Try again later.')
+  }
+
+  const orderRef = db.collection('orders').doc()
+  const userRef = db.collection('users').doc(input.uid)
+  const loyaltyPointsEarned = calculateEarnedPoints(input.subtotal)
+  const loyaltyPointsUsed = input.loyaltyPointsUsed ?? 0
+
+  await db.runTransaction(async (tx) => {
+    const userSnap = await tx.get(userRef)
+    if (!userSnap.exists) {
+      throw new Error('User profile not found')
+    }
+
+    const balance = userSnap.data()?.loyaltyPoints ?? 0
+    validateRedemption(loyaltyPointsUsed, balance)
+
+    const order = {
+      id: orderRef.id,
+      userId: input.uid,
+      guestEmail: '',
+      guestPhone: '',
+      locationId: input.locationId,
+      items: input.items,
+      subtotal: input.subtotal,
+      tax,
+      deliveryFee: input.deliveryFee,
+      serviceFee,
+      tip: input.tip,
+      promoCode: input.promoCode ?? '',
+      promoDiscount: input.promoDiscount ?? 0,
+      loyaltyPointsUsed,
+      loyaltyPointsEarned,
+      loyaltyAwarded: false,
+      giftCardAmount: input.giftCardAmount ?? 0,
+      total: expectedTotal,
+      fulfillmentType: input.fulfillmentType,
+      scheduledFor: null,
+      pickupTime: null,
+      deliveryAddress: input.deliveryAddress ?? null,
+      status: 'pending',
+      stripePaymentIntentId: '',
+      cloverMerchantId: input.cloverMerchantId ?? '',
+      cloverCheckoutSessionId: '',
+      cloverPaymentId: '',
+      doordashDeliveryId: '',
+      doordashTrackingUrl: '',
+      driverLocation: null,
+      estimatedDeliveryTime: null,
+      notes: input.notes ?? '',
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }
+
+    tx.set(orderRef, order)
+
+    if (loyaltyPointsUsed > 0) {
+      tx.update(userRef, {
+        loyaltyPoints: FieldValue.increment(-loyaltyPointsUsed),
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+    }
+  })
+
+  const lineItems = buildCloverLineItems(input, tax, serviceFee)
+  const customer = buildCustomer(input)
+
+  return { orderId: orderRef.id, lineItems, customer }
+}
+
+export async function attachCheckoutSession(orderId: string, checkoutSessionId: string) {
+  await db.collection('orders').doc(orderId).update({
+    cloverCheckoutSessionId: checkoutSessionId,
+    updatedAt: FieldValue.serverTimestamp(),
+  })
+}
+
+export async function markOrderPaidByCheckoutSession(
+  checkoutSessionId: string,
+  paymentId: string,
+): Promise<string | null> {
+  const snapshot = await db
+    .collection('orders')
+    .where('cloverCheckoutSessionId', '==', checkoutSessionId)
+    .limit(1)
+    .get()
+
+  if (snapshot.empty) {
+    return null
+  }
+
+  const doc = snapshot.docs[0]
+  const currentStatus = doc.data().status as string
+  if (currentStatus === 'confirmed' || currentStatus === 'preparing') {
+    return doc.id
+  }
+
+  await doc.ref.update({
+    status: 'confirmed',
+    cloverPaymentId: paymentId,
+    updatedAt: FieldValue.serverTimestamp(),
+  })
+
+  return doc.id
+}
+
+export async function markOrderDeclinedByCheckoutSession(checkoutSessionId: string) {
+  const snapshot = await db
+    .collection('orders')
+    .where('cloverCheckoutSessionId', '==', checkoutSessionId)
+    .limit(1)
+    .get()
+
+  if (snapshot.empty) {
+    return null
+  }
+
+  const doc = snapshot.docs[0]
+  const currentStatus = doc.data().status as string
+  if (currentStatus !== 'pending') {
+    return doc.id
+  }
+
+  await doc.ref.update({
+    status: 'cancelled',
+    updatedAt: FieldValue.serverTimestamp(),
+  })
+
+  return doc.id
+}
+
+function buildCustomer(input: CreatePendingOrderInput) {
+  const email = input.customerEmail?.trim()
+  if (!email) {
+    throw new Error('Customer email is required for Clover checkout')
+  }
+
+  const [firstName, ...rest] = (input.customerName ?? '').trim().split(/\s+/)
+  const lastName = rest.join(' ')
+
+  return {
+    email,
+    ...(firstName ? { firstName } : {}),
+    ...(lastName ? { lastName } : {}),
+    ...(input.customerPhone ? { phoneNumber: input.customerPhone } : {}),
+  }
+}
+
+function buildCloverLineItems(
+  input: CreatePendingOrderInput,
+  tax: number,
+  serviceFee: number,
+): CloverLineItem[] {
+  const lineItems: CloverLineItem[] = input.items.map((item) => ({
+    name: item.name,
+    price: item.price,
+    unitQty: item.quantity,
+    ...(item.instructions ? { note: item.instructions } : {}),
+  }))
+
+  if (serviceFee > 0) {
+    lineItems.push({ name: 'Service fee', price: serviceFee, unitQty: 1 })
+  }
+
+  if (input.deliveryFee > 0) {
+    lineItems.push({ name: 'Delivery fee', price: input.deliveryFee, unitQty: 1 })
+  }
+
+  if (tax > 0) {
+    lineItems.push({ name: 'Tax', price: tax, unitQty: 1 })
+  }
+
+  if (input.tip > 0) {
+    lineItems.push({ name: 'Tip', price: input.tip, unitQty: 1 })
+  }
+
+  const discount =
+    (input.promoDiscount ?? 0) +
+    loyaltyDiscountCents(input.loyaltyPointsUsed ?? 0) +
+    (input.giftCardAmount ?? 0)
+
+  if (discount > 0) {
+    lineItems.push({ name: 'Discount', price: -discount, unitQty: 1 })
+  }
+
+  const sum = lineItems.reduce((total, item) => total + item.price * item.unitQty, 0)
+  if (sum !== input.total) {
+    throw new Error('Clover line items do not match order total')
+  }
+
+  return lineItems
+}
