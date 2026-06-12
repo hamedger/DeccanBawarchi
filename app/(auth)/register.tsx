@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Text, TouchableOpacity, StyleSheet, Alert } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, isFirebaseConfigured } from '../../lib/firebase'
@@ -12,9 +12,11 @@ import { Input, PasswordInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { AuthScreen } from '../../components/auth/AuthScreen'
 import { colors, spacing } from '../../constants/theme'
+import { resolveAuthReturnPath } from '../../lib/authReturnTo'
 
 export default function RegisterScreen() {
   const router = useRouter()
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>()
   const setUserProfile = useAuthStore((s) => s.setUserProfile)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -60,7 +62,7 @@ export default function RegisterScreen() {
       )
       const snap = await getDoc(doc(db, 'users', cred.user.uid))
       if (snap.exists()) setUserProfile(snap.data() as User)
-      router.replace('/(tabs)/' as any)
+      router.replace(resolveAuthReturnPath(returnTo) as never)
     } catch (e) {
       Alert.alert('Registration Failed', getAuthErrorMessage(e))
     } finally {
@@ -82,7 +84,15 @@ export default function RegisterScreen() {
 
       <Button label="Create Account" onPress={handleRegister} loading={loading} fullWidth size="lg" />
 
-      <TouchableOpacity style={styles.link} onPress={() => router.push('/(auth)/login' as any)}>
+      <TouchableOpacity
+        style={styles.link}
+        onPress={() =>
+          router.push({
+            pathname: '/(auth)/login',
+            params: returnTo ? { returnTo } : undefined,
+          } as never)
+        }
+      >
         <Text style={styles.linkText}>Already have an account? <Text style={styles.bold}>Sign In</Text></Text>
       </TouchableOpacity>
     </AuthScreen>

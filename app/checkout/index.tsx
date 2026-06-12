@@ -23,9 +23,22 @@ import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { LocationConfirmCard } from '../../components/location/LocationConfirmCard'
 import { formatLocationAddress } from '../../lib/locationUtils'
 import { confirmOrderLocation } from '../../lib/confirmOrderLocation'
+import { User as FirebaseUser } from 'firebase/auth'
+import { User } from '../../types/user'
 import { TAX_LABEL } from '../../lib/services/cartService'
-import { alertUser } from '../../lib/alertUser'
 import { CHECKOUT_RETURN_PATH } from '../../lib/authReturnTo'
+
+function hasCheckoutAuth(firebaseUser: FirebaseUser | null, userProfile: User | null) {
+  const email = userProfile?.email?.trim() || firebaseUser?.email?.trim()
+  return Boolean(firebaseUser && email)
+}
+
+function redirectToCheckoutLogin(router: ReturnType<typeof useRouter>) {
+  router.replace({
+    pathname: '/(auth)/login',
+    params: { returnTo: CHECKOUT_RETURN_PATH },
+  } as never)
+}
 
 export default function CheckoutIndex() {
   const router = useRouter()
@@ -45,34 +58,29 @@ export default function CheckoutIndex() {
   }
 
   const isDelivery = DELIVERY_ENABLED && cart.fulfillmentType === 'delivery'
+  const isAuthed = hasCheckoutAuth(firebaseUser, userProfile)
   const canPlace =
     hasSelection &&
     (isDelivery
       ? Boolean(street.trim() && city.trim() && zip.trim())
       : isPickupScheduleValid(cart.pickupDate, cart.pickupTime))
+  const canContinue = isAuthed ? canPlace : true
 
   const handlePlaceOrder = async () => {
     setError(null)
 
-    if (!hasSelection || !location) {
-      alertUser('Select a location', 'Please choose which restaurant you are ordering from.')
+    if (!isAuthed) {
+      redirectToCheckoutLogin(router)
       return
     }
 
-    const customerEmail = userProfile?.email?.trim() || firebaseUser?.email?.trim()
-    if (!firebaseUser || !customerEmail) {
-      router.replace({
-        pathname: '/(auth)/login',
-        params: { returnTo: CHECKOUT_RETURN_PATH },
-      } as never)
+    if (!hasSelection || !location) {
+      setError('Please choose which restaurant you are ordering from.')
       return
     }
 
     if (!isApiConfigured()) {
-      alertUser(
-        'Payments unavailable',
-        'The payment server is not configured for this build. Contact support.',
-      )
+      setError('The payment server is not configured for this build. Contact support.')
       return
     }
 
@@ -88,6 +96,7 @@ export default function CheckoutIndex() {
       : formatPickupSchedule(cart.pickupDate, cart.pickupTime)
 
     try {
+      const customerEmail = userProfile?.email?.trim() || firebaseUser?.email?.trim() || ''
       const { href } = await startCloverCheckout({
         items: cart.items,
         subtotal: cart.subtotal(),
@@ -114,7 +123,7 @@ export default function CheckoutIndex() {
           : null,
         notes: cart.notes,
         locationId,
-        customerName: userProfile?.displayName ?? firebaseUser.displayName ?? '',
+        customerName: userProfile?.displayName ?? firebaseUser?.displayName ?? '',
         customerPhone: userProfile?.phone ?? '',
         customerEmail,
         pickupDate: isDelivery ? undefined : cart.pickupDate,
@@ -133,7 +142,6 @@ export default function CheckoutIndex() {
       const message =
         e instanceof Error ? e.message : 'Could not start payment. Please try again.'
       setError(message)
-      alertUser('Checkout Failed', message)
     } finally {
       setLoading(false)
     }
@@ -245,11 +253,11 @@ export default function CheckoutIndex() {
           loading={loading}
           fullWidth
           size="lg"
-          disabled={!canPlace}
+          disabled={!canContinue}
           style={{ marginTop: spacing.sm }}
         />
 
-        {!canPlace ? (
+        {!canContinue && isAuthed ? (
           <Text style={styles.helperText}>
             {!hasSelection
               ? 'Select a restaurant location to continue.'

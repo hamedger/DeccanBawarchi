@@ -9,7 +9,7 @@ import { Input, PasswordInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { AuthScreen } from '../../components/auth/AuthScreen'
 import { colors, spacing } from '../../constants/theme'
-import { resolveAuthReturnPath } from '../../lib/authReturnTo'
+import { CHECKOUT_RETURN_PATH, resolveAuthReturnPath } from '../../lib/authReturnTo'
 
 export default function LoginScreen() {
   const router = useRouter()
@@ -17,6 +17,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const fromCheckout = returnTo === CHECKOUT_RETURN_PATH
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -42,8 +43,12 @@ export default function LoginScreen() {
     <AuthScreen>
       <Logo variant="full" height={64} style={{ alignSelf: 'center', marginBottom: spacing.xl }} />
 
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.sub}>Sign in to your account</Text>
+      <Text style={styles.title}>{fromCheckout ? 'Sign In to Pay' : 'Welcome Back'}</Text>
+      <Text style={styles.sub}>
+        {fromCheckout
+          ? 'Sign in, register, or continue as guest to complete your order'
+          : 'Sign in to your account'}
+      </Text>
 
       <Input
         label="Email"
@@ -61,8 +66,18 @@ export default function LoginScreen() {
 
       <Button label="Sign In" onPress={handleLogin} loading={loading} fullWidth size="lg" />
 
-      <TouchableOpacity style={styles.link} onPress={() => router.push('/(auth)/register' as any)}>
-        <Text style={styles.linkText}>Don't have an account? <Text style={styles.linkBold}>Register</Text></Text>
+      <TouchableOpacity
+        style={styles.link}
+        onPress={() =>
+          router.push({
+            pathname: '/(auth)/register',
+            params: returnTo ? { returnTo } : undefined,
+          } as never)
+        }
+      >
+        <Text style={styles.linkText}>
+          Don&apos;t have an account? <Text style={styles.linkBold}>Register</Text>
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -74,7 +89,9 @@ export default function LoginScreen() {
           } as never)
         }
       >
-        <Text style={styles.linkText}>Continue as <Text style={styles.linkBold}>Guest</Text></Text>
+        <Text style={styles.linkText}>
+          Continue as <Text style={styles.linkBold}>Guest</Text>
+        </Text>
       </TouchableOpacity>
     </AuthScreen>
   )
@@ -82,7 +99,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   title: { color: colors.white, fontSize: 28, fontWeight: '800', marginBottom: 6 },
-  sub: { color: colors.whiteMuted, fontSize: 14, marginBottom: spacing.xl },
+  sub: { color: colors.whiteMuted, fontSize: 14, marginBottom: spacing.xl, textAlign: 'center' },
   link: { marginTop: spacing.md, alignItems: 'center' },
   linkText: { color: colors.whiteMuted, fontSize: 14 },
   linkBold: { color: colors.gold, fontWeight: '700' },
