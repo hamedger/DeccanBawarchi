@@ -9,7 +9,7 @@ import { Input, PasswordInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { AuthScreen } from '../../components/auth/AuthScreen'
 import { colors, spacing } from '../../constants/theme'
-import { CHECKOUT_RETURN_PATH, resolveAuthReturnPath } from '../../lib/authReturnTo'
+import { CHECKOUT_RETURN_PATH, buildAuthReturnRoute, isCheckoutReturn, resolveAuthReturnPath } from '../../lib/authReturnTo'
 
 export default function LoginScreen() {
   const router = useRouter()
@@ -31,7 +31,7 @@ export default function LoginScreen() {
     setLoading(true)
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password)
-      router.replace(resolveAuthReturnPath(returnTo) as never)
+      router.replace(buildAuthReturnRoute(returnTo, isCheckoutReturn(returnTo)) as never)
     } catch (e) {
       Alert.alert('Login Failed', getAuthErrorMessage(e))
     } finally {

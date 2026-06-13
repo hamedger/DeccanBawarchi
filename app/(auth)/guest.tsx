@@ -12,7 +12,7 @@ import { AuthScreen } from '../../components/auth/AuthScreen'
 import { colors, spacing } from '../../constants/theme'
 import { alertUser } from '../../lib/alertUser'
 import { getAuthErrorMessage } from '../../lib/authErrors'
-import { resolveAuthReturnPath } from '../../lib/authReturnTo'
+import { buildAuthReturnRoute, isCheckoutReturn } from '../../lib/authReturnTo'
 import { signInForGuestCheckout } from '../../lib/guestAuth'
 import { ensureGuestProfile } from '../../lib/guestProfile'
 
@@ -78,7 +78,7 @@ export default function GuestScreen() {
         setUserProfile(guestProfile)
       }
 
-      router.replace(resolveAuthReturnPath(returnTo) as never)
+      router.replace(buildAuthReturnRoute(returnTo, isCheckoutReturn(returnTo)) as never)
     } catch (e: unknown) {
       const message = getAuthErrorMessage(e)
       setFormError(message)

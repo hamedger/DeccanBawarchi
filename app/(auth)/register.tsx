@@ -12,7 +12,7 @@ import { Input, PasswordInput } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { AuthScreen } from '../../components/auth/AuthScreen'
 import { colors, spacing } from '../../constants/theme'
-import { resolveAuthReturnPath } from '../../lib/authReturnTo'
+import { resolveAuthReturnPath, buildAuthReturnRoute, isCheckoutReturn } from '../../lib/authReturnTo'
 
 export default function RegisterScreen() {
   const router = useRouter()
@@ -62,7 +62,7 @@ export default function RegisterScreen() {
       )
       const snap = await getDoc(doc(db, 'users', cred.user.uid))
       if (snap.exists()) setUserProfile(snap.data() as User)
-      router.replace(resolveAuthReturnPath(returnTo) as never)
+      router.replace(buildAuthReturnRoute(returnTo, isCheckoutReturn(returnTo)) as never)
     } catch (e) {
       Alert.alert('Registration Failed', getAuthErrorMessage(e))
     } finally {

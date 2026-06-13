@@ -63,7 +63,23 @@ export default function RootLayout() {
           try {
             const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
             if (snap.exists()) {
-              setUserProfile(snap.data() as User)
+              const remote = snap.data() as User
+              const existing = useAuthStore.getState().userProfile
+              if (
+                existing?.uid === firebaseUser.uid &&
+                existing.email?.trim() &&
+                !remote.email?.trim()
+              ) {
+                setUserProfile({
+                  ...remote,
+                  email: existing.email,
+                  phone: existing.phone || remote.phone,
+                  displayName: existing.displayName || remote.displayName,
+                  isGuest: existing.isGuest ?? remote.isGuest,
+                })
+              } else {
+                setUserProfile(remote)
+              }
             } else {
               const existing = useAuthStore.getState().userProfile
               if (existing?.uid !== firebaseUser.uid) {

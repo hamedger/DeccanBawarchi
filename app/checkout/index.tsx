@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { View, Text, ScrollView, StyleSheet } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useCart } from '../../hooks/useCart'
 import { useAuth } from '../../hooks/useAuth'
@@ -42,8 +42,9 @@ function redirectToCheckoutLogin(router: ReturnType<typeof useRouter>) {
 
 export default function CheckoutIndex() {
   const router = useRouter()
+  const { pay } = useLocalSearchParams<{ pay?: string }>()
   const cart = useCart()
-  const { firebaseUser, userProfile } = useAuth()
+  const { firebaseUser, userProfile, isLoading: authLoading } = useAuth()
   const { location, locationId, locations, loading: locationsLoading, hasSelection } =
     useSelectedLocation()
   const [street, setStreet] = useState('123 Main St')
@@ -51,11 +52,7 @@ export default function CheckoutIndex() {
   const [zip, setZip] = useState('48167')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  if (cart.items.length === 0) {
-    router.replace('/(tabs)/cart' as never)
-    return null
-  }
+  const autoPayStarted = useRef(false)
 
   const isDelivery = DELIVERY_ENABLED && cart.fulfillmentType === 'delivery'
   const isAuthed = hasCheckoutAuth(firebaseUser, userProfile)
@@ -66,85 +63,133 @@ export default function CheckoutIndex() {
       : isPickupScheduleValid(cart.pickupDate, cart.pickupTime))
   const canContinue = isAuthed ? canPlace : true
 
-  const handlePlaceOrder = async () => {
-    setError(null)
+  const processPayment = useCallback(
+    async (options?: { skipLocationConfirm?: boolean }) => {
+      setError(null)
 
-    if (!isAuthed) {
-      redirectToCheckoutLogin(router)
-      return
+      if (!isAuthed) {
+        redirectToCheckoutLogin(router)
+        return
+      }
+
+      if (!hasSelection || !location) {
+        setError('Please choose which restaurant you are ordering from.')
+        return
+      }
+
+      if (!isApiConfigured()) {
+        setError('The payment server is not configured for this build. Contact support.')
+        return
+      }
+
+      if (!options?.skipLocationConfirm) {
+        const confirmed = await confirmOrderLocation(location)
+        if (!confirmed) return
+      }
+
+      setLoading(true)
+      const fulfillment = cart.fulfillmentType
+      const pickupAddress = formatLocationAddress(location.address)
+      const address = isDelivery ? `${street}, ${city}, MI ${zip}` : pickupAddress
+      const pickupSchedule = isDelivery
+        ? ''
+        : formatPickupSchedule(cart.pickupDate, cart.pickupTime)
+
+      try {
+        const customerEmail = userProfile?.email?.trim() || firebaseUser?.email?.trim() || ''
+        const { href } = await startCloverCheckout({
+          items: cart.items,
+          subtotal: cart.subtotal(),
+          tax: cart.tax,
+          serviceFee: cart.serviceFee,
+          deliveryFee: cart.deliveryFee,
+          tip: cart.tip,
+          total: cart.total,
+          promoCode: cart.promoCode,
+          promoDiscount: cart.promoDiscount,
+          loyaltyPointsToRedeem: cart.loyaltyPointsToRedeem,
+          giftCardAmount: cart.giftCardAmount,
+          fulfillmentType: fulfillment,
+          deliveryAddress: isDelivery
+            ? {
+                id: '',
+                label: 'Delivery',
+                street: street.trim(),
+                city: city.trim(),
+                state: 'MI',
+                zip: zip.trim(),
+                country: 'US',
+              }
+            : null,
+          notes: cart.notes,
+          locationId,
+          customerName: userProfile?.displayName ?? firebaseUser?.displayName ?? '',
+          customerPhone: userProfile?.phone ?? '',
+          customerEmail,
+          pickupDate: isDelivery ? undefined : cart.pickupDate,
+          pickupTime: isDelivery ? undefined : cart.pickupTime,
+        })
+
+        saveCheckoutContext({
+          fulfillment,
+          address,
+          pickupSchedule,
+          total: String(cart.total),
+        })
+
+        redirectToCloverCheckout(href)
+      } catch (e) {
+        const message =
+          e instanceof Error ? e.message : 'Could not start payment. Please try again.'
+        setError(message)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [
+      cart,
+      firebaseUser,
+      userProfile,
+      isAuthed,
+      hasSelection,
+      location,
+      locationId,
+      isDelivery,
+      street,
+      city,
+      zip,
+      router,
+    ],
+  )
+
+  useEffect(() => {
+    if (pay !== '1' || autoPayStarted.current || authLoading || locationsLoading) return
+    if (!isAuthed || !canPlace || !location) return
+
+    autoPayStarted.current = true
+    void processPayment({ skipLocationConfirm: true })
+  }, [
+    pay,
+    authLoading,
+    locationsLoading,
+    isAuthed,
+    canPlace,
+    location,
+    processPayment,
+  ])
+
+  const handlePlaceOrder = () => {
+    void processPayment()
+  }
+
+  useEffect(() => {
+    if (cart.items.length === 0) {
+      router.replace('/(tabs)/cart' as never)
     }
+  }, [cart.items.length, router])
 
-    if (!hasSelection || !location) {
-      setError('Please choose which restaurant you are ordering from.')
-      return
-    }
-
-    if (!isApiConfigured()) {
-      setError('The payment server is not configured for this build. Contact support.')
-      return
-    }
-
-    const confirmed = await confirmOrderLocation(location)
-    if (!confirmed) return
-
-    setLoading(true)
-    const fulfillment = cart.fulfillmentType
-    const pickupAddress = formatLocationAddress(location.address)
-    const address = isDelivery ? `${street}, ${city}, MI ${zip}` : pickupAddress
-    const pickupSchedule = isDelivery
-      ? ''
-      : formatPickupSchedule(cart.pickupDate, cart.pickupTime)
-
-    try {
-      const customerEmail = userProfile?.email?.trim() || firebaseUser?.email?.trim() || ''
-      const { href } = await startCloverCheckout({
-        items: cart.items,
-        subtotal: cart.subtotal(),
-        tax: cart.tax,
-        serviceFee: cart.serviceFee,
-        deliveryFee: cart.deliveryFee,
-        tip: cart.tip,
-        total: cart.total,
-        promoCode: cart.promoCode,
-        promoDiscount: cart.promoDiscount,
-        loyaltyPointsToRedeem: cart.loyaltyPointsToRedeem,
-        giftCardAmount: cart.giftCardAmount,
-        fulfillmentType: fulfillment,
-        deliveryAddress: isDelivery
-          ? {
-              id: '',
-              label: 'Delivery',
-              street: street.trim(),
-              city: city.trim(),
-              state: 'MI',
-              zip: zip.trim(),
-              country: 'US',
-            }
-          : null,
-        notes: cart.notes,
-        locationId,
-        customerName: userProfile?.displayName ?? firebaseUser?.displayName ?? '',
-        customerPhone: userProfile?.phone ?? '',
-        customerEmail,
-        pickupDate: isDelivery ? undefined : cart.pickupDate,
-        pickupTime: isDelivery ? undefined : cart.pickupTime,
-      })
-
-      saveCheckoutContext({
-        fulfillment,
-        address,
-        pickupSchedule,
-        total: String(cart.total),
-      })
-
-      redirectToCloverCheckout(href)
-    } catch (e) {
-      const message =
-        e instanceof Error ? e.message : 'Could not start payment. Please try again.'
-      setError(message)
-    } finally {
-      setLoading(false)
-    }
+  if (cart.items.length === 0) {
+    return null
   }
 
   return (
