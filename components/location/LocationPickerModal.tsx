@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { Modal } from '../ui/Modal'
 import { Location } from '../../types/location'
-import { formatLocationAddress } from '../../lib/locationUtils'
+import { formatLocationAddress, formatPhoneDisplay } from '../../lib/locationUtils'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 interface LocationPickerModalProps {
@@ -57,7 +57,7 @@ export function LocationPickerModal({
                 <View style={styles.optionBody}>
                   <Text style={styles.optionName}>{location.name}</Text>
                   <Text style={styles.optionAddress}>{formatLocationAddress(location.address)}</Text>
-                  <Text style={styles.optionPhone}>{location.phone}</Text>
+                  <Text style={styles.optionPhone}>{formatPhoneDisplay(location.phone)}</Text>
                 </View>
                 {selected ? (
                   <Ionicons name="checkmark-circle" size={22} color={colors.gold} />

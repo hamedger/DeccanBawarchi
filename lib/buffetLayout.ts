@@ -84,10 +84,18 @@ export function groupBuffetDishesForCustomer(dishes: BuffetDish[]): BuffetSectio
   return groups
 }
 
+export type AdminBuffetStatusFilter = 'all' | 'green' | 'red'
+
 function matchesSearch(row: AdminBuffetRow, query: string): boolean {
   if (!query) return true
   const haystack = `${row.displayName} ${row.menuItem?.name ?? ''} ${row.menuItem?.category ?? ''}`.toLowerCase()
   return haystack.includes(query)
+}
+
+function matchesStatusFilter(row: AdminBuffetRow, filter: AdminBuffetStatusFilter): boolean {
+  if (filter === 'all') return true
+  const onBuffet = !!row.buffetDish
+  return filter === 'green' ? onBuffet : !onBuffet
 }
 
 /** Build grouped admin rows — layout order, includes items not yet on buffet. */
@@ -95,6 +103,7 @@ export function buildAdminBuffetSections(
   menuItems: MenuItem[],
   todaysDishes: BuffetDish[],
   search = '',
+  statusFilter: AdminBuffetStatusFilter = 'all',
 ): { sections: AdminBuffetSectionGroup[]; extraRows: AdminBuffetRow[] } {
   const menuById = new Map(menuItems.map((i) => [i.id, i]))
   const dishById = new Map(todaysDishes.map((d) => [d.menuItemId, d]))
@@ -111,10 +120,10 @@ export function buildAdminBuffetSections(
         menuItem: menuById.get(item.menuItemId),
         buffetDish: dishById.get(item.menuItemId),
       }
-      if (matchesSearch(row, query)) rows.push(row)
+      if (matchesSearch(row, query) && matchesStatusFilter(row, statusFilter)) rows.push(row)
     }
     return { id: section.id, title: section.title, rows }
-  }).filter((s) => s.rows.length > 0 || !query)
+  }).filter((s) => s.rows.length > 0 || (!query && statusFilter === 'all'))
 
   const extraRows: AdminBuffetRow[] = menuItems
     .filter((item) => !layoutIds.has(item.id))
@@ -124,7 +133,7 @@ export function buildAdminBuffetSections(
       menuItem: item,
       buffetDish: dishById.get(item.id),
     }))
-    .filter((row) => matchesSearch(row, query))
+    .filter((row) => matchesSearch(row, query) && matchesStatusFilter(row, statusFilter))
     .sort((a, b) => a.displayName.localeCompare(b.displayName))
 
   return { sections, extraRows }

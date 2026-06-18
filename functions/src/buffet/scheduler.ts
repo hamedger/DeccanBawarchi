@@ -1,6 +1,5 @@
 import * as functions from 'firebase-functions/v2/scheduler'
 import * as admin from 'firebase-admin'
-import { Timestamp } from 'firebase-admin/firestore'
 
 const db = admin.firestore()
 const LOCATION_ID = 'northville-mi'

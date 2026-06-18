@@ -4,14 +4,13 @@ import fetch from 'node-fetch'
 
 const DOORDASH_BASE = 'https://openapi.doordash.com'
 const RESTAURANT_ADDRESS = '17933 Haggerty Rd, Northville Township, MI 48168'
-const RESTAURANT_PHONE = '+12489168700'
+const RESTAURANT_PHONE = '+12489857209'
 
 function buildJwt(): string {
   const developerId = process.env.DOORDASH_DEVELOPER_ID!
   const keyId = process.env.DOORDASH_KEY_ID!
   const signingSecret = process.env.DOORDASH_SIGNING_SECRET!
 
-  const header = { algorithm: 'HS256', header: { dd_ver: 'DD-JWT-V1', kid: keyId } }
   return jwt.sign(
     { aud: 'doordash', iss: developerId, kid: keyId, exp: Math.floor(Date.now() / 1000) + 300 },
     Buffer.from(signingSecret, 'base64'),

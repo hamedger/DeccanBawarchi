@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import {
   View,
   Text,
@@ -10,10 +10,12 @@ import {
 import { usePathname, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { signOutAdmin } from '../../lib/adminAuth'
+import { useRevenueAccessStore } from '../../store/revenueAccessStore'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: 'grid-outline' as const, exact: true },
+  { href: '/admin/revenue', label: 'Revenue', icon: 'cash-outline' as const, locked: true },
   { href: '/admin/orders', label: 'Orders', icon: 'receipt-outline' as const },
   { href: '/admin/reservations', label: 'Reservations', icon: 'calendar-outline' as const },
   { href: '/admin/catering', label: 'Catering', icon: 'people-outline' as const },
@@ -31,8 +33,16 @@ export function AdminShell({ children }: AdminShellProps) {
   const pathname = usePathname()
   const { width } = useWindowDimensions()
   const wide = width >= 900
+  const hydrateRevenueAccess = useRevenueAccessStore((s) => s.hydrate)
+  const revenueUnlocked = useRevenueAccessStore((s) => s.unlocked)
+  const lockRevenue = useRevenueAccessStore((s) => s.lock)
+
+  useEffect(() => {
+    hydrateRevenueAccess()
+  }, [hydrateRevenueAccess])
 
   const handleSignOut = async () => {
+    lockRevenue()
     await signOutAdmin()
     router.replace('/(tabs)' as never)
   }
@@ -75,6 +85,9 @@ export function AdminShell({ children }: AdminShellProps) {
                 color={active ? colors.gold : colors.whiteMuted}
               />
               <Text style={[styles.navLabel, active && styles.navLabelActive]}>{item.label}</Text>
+              {'locked' in item && item.locked && !revenueUnlocked ? (
+                <Ionicons name="lock-closed" size={12} color={colors.whiteMuted} />
+              ) : null}
             </TouchableOpacity>
           )
         })}

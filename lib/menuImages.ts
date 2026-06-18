@@ -7,6 +7,7 @@
 /** Restaurant-owned dish photos served from public/assets/menu/ (web) and bundled assets (native). */
 const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'boneless-chicken-dum-biryani': '/assets/menu/boneless-chicken-dum-biryani.jpg',
+  'butter-chicken': '/assets/menu/butter-chicken.jpg',
   'chicken-65': '/assets/menu/chicken-65.jpg',
   'chicken-65-biryani': '/assets/menu/chicken-65-biryani.jpg',
   'chicken-lollipop': '/assets/menu/chicken-lollipop.jpg',
@@ -19,6 +20,7 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'chilli-paneer': '/assets/menu/chilli-paneer.jpg',
   'egg-biryani': '/assets/menu/egg-biryani.jpg',
   'fish-65': '/assets/menu/fish-65.jpg',
+  'fish-karahi': '/assets/menu/fish-karahi.jpg',
   'fish-majestic': '/assets/menu/fish-majestic.jpg',
   'fish-manchurian': '/assets/menu/fish-manchurian.jpg',
   'fish-pakora': '/assets/menu/fish-pakora.jpg',
@@ -26,19 +28,26 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'gobi-manchurian': '/assets/menu/gobi-manchurian.jpg',
   'hyderabadi-chicken-dum-biryani': '/assets/menu/hyderabadi-chicken-dum-biryani.jpg',
   'hyderabadi-goat-dum-biryani': '/assets/menu/hyderabadi-goat-dum-biryani.jpg',
+  'lamb-saag': '/assets/menu/lamb-saag.jpg',
   'mix-veg-appetizer': '/assets/menu/mix-veg-appetizer.jpg',
+  'mutton-haleem': '/assets/menu/mutton-haleem.jpg',
+  'mutton-marag': '/assets/menu/mutton-marag.jpg',
   'onion-bhajee': '/assets/menu/onion-bhajee.jpg',
   'onion-palak-pakora': '/assets/menu/onion-palak-pakora.jpg',
   'paneer-65': '/assets/menu/paneer-65.jpg',
   'paneer-dum-biryani': '/assets/menu/paneer-dum-biryani.jpg',
   'paneer-manchurian': '/assets/menu/paneer-manchurian.jpg',
+  'paneer-tikka-masala': '/assets/menu/paneer-tikka-masala.jpg',
+  'roti': '/assets/menu/roti.jpg',
   'shrimp-65': '/assets/menu/shrimp-65.jpg',
   'shrimp-lollipop': '/assets/menu/shrimp-lollipop.jpg',
   'shrimp-majestic': '/assets/menu/shrimp-majestic.jpg',
   'shrimp-pakora': '/assets/menu/shrimp-pakora.jpg',
+  'shrimp-saag': '/assets/menu/shrimp-saag.jpg',
   'talawa-gosht': '/assets/menu/talawa-gosht.jpg',
   'veg-dum-biryani': '/assets/menu/veg-dum-biryani.jpg',
   'veg-samosa': '/assets/menu/veg-samosa.jpg',
+  'water': '/assets/menu/water.jpg',
 }
 
 function getLocalDishImageUrl(id: string): string | null {

@@ -40,7 +40,7 @@ export const createOrder = functions.https.onCall(async (request) => {
   try {
     await db.runTransaction(async (tx) => {
       const userSnap = await tx.get(userRef)
-      if (!userSnap.exists()) {
+      if (!userSnap.exists) {
         throw new Error('User profile not found')
       }
       const balance = userSnap.data()?.loyaltyPoints ?? 0

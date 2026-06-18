@@ -1,6 +1,6 @@
 export const APP_NAME = 'Deccan Bawarchi'
 export const APP_TAGLINE = 'Authentic Hyderabadi Cuisine'
-export const RESTAURANT_PHONE = '+12489168700'
+export const RESTAURANT_PHONE = '+12489857209'
 export const RESTAURANT_ADDRESS = '17933 Haggerty Rd, Township of Northville, MI 48168'
 export const RESTAURANT_WEBSITE = 'https://deccanbawarchi.com'
 export const SUPPORT_EMAIL = 'support@deccanbawarchi.com'
@@ -19,8 +19,8 @@ export const BUSINESS_HOURS = {
 
 export const DELIVERY_RADIUS_MILES = 10
 
-/** DoorDash Drive delivery — Phase 3. Pickup-only until enabled. */
-export const DELIVERY_ENABLED = false
+/** DoorDash Drive delivery — Phase 3. */
+export const DELIVERY_ENABLED = true
 
 export const LOYALTY = {
   pointsPerDollar: 1,

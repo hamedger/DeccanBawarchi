@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  TouchableOpacity,
 } from 'react-native'
 import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
@@ -20,7 +21,11 @@ import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { DEFAULT_LOCATION_ID } from '../../constants/config'
 import { useAdminMenu } from '../../hooks/useAdminMenu'
 import { isBuffetDishServing } from '../../lib/services/buffetService'
-import { buildAdminBuffetSections, buffetDishFromMenuItem } from '../../lib/buffetLayout'
+import {
+  AdminBuffetStatusFilter,
+  buildAdminBuffetSections,
+  buffetDishFromMenuItem,
+} from '../../lib/buffetLayout'
 
 export default function AdminBuffetScreen() {
   const [config, setConfig] = useState<BuffetConfig | null>(null)
@@ -28,6 +33,7 @@ export default function AdminBuffetScreen() {
   const [saving, setSaving] = useState(false)
   const [specialNote, setSpecialNote] = useState('')
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<AdminBuffetStatusFilter>('all')
   const [servingBusyId, setServingBusyId] = useState<string | null>(null)
   const [buffetBusyId, setBuffetBusyId] = useState<string | null>(null)
 
@@ -46,10 +52,24 @@ export default function AdminBuffetScreen() {
     return unsub
   }, [locationId])
 
-  const { sections, extraRows } = useMemo(
-    () => buildAdminBuffetSections(menuItems, config?.todaysDishes ?? [], search),
-    [menuItems, config?.todaysDishes, search],
-  )
+  const { sections, extraRows, statusCounts } = useMemo(() => {
+    const filtered = buildAdminBuffetSections(
+      menuItems,
+      config?.todaysDishes ?? [],
+      search,
+      statusFilter,
+    )
+    const all = buildAdminBuffetSections(menuItems, config?.todaysDishes ?? [])
+    const allRows = [...all.sections.flatMap((s) => s.rows), ...all.extraRows]
+    return {
+      ...filtered,
+      statusCounts: {
+        all: allRows.length,
+        green: allRows.filter((r) => r.buffetDish).length,
+        red: allRows.filter((r) => !r.buffetDish).length,
+      },
+    }
+  }, [menuItems, config?.todaysDishes, search, statusFilter])
 
   if (loading) {
     return <ActivityIndicator color={colors.gold} style={{ flex: 1, marginTop: 80 }} />
@@ -156,6 +176,37 @@ export default function AdminBuffetScreen() {
             Green circle = on today&apos;s menu · Serving switch = visible on the customer buffet page
           </Text>
         </View>
+        <View style={styles.filterRow}>
+          {(
+            [
+              { key: 'all', label: 'All' },
+              { key: 'red', label: 'Red', dot: colors.error },
+              { key: 'green', label: 'Green', dot: colors.green },
+            ] as const
+          ).map(({ key, label, dot }) => {
+            const active = statusFilter === key
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setStatusFilter(key)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+              >
+                {dot ? <View style={[styles.filterDot, { backgroundColor: dot }]} /> : null}
+                <Text style={[styles.filterChipLabel, active && styles.filterChipLabelActive]}>
+                  {label}
+                </Text>
+                <View style={[styles.filterBadge, active && styles.filterBadgeActive]}>
+                  <Text style={[styles.filterBadgeText, active && styles.filterBadgeTextActive]}>
+                    {statusCounts[key]}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+
         <TextInput
           style={styles.search}
           value={search}
@@ -163,6 +214,12 @@ export default function AdminBuffetScreen() {
           placeholder="Search buffet items..."
           placeholderTextColor={colors.whiteMuted}
         />
+
+        {sections.length === 0 && extraRows.length === 0 ? (
+          <View style={styles.card}>
+            <Text style={styles.hint}>No items match this filter.</Text>
+          </View>
+        ) : null}
 
         {sections.map((section) => (
           <View key={section.id} style={styles.categorySection}>
@@ -295,6 +352,64 @@ const styles = StyleSheet.create({
     color: colors.whiteMuted,
     fontSize: 13,
     padding: spacing.md,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 4,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  filterChipActive: {
+    borderColor: colors.gold,
+    backgroundColor: 'rgba(212,175,55,0.18)',
+  },
+  filterDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+  },
+  filterChipLabel: {
+    fontFamily: fonts.sansMedium,
+    color: colors.white,
+    fontSize: 14,
+  },
+  filterChipLabelActive: {
+    color: colors.goldBright,
+  },
+  filterBadge: {
+    minWidth: 22,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+  },
+  filterBadgeActive: {
+    backgroundColor: colors.gold,
+    borderColor: colors.gold,
+  },
+  filterBadgeText: {
+    fontFamily: fonts.sansBold,
+    color: colors.goldLight,
+    fontSize: 11,
+  },
+  filterBadgeTextActive: {
+    color: colors.background,
   },
   search: {
     fontFamily: fonts.sans,

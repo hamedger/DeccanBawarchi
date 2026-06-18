@@ -6,7 +6,7 @@ if (!admin.apps.length) admin.initializeApp()
 const db = admin.firestore()
 
 export const onUserCreated = functions.auth.user().onCreate(async (user) => {
-  const isGuest = user.isAnonymous
+  const isGuest = user.providerData.length === 0
 
   await db.collection('users').doc(user.uid).set(
     {

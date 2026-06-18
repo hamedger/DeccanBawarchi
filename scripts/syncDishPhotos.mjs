@@ -18,6 +18,11 @@ const FOLDER_TO_CATEGORY = {
   'non-veg appetizers': 'non-veg-appetizers',
   'vegetarian appetizer': 'veg-appetizers',
   'vegetarian appetizers': 'veg-appetizers',
+  beverages: 'drinks',
+  "chef's specials": 'chef-specials',
+  'non-veg curries': 'non-veg-curries',
+  'vegetarian curries': 'veg-curries',
+  'breads & naan': 'breads',
 }
 
 function normalizeName(value) {
@@ -25,6 +30,7 @@ function normalizeName(value) {
     .toLowerCase()
     .replace(/\.(jpe?g|png|webp)$/i, '')
     .replace(/\(.*?\)/g, '')
+    .replace(/[/:]/g, ' ')
     .replace(/[^a-z0-9]+/g, ' ')
     .replace(/\bbiryan\b/g, 'biryani')
     .replace(/\bchilli\b/g, 'chili')
@@ -32,6 +38,10 @@ function normalizeName(value) {
     .replace(/\bdum\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+function isHashFilename(name) {
+  return /^[A-Za-z0-9_-]{40,}$/.test(name)
 }
 
 function parseMenuItems() {
@@ -128,6 +138,10 @@ for (const folder of readdirSync(PHOTOS_DIR)) {
 
   for (const filePath of listPhotoFiles(folderPath)) {
     const photoName = basename(filePath, extname(filePath))
+    if (isHashFilename(photoName)) {
+      console.warn(`Skipping hash-named photo (rename to dish name): ${folder}/${photoName}`)
+      continue
+    }
     const photoNorm = normalizeName(photoName)
     const match = findBestItem(photoNorm, items, categoryId)
 

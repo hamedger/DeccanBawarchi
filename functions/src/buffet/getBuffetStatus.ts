@@ -1,6 +1,5 @@
 import * as functions from 'firebase-functions/v2'
 import * as admin from 'firebase-admin'
-import { BUFFET_PRICING, BUFFET_HOURS, BUFFET_DAYS } from '../../constants/buffetConstants'
 
 const db = admin.firestore()
 

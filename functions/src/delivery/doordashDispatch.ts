@@ -3,10 +3,12 @@ import * as admin from 'firebase-admin'
 import * as jwt from 'jsonwebtoken'
 import fetch from 'node-fetch'
 
+if (!admin.apps.length) admin.initializeApp()
+
 const db = admin.firestore()
 const DOORDASH_BASE = 'https://openapi.doordash.com'
 const RESTAURANT_ADDRESS = '17933 Haggerty Rd, Northville Township, MI 48168'
-const RESTAURANT_PHONE = '+12489168700'
+const RESTAURANT_PHONE = '+12489857209'
 
 function buildJwt(): string {
   const developerId = process.env.DOORDASH_DEVELOPER_ID!

@@ -1,6 +1,8 @@
 import * as functions from 'firebase-functions/v2'
 import * as admin from 'firebase-admin'
 
+if (!admin.apps.length) admin.initializeApp()
+
 const db = admin.firestore()
 
 const DD_STATUS_MAP: Record<string, string> = {

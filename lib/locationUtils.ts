@@ -1,5 +1,15 @@
 import { Linking, Platform } from 'react-native'
+import { STATIC_LOCATIONS } from '../constants/staticLocations'
 import { Location, LocationAddress } from '../types/location'
+
+/** Previously both locations shared this number in Firestore. */
+const LEGACY_SHARED_PHONE = '+12489168700'
+
+function resolveLocationPhone(staticPhone: string, remotePhone?: string): string {
+  const remote = remotePhone?.trim()
+  if (!remote || remote === LEGACY_SHARED_PHONE) return staticPhone
+  return remote
+}
 
 export function formatLocationAddress(address: LocationAddress): string {
   return `${address.street}, ${address.city}, ${address.state} ${address.zip}`
@@ -44,4 +54,29 @@ export function slugifyLocationId(name: string, city: string, state: string): st
 
 export function isLocationActive(location: Location): boolean {
   return location.isActive !== false
+}
+
+/** Keep all static pickable locations; overlay Firestore fields when present. */
+export function mergePickableLocations(remote: Location[]): Location[] {
+  const byId = new Map<string, Location>()
+
+  for (const loc of STATIC_LOCATIONS.filter(isLocationActive)) {
+    byId.set(loc.id, loc)
+  }
+
+  for (const loc of remote.filter(isLocationActive)) {
+    const base = byId.get(loc.id)
+    byId.set(
+      loc.id,
+      base
+        ? {
+            ...base,
+            ...loc,
+            phone: resolveLocationPhone(base.phone, loc.phone),
+          }
+        : loc,
+    )
+  }
+
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
 }

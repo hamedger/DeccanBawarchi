@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { Location } from '../../types/location'
-import { formatLocationAddress } from '../../lib/locationUtils'
+import { formatLocationAddress, formatPhoneDisplay } from '../../lib/locationUtils'
 import { LocationPickerModal } from './LocationPickerModal'
 import { useLocationSelection } from '../../hooks/useLocationSelection'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
@@ -32,7 +32,7 @@ export function LocationConfirmCard({
         </View>
         <Text style={styles.name}>{location.name}</Text>
         <Text style={styles.address}>{formatLocationAddress(location.address)}</Text>
-        <Text style={styles.phone}>{location.phone}</Text>
+        <Text style={styles.phone}>{formatPhoneDisplay(location.phone)}</Text>
         <TouchableOpacity style={styles.changeBtn} onPress={() => setOpen(true)}>
           <Text style={styles.changeText}>Change location</Text>
         </TouchableOpacity>

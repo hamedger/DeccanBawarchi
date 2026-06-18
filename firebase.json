@@ -1,6 +1,18 @@
 {
   "hosting": {
     "public": "dist",
+    "redirects": [
+      {
+        "source": "/deccanbawarchi/order",
+        "destination": "/menu",
+        "type": 301
+      },
+      {
+        "source": "/deccanbawarchi/**",
+        "destination": "/",
+        "type": 301
+      }
+    ],
     "rewrites": [
       { "source": "**", "destination": "/index.html" }
     ],
@@ -31,5 +43,15 @@
       "codebase": "default",
       "ignore": ["node_modules", ".git"]
     }
-  ]
+  ],
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
+    },
+    "singleProjectMode": true
+  }
 }
