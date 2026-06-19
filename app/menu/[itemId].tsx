@@ -15,12 +15,13 @@ import { useMenu, useMenuItem } from '../../hooks/useMenu'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { isMenuItemOrderable } from '../../lib/menuMerge'
 import { useCartStore } from '../../store/cartStore'
-import { getDishImageUrl } from '../../lib/menuImages'
+import { resolveMenuItemImage } from '../../lib/menuImages'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { Badge } from '../../components/ui/Badge'
 import { HalalBadge } from '../../components/brand/HalalBadge'
 import { Button } from '../../components/ui/Button'
-import { HomeButton } from '../../components/navigation/HomeButton'
+import { BackButton } from '../../components/navigation/BackButton'
+import { CartNavButton } from '../../components/navigation/CartNavButton'
 import { DishPhotoDisclaimer } from '../../components/menu/DishPhotoDisclaimer'
 
 const CONTENT_MAX = 640
@@ -63,23 +64,37 @@ export default function ItemDetailScreen() {
   const imageInnerWidth = Math.max(200, contentWidth - arrowWidth * 2 - imageGap * 2)
   const imageHeight = Math.round(imageInnerWidth * 0.56)
 
+  const navBar = (
+    <View style={[styles.navBar, { maxWidth: CONTENT_MAX }]}>
+      <BackButton label="Menu" />
+      <View style={styles.navBarSpacer} />
+      <CartNavButton />
+    </View>
+  )
+
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color={colors.gold} size="large" />
+      <View style={styles.screen}>
+        {navBar}
+        <View style={styles.centered}>
+          <ActivityIndicator color={colors.gold} size="large" />
+        </View>
       </View>
     )
   }
 
   if (!item) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.notFound}>Item not found</Text>
+      <View style={styles.screen}>
+        {navBar}
+        <View style={styles.centered}>
+          <Text style={styles.notFound}>Item not found</Text>
+        </View>
       </View>
     )
   }
 
-  const imageUri = item.imageURL || getDishImageUrl(item.id, item.name, item.category)
+  const imageUri = resolveMenuItemImage(item)
   const unitPrice = (item.price / 100).toFixed(2)
   const lineTotal = ((item.price * qty) / 100).toFixed(2)
   const orderable = isMenuItemOrderable(item)
@@ -113,9 +128,7 @@ export default function ItemDetailScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.navBar, { maxWidth: CONTENT_MAX }]}>
-        <HomeButton />
-      </View>
+      {navBar}
 
       <ScrollView
         style={styles.scroll}
@@ -271,6 +284,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
+  },
+  navBarSpacer: {
+    flex: 1,
   },
   imageRow: {
     alignSelf: 'center',

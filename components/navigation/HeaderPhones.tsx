@@ -1,24 +1,22 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { STATIC_LOCATIONS } from '../../constants/staticLocations'
 import {
   formatLocationShort,
   formatPhoneDisplay,
-  isLocationActive,
   openPhone,
 } from '../../lib/locationUtils'
+import { useLocations } from '../../hooks/useLocations'
 import { colors, spacing, fonts } from '../../constants/theme'
-
-const ACTIVE_LOCATIONS = STATIC_LOCATIONS.filter(isLocationActive)
 
 export function HeaderPhones() {
   const { width } = useWindowDimensions()
   const compact = width < 480
+  const { locations } = useLocations()
 
   return (
     <View style={styles.wrap}>
-      {ACTIVE_LOCATIONS.map((location) => {
+      {locations.map((location) => {
         const label = formatLocationShort(location)
         const phone = formatPhoneDisplay(location.phone)
         return (

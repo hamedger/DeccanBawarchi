@@ -4,17 +4,27 @@
  * Regenerate with: node scripts/buildMenuImages.mjs
  */
 
+import type { MenuItem } from '../types/menu'
+
+/** Bump when restaurant photos change — busts browser/CDN cache for /assets/menu/*.jpg */
+const LOCAL_DISH_IMAGE_VERSION = '20260619'
+
 /** Restaurant-owned dish photos served from public/assets/menu/ (web) and bundled assets (native). */
 const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'boneless-chicken-dum-biryani': '/assets/menu/boneless-chicken-dum-biryani.jpg',
   'butter-chicken': '/assets/menu/butter-chicken.jpg',
+  'chana-masala': '/assets/menu/chana-masala.jpg',
   'chicken-65': '/assets/menu/chicken-65.jpg',
   'chicken-65-biryani': '/assets/menu/chicken-65-biryani.jpg',
+  'chicken-bhuna': '/assets/menu/chicken-bhuna.jpg',
+  'chicken-karahi': '/assets/menu/chicken-karahi.jpg',
   'chicken-lollipop': '/assets/menu/chicken-lollipop.jpg',
   'chicken-majestic': '/assets/menu/chicken-majestic.jpg',
   'chicken-manchurian': '/assets/menu/chicken-manchurian.jpg',
   'chicken-nuggets': '/assets/menu/chicken-nuggets.jpg',
   'chicken-pakora': '/assets/menu/chicken-pakora.jpg',
+  'chicken-saag': '/assets/menu/chicken-saag.jpg',
+  'chicken-tikka-masala': '/assets/menu/chicken-tikka-masala.jpg',
   'chilli-chicken': '/assets/menu/chilli-chicken.jpg',
   'chilli-gobi': '/assets/menu/chilli-gobi.jpg',
   'chilli-paneer': '/assets/menu/chilli-paneer.jpg',
@@ -24,10 +34,14 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'fish-majestic': '/assets/menu/fish-majestic.jpg',
   'fish-manchurian': '/assets/menu/fish-manchurian.jpg',
   'fish-pakora': '/assets/menu/fish-pakora.jpg',
+  'fish-saag': '/assets/menu/fish-saag.jpg',
   'gobi-65': '/assets/menu/gobi-65.jpg',
   'gobi-manchurian': '/assets/menu/gobi-manchurian.jpg',
   'hyderabadi-chicken-dum-biryani': '/assets/menu/hyderabadi-chicken-dum-biryani.jpg',
   'hyderabadi-goat-dum-biryani': '/assets/menu/hyderabadi-goat-dum-biryani.jpg',
+  'lamb-achari': '/assets/menu/lamb-achari.jpg',
+  'lamb-bhuna': '/assets/menu/lamb-bhuna.jpg',
+  'lamb-karahi': '/assets/menu/lamb-karahi.jpg',
   'lamb-saag': '/assets/menu/lamb-saag.jpg',
   'mix-veg-appetizer': '/assets/menu/mix-veg-appetizer.jpg',
   'mutton-haleem': '/assets/menu/mutton-haleem.jpg',
@@ -36,10 +50,14 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'onion-palak-pakora': '/assets/menu/onion-palak-pakora.jpg',
   'paneer-65': '/assets/menu/paneer-65.jpg',
   'paneer-dum-biryani': '/assets/menu/paneer-dum-biryani.jpg',
+  'paneer-karahi': '/assets/menu/paneer-karahi.jpg',
   'paneer-manchurian': '/assets/menu/paneer-manchurian.jpg',
   'paneer-tikka-masala': '/assets/menu/paneer-tikka-masala.jpg',
   'roti': '/assets/menu/roti.jpg',
+  'saag-dal': '/assets/menu/saag-dal.jpg',
+  'saag-palak-paneer': '/assets/menu/saag-palak-paneer.jpg',
   'shrimp-65': '/assets/menu/shrimp-65.jpg',
+  'shrimp-bhuna': '/assets/menu/shrimp-bhuna.jpg',
   'shrimp-lollipop': '/assets/menu/shrimp-lollipop.jpg',
   'shrimp-majestic': '/assets/menu/shrimp-majestic.jpg',
   'shrimp-pakora': '/assets/menu/shrimp-pakora.jpg',
@@ -51,7 +69,18 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
 }
 
 function getLocalDishImageUrl(id: string): string | null {
-  return LOCAL_DISH_IMAGE_URLS[id] ?? null
+  const path = LOCAL_DISH_IMAGE_URLS[id]
+  if (!path) return null
+  return `${path}?v=${LOCAL_DISH_IMAGE_VERSION}`
+}
+
+export function resolveMenuItemImage(
+  item: Pick<MenuItem, 'id' | 'name' | 'category' | 'imageURL'>,
+): string {
+  if (hasLocalDishImage(item.id)) {
+    return getDishImageUrl(item.id, item.name, item.category)
+  }
+  return item.imageURL || getDishImageUrl(item.id, item.name, item.category)
 }
 
 export function hasLocalDishImage(id: string): boolean {
@@ -204,7 +233,6 @@ export const DISH_IMAGE_URLS: Record<string, string> = {
   'chicken-reshmi-kabab': 'https://images.unsplash.com/photo-1727280376746-b89107a5b0df?w=800&q=80&auto=format&fit=crop', // Chicken Reshmi Kabab
   'tiranga-kabab': 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80&auto=format&fit=crop', // Tiranga Kabab
   'paneer-tandoori': 'https://images.unsplash.com/photo-1589647363585-f4a7d3877b10?w=800&q=80&auto=format&fit=crop', // Paneer Tandoori
-  'sheekh-kabab': 'https://images.unsplash.com/photo-1532636875304-0c89119d9b4d?w=800&q=80&auto=format&fit=crop', // Sheekh Kabab
   'mutton-reshmi-kabab': 'https://images.unsplash.com/photo-1532636875304-0c89119d9b4d?w=800&q=80&auto=format&fit=crop', // Mutton Reshmi Kabab
   'fish-tandoori': 'https://images.unsplash.com/photo-1665401015549-712c0dc5ef85?w=800&q=80&auto=format&fit=crop', // Fish Tandoori
   'mixed-tandoori-grill': 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80&auto=format&fit=crop', // Mixed Tandoori Grill
@@ -350,6 +378,6 @@ export function withMenuImages<T extends { id: string; name: string; category: s
 ): T[] {
   return items.map((item) => ({
     ...item,
-    imageURL: item.imageURL || getDishImageUrl(item.id, item.name, item.category),
+    imageURL: resolveMenuItemImage(item),
   }))
 }

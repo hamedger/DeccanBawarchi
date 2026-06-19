@@ -12,6 +12,7 @@ import * as dotenv from 'dotenv'
 import { STATIC_MENU } from '../constants/staticMenu'
 import { STATIC_LOCATIONS, STATIC_LOCATION_IDS } from '../constants/staticLocations'
 import { createDefaultBuffetDishes } from '../lib/buffetLayout'
+import { REMOVED_MENU_IDS } from '../lib/menuMerge'
 
 dotenv.config()
 
@@ -253,7 +254,7 @@ const menuItems = [
   item('chicken-karahi', 'Chicken Karahi', 'A dish typically consisting of a base of onions, garlic, ginger and spices being fried together to form a thick coating sauce.', 16.99, 'non-veg-curries',
     { isSpicy: true, spiceLevel: 2, isBuffetItem: true }),
 
-  item('goat-karahi', 'Lamb/Goat Karahi', 'Lamb or goat in a thick coating sauce of onions, garlic, ginger and aromatic spices.', 19.99, 'non-veg-curries',
+  item('lamb-karahi', 'Lamb/Goat Karahi', 'Lamb or goat in a thick coating sauce of onions, garlic, ginger and aromatic spices.', 19.99, 'non-veg-curries',
     { isSpicy: true, spiceLevel: 2 }),
 
   item('chicken-achari', 'Chicken Achari', 'Curry made with ingredients used to make achaar or South Asian pickle giving it a tangy and spicy flavor.', 16.99, 'non-veg-curries',
@@ -286,9 +287,6 @@ const menuItems = [
 
   item('paneer-tandoori', 'Paneer Tandoori', 'Indian cottage cheese marinated in a spicy yogurt mixture and then grilled to perfection in the Tandoor. Served sizzling hot with onions and lemon.', 16.99, 'sizzlers',
     { isVegetarian: true, allergens: ['dairy'] }),
-
-  item('sheek-kabab', 'Sheek Kabab', 'Mouth-watering minced lamb meat infused with aromatic spices, skewered and grilled to perfection in the Tandoor. Served sizzling hot with onions and lemon.', 17.99, 'sizzlers',
-    { tags: ['signature'] }),
 
   item('mutton-reshmi-kabab', 'Mutton Reshmi Kabab', 'Made with boneless Lamb/Goat. It is cooked by marinating chunks of meat in curd, cream, cashew nut paste, spices and then grilled in tandoor.', 19.99, 'sizzlers',
     { allergens: ['dairy', 'nuts'] }),
@@ -368,6 +366,11 @@ async function seed() {
       updatedAt: ts(),
     })
     console.log(`✓ Buffet config seeded: ${location.id}`)
+  }
+
+  // Retired menu items (legacy Firestore doc ids)
+  for (const id of REMOVED_MENU_IDS) {
+    await db.collection('menu').doc(id).delete()
   }
 
   // Menu items

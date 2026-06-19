@@ -1,31 +1,30 @@
 import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { STATIC_LOCATIONS } from '../../constants/staticLocations'
 import { formatBusinessHours } from '../../constants/home'
 import {
   formatLocationAddress,
   formatLocationShort,
   formatPhoneDisplay,
-  isLocationActive,
   openDirections,
   openPhone,
 } from '../../lib/locationUtils'
+import { useLocations } from '../../hooks/useLocations'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 const WIDE_BREAKPOINT = 720
-const ACTIVE_LOCATIONS = STATIC_LOCATIONS.filter(isLocationActive)
 
 export function LocationsSection() {
   const { width } = useWindowDimensions()
   const isWide = width >= WIDE_BREAKPOINT
+  const { locations } = useLocations()
 
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Our Locations</Text>
       <View style={styles.divider} />
       <View style={[styles.grid, isWide && styles.gridWide]}>
-        {ACTIVE_LOCATIONS.map((location) => {
+        {locations.map((location) => {
           const address = formatLocationAddress(location.address)
           const label = formatLocationShort(location)
           const phone = formatPhoneDisplay(location.phone)

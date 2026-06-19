@@ -1,7 +1,7 @@
 import { MenuItem } from '../types/menu'
 import { STATIC_MENU } from '../constants/staticMenu'
 import { DEFAULT_LOCATION_ID } from '../constants/config'
-import { getDishImageUrl, hasLocalDishImage } from './menuImages'
+import { resolveMenuItemImage } from './menuImages'
 
 export function isMenuItemOrderable(item: MenuItem): boolean {
   return item.isAvailable !== false
@@ -17,13 +17,10 @@ export function itemAvailableAtLocation(item: MenuItem, locationId: string): boo
 }
 
 function ensureImage(item: MenuItem): MenuItem {
-  if (hasLocalDishImage(item.id) || !item.imageURL) {
-    return {
-      ...item,
-      imageURL: getDishImageUrl(item.id, item.name, item.category),
-    }
+  return {
+    ...item,
+    imageURL: resolveMenuItemImage(item),
   }
-  return item
 }
 
 export function getStaticMenuCatalog(
@@ -40,14 +37,38 @@ export function getStaticMenuCatalog(
     .map(ensureImage)
 }
 
+/** Retired items; legacy Firestore docs may still exist under alternate ids. */
+export const REMOVED_MENU_IDS = new Set(['sheek-kabab', 'sheekh-kabab'])
+
+/** Legacy Firestore doc ids merged into the canonical static-menu id. */
+const LEGACY_MENU_ID_ALIASES: Record<string, string> = {
+  'goat-karahi': 'lamb-karahi',
+}
+
+function isRemovedMenuItem(id: string): boolean {
+  return REMOVED_MENU_IDS.has(id)
+}
+
+function normalizeRemoteMenuItem(item: MenuItem): MenuItem {
+  const canonicalId = LEGACY_MENU_ID_ALIASES[item.id]
+  return canonicalId ? { ...item, id: canonicalId } : item
+}
+
 /** Static base + Firestore overrides (Firestore wins on conflict). */
 export function mergeMenuItems(staticItems: MenuItem[], remoteItems: MenuItem[]): MenuItem[] {
-  const remoteMap = new Map(remoteItems.map((i) => [i.id, i]))
+  const remoteMap = new Map(
+    remoteItems
+      .map((i) => normalizeRemoteMenuItem(i))
+      .filter((i) => !isRemovedMenuItem(i.id))
+      .map((i) => [i.id, i] as const),
+  )
 
-  const merged = staticItems.map((item) => {
-    const remote = remoteMap.get(item.id)
-    return remote ? { ...item, ...remote, id: item.id } : item
-  })
+  const merged = staticItems
+    .filter((item) => !isRemovedMenuItem(item.id))
+    .map((item) => {
+      const remote = remoteMap.get(item.id)
+      return remote ? { ...item, ...remote, id: item.id } : item
+    })
 
   for (const [id, remote] of remoteMap) {
     if (!staticItems.some((s) => s.id === id)) {

@@ -4,7 +4,7 @@ import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { MenuItem } from '../../types/menu'
-import { getDishImageUrl } from '../../lib/menuImages'
+import { resolveMenuItemImage } from '../../lib/menuImages'
 import { isMenuItemOrderable } from '../../lib/menuMerge'
 import { useCartStore } from '../../store/cartStore'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
@@ -24,7 +24,7 @@ export function MenuDishCard({ item, width }: MenuDishCardProps) {
   const orderable = isMenuItemOrderable(item)
 
   const price = `$${(item.price / 100).toFixed(2)}`
-  const imageUri = item.imageURL || getDishImageUrl(item.id, item.name, item.category)
+  const imageUri = resolveMenuItemImage(item)
   const imageHeight = Math.round(width * 0.58)
 
   const openDetail = () => router.push(`/menu/${item.id}` as never)

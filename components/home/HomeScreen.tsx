@@ -1,5 +1,5 @@
 import React from 'react'
-import { ScrollView, View, StyleSheet } from 'react-native'
+import { ScrollView, View, StyleSheet, useWindowDimensions } from 'react-native'
 import { HalalBadge } from '../brand/HalalBadge'
 import { HeroSection } from './HeroSection'
 import { BuffetBanner } from './BuffetBanner'
@@ -10,13 +10,18 @@ import { OrynPromoBlock } from './OrynPromoBlock'
 import { DemoBanner } from '../shared/DemoBanner'
 import { colors, spacing } from '../../constants/theme'
 
+const WIDE_BREAKPOINT = 720
+
 export function HomeScreen() {
+  const { width } = useWindowDimensions()
+  const isWide = width >= WIDE_BREAKPOINT
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <DemoBanner />
 
-      <View style={styles.announcementBar}>
-        <HalalBadge size="xl" showPercent />
+      <View style={[styles.announcementBar, !isWide && styles.announcementBarMobile]}>
+        <HalalBadge size={isWide ? 'xl' : 'lg'} showPercent />
       </View>
 
       <HeroSection />
@@ -39,5 +44,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  announcementBarMobile: {
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.md,
   },
 })

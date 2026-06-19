@@ -4,7 +4,7 @@ import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { MenuItem } from '../../types/menu'
 import { SPICE_LABELS } from '../../constants/menu'
-import { getDishImageUrl } from '../../lib/menuImages'
+import { resolveMenuItemImage } from '../../lib/menuImages'
 import { isMenuItemOrderable } from '../../lib/menuMerge'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
@@ -27,7 +27,7 @@ export function MenuDishEntry({ item, onAdd }: MenuDishEntryProps) {
   const orderable = isMenuItemOrderable(item)
   const meta = buildMeta(item)
   const price = `$${(item.price / 100).toFixed(2)}`
-  const imageUri = item.imageURL || getDishImageUrl(item.id, item.name, item.category)
+  const imageUri = resolveMenuItemImage(item)
 
   const openDetail = () => router.push(`/menu/${item.id}` as never)
 

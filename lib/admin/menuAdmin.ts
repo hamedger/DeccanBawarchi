@@ -14,16 +14,13 @@ import {
   mergeMenuItems,
   sortMenuItems,
 } from '../menuMerge'
-import { getDishImageUrl, hasLocalDishImage } from '../menuImages'
+import { resolveMenuItemImage } from '../menuImages'
 
 function ensureImage(item: MenuItem): MenuItem {
-  if (hasLocalDishImage(item.id) || !item.imageURL) {
-    return {
-      ...item,
-      imageURL: getDishImageUrl(item.id, item.name, item.category),
-    }
+  return {
+    ...item,
+    imageURL: resolveMenuItemImage(item),
   }
-  return item
 }
 
 export async function fetchAdminMenuItems(): Promise<MenuItem[]> {

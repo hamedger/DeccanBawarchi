@@ -19,8 +19,8 @@ export const BUSINESS_HOURS = {
 
 export const DELIVERY_RADIUS_MILES = 10
 
-/** DoorDash Drive delivery — Phase 3. */
-export const DELIVERY_ENABLED = true
+/** DoorDash Drive delivery — Phase 3. Pickup-only until local testing passes. */
+export const DELIVERY_ENABLED = false
 
 export const LOYALTY = {
   pointsPerDollar: 1,

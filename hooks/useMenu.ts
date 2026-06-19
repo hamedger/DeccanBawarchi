@@ -7,18 +7,16 @@ import {
   filterMenuForDisplay,
   getStaticMenuCatalog,
   mergeMenuItems,
+  REMOVED_MENU_IDS,
 } from '../lib/menuMerge'
 import { STATIC_MENU } from '../constants/staticMenu'
-import { getDishImageUrl, hasLocalDishImage } from '../lib/menuImages'
+import { resolveMenuItemImage } from '../lib/menuImages'
 
 function ensureImage(item: MenuItem): MenuItem {
-  if (hasLocalDishImage(item.id) || !item.imageURL) {
-    return {
-      ...item,
-      imageURL: getDishImageUrl(item.id, item.name, item.category),
-    }
+  return {
+    ...item,
+    imageURL: resolveMenuItemImage(item),
   }
-  return item
 }
 
 /** @deprecated use getStaticMenuCatalog from lib/menuMerge */
@@ -44,7 +42,7 @@ async function fetchMenuItems(
     const remoteItems = snap.docs.map((d) =>
       ensureImage({ id: d.id, ...d.data() } as MenuItem),
     )
-    const merged = mergeMenuItems(staticItems, remoteItems)
+    const merged = mergeMenuItems(staticItems, remoteItems).map(ensureImage)
     return filterMenuForDisplay(merged, locationId, category)
   } catch {
     return staticItems
@@ -65,6 +63,8 @@ export function useMenuItem(itemId: string) {
   return useQuery({
     queryKey: ['menuItem', itemId],
     queryFn: async () => {
+      if (REMOVED_MENU_IDS.has(itemId)) throw new Error('Item not found')
+
       const staticItem = STATIC_MENU.find((i) => i.id === itemId)
       if (!isFirebaseConfigured) {
         if (!staticItem) throw new Error('Item not found')
