@@ -7,7 +7,7 @@
 import type { MenuItem } from '../types/menu'
 
 /** Bump when restaurant photos change — busts browser/CDN cache for /assets/menu/*.jpg */
-const LOCAL_DISH_IMAGE_VERSION = '20260619'
+const LOCAL_DISH_IMAGE_VERSION = '20260620'
 
 /** Restaurant-owned dish photos served from public/assets/menu/ (web) and bundled assets (native). */
 const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
@@ -23,7 +23,11 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'chicken-manchurian': '/assets/menu/chicken-manchurian.jpg',
   'chicken-nuggets': '/assets/menu/chicken-nuggets.jpg',
   'chicken-pakora': '/assets/menu/chicken-pakora.jpg',
+  'chicken-reshmi-kabab': '/assets/menu/chicken-reshmi-kabab.jpg',
   'chicken-saag': '/assets/menu/chicken-saag.jpg',
+  'chicken-tandoori': '/assets/menu/chicken-tandoori.jpg',
+  'chicken-tangdi-kabab': '/assets/menu/chicken-tangdi-kabab.jpg',
+  'chicken-tikka': '/assets/menu/chicken-tikka.jpg',
   'chicken-tikka-masala': '/assets/menu/chicken-tikka-masala.jpg',
   'chilli-chicken': '/assets/menu/chilli-chicken.jpg',
   'chilli-gobi': '/assets/menu/chilli-gobi.jpg',
@@ -44,6 +48,7 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'lamb-karahi': '/assets/menu/lamb-karahi.jpg',
   'lamb-saag': '/assets/menu/lamb-saag.jpg',
   'mix-veg-appetizer': '/assets/menu/mix-veg-appetizer.jpg',
+  'mixed-tandoori-grill': '/assets/menu/mixed-tandoori-grill.jpg',
   'mutton-haleem': '/assets/menu/mutton-haleem.jpg',
   'mutton-marag': '/assets/menu/mutton-marag.jpg',
   'onion-bhajee': '/assets/menu/onion-bhajee.jpg',
@@ -52,6 +57,7 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'paneer-dum-biryani': '/assets/menu/paneer-dum-biryani.jpg',
   'paneer-karahi': '/assets/menu/paneer-karahi.jpg',
   'paneer-manchurian': '/assets/menu/paneer-manchurian.jpg',
+  'paneer-tandoori': '/assets/menu/paneer-tandoori.jpg',
   'paneer-tikka-masala': '/assets/menu/paneer-tikka-masala.jpg',
   'roti': '/assets/menu/roti.jpg',
   'saag-dal': '/assets/menu/saag-dal.jpg',
@@ -63,6 +69,7 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'shrimp-pakora': '/assets/menu/shrimp-pakora.jpg',
   'shrimp-saag': '/assets/menu/shrimp-saag.jpg',
   'talawa-gosht': '/assets/menu/talawa-gosht.jpg',
+  'tiranga-kabab': '/assets/menu/tiranga-kabab.jpg',
   'veg-dum-biryani': '/assets/menu/veg-dum-biryani.jpg',
   'veg-samosa': '/assets/menu/veg-samosa.jpg',
   'water': '/assets/menu/water.jpg',

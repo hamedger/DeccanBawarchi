@@ -23,6 +23,8 @@ const FOLDER_TO_CATEGORY = {
   'non-veg curries': 'non-veg-curries',
   'vegetarian curries': 'veg-curries',
   'breads & naan': 'breads',
+  sizzler: 'sizzlers',
+  sizzlers: 'sizzlers',
 }
 
 function normalizeName(value) {
