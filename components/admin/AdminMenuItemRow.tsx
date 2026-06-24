@@ -3,11 +3,13 @@ import { View, Text, TouchableOpacity, StyleSheet, Switch, ActivityIndicator, Al
 import { Ionicons } from '@expo/vector-icons'
 import { MenuItem } from '../../types/menu'
 import { setMenuAvailability } from '../../lib/admin/menuAdmin'
+import { getMenuItemAvailability } from '../../lib/menuMerge'
 import { formatCents } from '../../lib/admin/stats'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 interface AdminMenuItemRowProps {
   item: MenuItem
+  locationId: string
   categoryLabel?: string
   onPress: () => void
   onStockChange?: () => void
@@ -15,17 +17,18 @@ interface AdminMenuItemRowProps {
 
 export function AdminMenuItemRow({
   item,
+  locationId,
   categoryLabel,
   onPress,
   onStockChange,
 }: AdminMenuItemRowProps) {
   const [busy, setBusy] = useState(false)
-  const inStock = item.isAvailable !== false
+  const inStock = getMenuItemAvailability(item, locationId)
 
   const toggleStock = async (next: boolean) => {
     setBusy(true)
     try {
-      await setMenuAvailability(item.id, next, item)
+      await setMenuAvailability(item.id, next, locationId, item)
       onStockChange?.()
     } catch (e) {
       Alert.alert('Update failed', e instanceof Error ? e.message : 'Could not update stock')

@@ -1,9 +1,29 @@
 import { Linking, Platform } from 'react-native'
+import { DEFAULT_PICKUP_PREP_BUFFER_MINUTES } from '../constants/config'
 import { STATIC_LOCATIONS } from '../constants/staticLocations'
 import { Location, LocationAddress } from '../types/location'
 
+/** Minutes before earliest same-day pickup slot for a store. */
+export function getPickupPrepBufferMinutes(location: Location | null | undefined): number {
+  const minutes = location?.pickupPrepBufferMinutes
+  if (typeof minutes === 'number' && Number.isFinite(minutes) && minutes > 0) {
+    return Math.round(minutes)
+  }
+  return DEFAULT_PICKUP_PREP_BUFFER_MINUTES
+}
+
+/** Firestore doc ids that should merge into canonical static location ids. */
+const LOCATION_ID_ALIASES: Record<string, string> = {
+  farmingtonhills: 'farmington-hills-mi',
+}
+
 /** Previously both locations shared this number in Firestore. */
 const LEGACY_SHARED_PHONE = '+12489168700'
+
+export function normalizeLocationId(id: string): string {
+  const key = id.trim().toLowerCase()
+  return LOCATION_ID_ALIASES[key] ?? id
+}
 
 function resolveLocationPhone(staticPhone: string, remotePhone?: string): string {
   const remote = remotePhone?.trim()
@@ -65,16 +85,20 @@ export function mergePickableLocations(remote: Location[]): Location[] {
   }
 
   for (const loc of remote.filter(isLocationActive)) {
-    const base = byId.get(loc.id)
+    const canonicalId = normalizeLocationId(loc.id)
+    const base = byId.get(canonicalId)
+    const remoteLoc = canonicalId === loc.id ? loc : { ...loc, id: canonicalId }
     byId.set(
-      loc.id,
+      canonicalId,
       base
         ? {
             ...base,
-            ...loc,
-            phone: resolveLocationPhone(base.phone, loc.phone),
+            ...remoteLoc,
+            phone: resolveLocationPhone(base.phone, remoteLoc.phone),
+            pickupPrepBufferMinutes:
+              remoteLoc.pickupPrepBufferMinutes ?? base.pickupPrepBufferMinutes,
           }
-        : loc,
+        : remoteLoc,
     )
   }
 

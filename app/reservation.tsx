@@ -5,9 +5,14 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { colors, spacing, borderRadius, fonts } from '../constants/theme'
 import { useReservation } from '../hooks/useReservation'
-import { RESERVATION_TIME_SLOTS } from '../lib/services/reservationService'
+import {
+  MIN_RESERVATION_PARTY_SIZE,
+  RESERVATION_TIME_SLOTS,
+} from '../lib/services/reservationService'
 
-const PARTY_SIZES = [1, 2, 3, 4, 5, 6, 7, 8, '9+'] as const
+const PARTY_SIZES = [
+  8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, '21+',
+] as const
 const OCCASIONS = ['Birthday', 'Anniversary', 'Business Dinner', 'Date Night', 'Family Gathering', 'Other']
 
 export default function ReservationScreen() {
@@ -17,7 +22,7 @@ export default function ReservationScreen() {
   const [name, setName] = useState(defaultName)
   const [email, setEmail] = useState(defaultEmail)
   const [phone, setPhone] = useState(defaultPhone)
-  const [partySize, setPartySize] = useState(2)
+  const [partySize, setPartySize] = useState(MIN_RESERVATION_PARTY_SIZE)
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [occasion, setOccasion] = useState('')
@@ -55,6 +60,14 @@ export default function ReservationScreen() {
       <Text style={styles.heading}>Reserve Your Table</Text>
       <Text style={styles.subtitle}>Book up to 30 days in advance · 15-minute seating slots</Text>
 
+      <View style={styles.noticeBox}>
+        <Text style={styles.noticeTitle}>Parties of {MIN_RESERVATION_PARTY_SIZE} or more</Text>
+        <Text style={styles.noticeText}>
+          Table reservations are available for groups of {MIN_RESERVATION_PARTY_SIZE} guests and up.
+          For smaller parties, walk in or order online. For parties over 20, use our catering form.
+        </Text>
+      </View>
+
       {error && (
         <View style={styles.errorBox} accessibilityRole="alert">
           <Text style={styles.errorText}>{error}</Text>
@@ -81,7 +94,7 @@ export default function ReservationScreen() {
         ))}
       </View>
 
-      <Text style={styles.fieldLabel}>Party Size *</Text>
+      <Text style={styles.fieldLabel}>Party Size * (minimum {MIN_RESERVATION_PARTY_SIZE})</Text>
       <View style={styles.sizeGrid}>
         {PARTY_SIZES.map((s) => {
           const value = typeof s === 'number' ? s : 21
@@ -149,7 +162,27 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     color: colors.whiteMuted,
     fontSize: 13,
+    marginBottom: spacing.md,
+  },
+  noticeBox: {
+    backgroundColor: 'rgba(212,175,55,0.1)',
+    borderWidth: 1,
+    borderColor: colors.goldDark,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     marginBottom: spacing.lg,
+    gap: spacing.xs,
+  },
+  noticeTitle: {
+    fontFamily: fonts.sansBold,
+    color: colors.gold,
+    fontSize: 14,
+  },
+  noticeText: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 13,
+    lineHeight: 19,
   },
   errorBox: {
     backgroundColor: 'rgba(239,83,80,0.12)',

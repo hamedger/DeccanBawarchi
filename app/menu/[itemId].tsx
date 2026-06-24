@@ -32,7 +32,7 @@ export default function ItemDetailScreen() {
   const router = useRouter()
   const { width: windowWidth } = useWindowDimensions()
   const { locationId } = useSelectedLocation()
-  const { data: item, isLoading } = useMenuItem(itemId)
+  const { data: item, isLoading } = useMenuItem(itemId, locationId)
   const { data: menuItems = [] } = useMenu(locationId)
 
   const { prevId, nextId } = useMemo(() => {
@@ -97,7 +97,7 @@ export default function ItemDetailScreen() {
   const imageUri = resolveMenuItemImage(item)
   const unitPrice = (item.price / 100).toFixed(2)
   const lineTotal = ((item.price * qty) / 100).toFixed(2)
-  const orderable = isMenuItemOrderable(item)
+  const orderable = isMenuItemOrderable(item, locationId)
 
   const decrement = () => setQty((n) => Math.max(1, n - 1))
   const increment = () => {

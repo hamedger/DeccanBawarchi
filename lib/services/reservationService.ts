@@ -23,6 +23,7 @@ export interface ReservationValidationResult {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const MAX_ADVANCE_DAYS = 30
+export const MIN_RESERVATION_PARTY_SIZE = 8
 const MAX_PARTY_SIZE = 20
 
 export function validateReservation(input: ReservationInput): ReservationValidationResult {
@@ -46,7 +47,9 @@ export function validateReservation(input: ReservationInput): ReservationValidat
     if (reservationDate > maxDate) errors.push(`Book up to ${MAX_ADVANCE_DAYS} days in advance`)
   }
   if (!input.time.trim()) errors.push('Time is required')
-  if (input.partySize < 1) errors.push('Party size must be at least 1')
+  if (input.partySize < MIN_RESERVATION_PARTY_SIZE) {
+    errors.push(`Table reservations require a minimum party of ${MIN_RESERVATION_PARTY_SIZE}`)
+  }
   if (input.partySize > MAX_PARTY_SIZE) {
     errors.push(`For parties over ${MAX_PARTY_SIZE}, use the catering inquiry form`)
   }

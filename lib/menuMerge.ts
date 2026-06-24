@@ -3,7 +3,21 @@ import { STATIC_MENU } from '../constants/staticMenu'
 import { DEFAULT_LOCATION_ID } from '../constants/config'
 import { resolveMenuItemImage } from './menuImages'
 
-export function isMenuItemOrderable(item: MenuItem): boolean {
+export function getMenuItemAvailability(item: MenuItem, locationId: string): boolean {
+  const override = item.locationStock?.[locationId]?.isAvailable
+  if (override !== undefined) return override
+  return item.isAvailable !== false
+}
+
+export function withLocationAvailability(item: MenuItem, locationId: string): MenuItem {
+  return {
+    ...item,
+    isAvailable: getMenuItemAvailability(item, locationId),
+  }
+}
+
+export function isMenuItemOrderable(item: MenuItem, locationId?: string): boolean {
+  if (locationId) return getMenuItemAvailability(item, locationId)
   return item.isAvailable !== false
 }
 
@@ -85,10 +99,12 @@ export function filterMenuForDisplay(
   category?: string,
 ): MenuItem[] {
   return items
+    .map((item) => withLocationAvailability(item, locationId))
     .filter((i) => itemAvailableAtLocation(i, locationId))
+    .filter((i) => isMenuItemOrderable(i, locationId))
     .filter((i) => !category || i.category === category)
     .sort((a, b) => {
-      const avail = Number(isMenuItemOrderable(b)) - Number(isMenuItemOrderable(a))
+      const avail = Number(isMenuItemOrderable(b, locationId)) - Number(isMenuItemOrderable(a, locationId))
       if (avail !== 0) return avail
       return a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
     })

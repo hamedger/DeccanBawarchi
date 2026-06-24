@@ -13,6 +13,7 @@ import { colors } from '../constants/theme'
 import { useAppFonts } from '../lib/fonts'
 import { blurActiveElementOnWeb } from '../lib/a11y'
 import { isAdminUser } from '../lib/adminAuth'
+import { normalizeUserProfile } from '../lib/finishAuthSession'
 import { HomeButton } from '../components/navigation/HomeButton'
 
 SplashScreen.preventAutoHideAsync()
@@ -63,20 +64,25 @@ export default function RootLayout() {
           try {
             const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
             if (snap.exists()) {
-              const remote = snap.data() as User
+              const remote = normalizeUserProfile({
+                uid: firebaseUser.uid,
+                ...(snap.data() as Partial<User>),
+              })
               const existing = useAuthStore.getState().userProfile
               if (
                 existing?.uid === firebaseUser.uid &&
                 existing.email?.trim() &&
                 !remote.email?.trim()
               ) {
-                setUserProfile({
-                  ...remote,
-                  email: existing.email,
-                  phone: existing.phone || remote.phone,
-                  displayName: existing.displayName || remote.displayName,
-                  isGuest: existing.isGuest ?? remote.isGuest,
-                })
+                setUserProfile(
+                  normalizeUserProfile({
+                    ...remote,
+                    email: existing.email,
+                    phone: existing.phone || remote.phone,
+                    displayName: existing.displayName || remote.displayName,
+                    isGuest: existing.isGuest ?? remote.isGuest,
+                  }),
+                )
               } else {
                 setUserProfile(remote)
               }

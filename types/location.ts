@@ -25,6 +25,8 @@ export interface Location {
   acceptsCatering: boolean
   deliveryRadius: number
   timezone: string
+  /** Minutes before earliest same-day pickup slot (ASAP still uses checkout ETA). */
+  pickupPrepBufferMinutes?: number
 }
 
 export type LocationInput = Partial<Omit<Location, 'id' | 'address'>> & {

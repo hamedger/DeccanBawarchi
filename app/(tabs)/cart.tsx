@@ -14,8 +14,9 @@ import { useCart } from '../../hooks/useCart'
 import { useAuth } from '../../hooks/useAuth'
 import { FulfillmentSelector } from '../../components/cart/FulfillmentSelector'
 import { LoyaltyRedeem } from '../../components/cart/LoyaltyRedeem'
+import { TipSelector } from '../../components/cart/TipSelector'
 import { loyaltyDiscountCents } from '../../lib/services/loyaltyService'
-import { TAX_LABEL } from '../../lib/services/cartService'
+import { TAXES_AND_FEES_LABEL } from '../../lib/services/cartService'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
 import { DELIVERY_ENABLED } from '../../constants/config'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
@@ -192,9 +193,16 @@ export default function CartScreen() {
               />
             )}
 
+            <TipSelector
+              subtotal={cart.subtotal()}
+              tipPercent={cart.tipPercent}
+              tip={cart.tip}
+              fulfillmentType={cart.fulfillmentType}
+              onSelectPercent={cart.setTipPercent}
+            />
+
             <SummaryRow label="Subtotal" value={cart.subtotal()} />
-            <SummaryRow label={TAX_LABEL} value={cart.tax} />
-            <SummaryRow label="Service Fee" value={cart.serviceFee} />
+            <SummaryRow label={TAXES_AND_FEES_LABEL} value={cart.tax + cart.serviceFee} />
             {DELIVERY_ENABLED && cart.fulfillmentType === 'delivery' && (
               <SummaryRow
                 label="DoorDash Delivery"
@@ -208,6 +216,7 @@ export default function CartScreen() {
             {loyaltyDiscount > 0 && (
               <SummaryRow label="Loyalty Discount" value={-loyaltyDiscount} gold />
             )}
+            {cart.tip > 0 && <SummaryRow label="Tip" value={cart.tip} gold />}
             <View style={styles.divider} />
             <SummaryRow label="Total" value={cart.total} bold />
           </View>

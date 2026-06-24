@@ -6,6 +6,7 @@ import { useCart } from '../../hooks/useCart'
 import { useAuth } from '../../hooks/useAuth'
 import { FulfillmentSelector } from '../../components/cart/FulfillmentSelector'
 import { PickupScheduler } from '../../components/checkout/PickupScheduler'
+import { TipSelector } from '../../components/cart/TipSelector'
 import { Input } from '../../components/ui/Input'
 import { formatPickupSchedule, isPickupScheduleValid } from '../../lib/services/pickupScheduling'
 import { loyaltyDiscountCents } from '../../lib/services/loyaltyService'
@@ -21,11 +22,11 @@ import { isApiConfigured } from '../../constants/api'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { LocationConfirmCard } from '../../components/location/LocationConfirmCard'
-import { formatLocationAddress } from '../../lib/locationUtils'
+import { formatLocationAddress, getPickupPrepBufferMinutes } from '../../lib/locationUtils'
 import { confirmOrderLocation } from '../../lib/confirmOrderLocation'
 import { User as FirebaseUser } from 'firebase/auth'
 import { User } from '../../types/user'
-import { TAX_LABEL } from '../../lib/services/cartService'
+import { TAXES_AND_FEES_LABEL } from '../../lib/services/cartService'
 import { CHECKOUT_RETURN_PATH } from '../../lib/authReturnTo'
 
 function hasCheckoutAuth(firebaseUser: FirebaseUser | null, userProfile: User | null) {
@@ -53,6 +54,7 @@ export default function CheckoutIndex() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const autoPayStarted = useRef(false)
+  const prepBufferMinutes = getPickupPrepBufferMinutes(location)
 
   const isDelivery = DELIVERY_ENABLED && cart.fulfillmentType === 'delivery'
   const isAuthed = hasCheckoutAuth(firebaseUser, userProfile)
@@ -60,7 +62,7 @@ export default function CheckoutIndex() {
     hasSelection &&
     (isDelivery
       ? Boolean(street.trim() && city.trim() && zip.trim())
-      : isPickupScheduleValid(cart.pickupDate, cart.pickupTime))
+      : isPickupScheduleValid(cart.pickupDate, cart.pickupTime, prepBufferMinutes))
   const canContinue = isAuthed ? canPlace : true
 
   const processPayment = useCallback(
@@ -257,10 +259,21 @@ export default function CheckoutIndex() {
             time={cart.pickupTime}
             pickupAddress={location ? formatLocationAddress(location.address) : ''}
             locationName={location?.name}
+            prepBufferMinutes={prepBufferMinutes}
             onDateChange={cart.setPickupDate}
             onTimeChange={cart.setPickupTime}
           />
         )}
+
+        <View style={styles.section}>
+          <TipSelector
+            subtotal={cart.subtotal()}
+            tipPercent={cart.tipPercent}
+            tip={cart.tip}
+            fulfillmentType={cart.fulfillmentType}
+            onSelectPercent={cart.setTipPercent}
+          />
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
@@ -278,8 +291,7 @@ export default function CheckoutIndex() {
             ))}
             <View style={styles.divider} />
             <SummaryLine label="Subtotal" value={cart.subtotal()} />
-            <SummaryLine label={TAX_LABEL} value={cart.tax} />
-            <SummaryLine label="Service Fee" value={cart.serviceFee} />
+            <SummaryLine label={TAXES_AND_FEES_LABEL} value={cart.tax + cart.serviceFee} />
             {isDelivery && <SummaryLine label="DoorDash Delivery" value={cart.deliveryFee} />}
             {cart.loyaltyPointsToRedeem > 0 && (
               <SummaryLine
@@ -287,6 +299,7 @@ export default function CheckoutIndex() {
                 value={-loyaltyDiscountCents(cart.loyaltyPointsToRedeem)}
               />
             )}
+            {cart.tip > 0 && <SummaryLine label="Tip" value={cart.tip} />}
             <View style={styles.divider} />
             <SummaryLine label="Total" value={cart.total} bold />
           </View>

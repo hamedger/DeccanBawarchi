@@ -1,6 +1,6 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
 import { getAuth, initializeAuth, browserLocalPersistence, Auth } from 'firebase/auth'
-import { getFirestore, Firestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore, Firestore } from 'firebase/firestore'
 import { getStorage, FirebaseStorage } from 'firebase/storage'
 import { Platform } from 'react-native'
 
@@ -39,8 +39,21 @@ function createAuth(firebaseApp: FirebaseApp): Auth {
   return getAuth(firebaseApp)
 }
 
+function createFirestore(firebaseApp: FirebaseApp): Firestore {
+  if (Platform.OS === 'web' && isFirebaseConfigured) {
+    try {
+      return initializeFirestore(firebaseApp, {
+        experimentalForceLongPolling: true,
+      })
+    } catch {
+      return getFirestore(firebaseApp)
+    }
+  }
+  return getFirestore(firebaseApp)
+}
+
 export const auth: Auth = createAuth(app)
-export const db: Firestore = getFirestore(app)
+export const db: Firestore = createFirestore(app)
 export const storage: FirebaseStorage = getStorage(app)
 
 // Offline persistence (native only)

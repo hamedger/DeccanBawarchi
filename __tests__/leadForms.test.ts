@@ -18,8 +18,8 @@ describe('reservationService validation', () => {
     name: 'Jane Doe',
     email: 'jane@example.com',
     phone: '2485551234',
-    partySize: 4,
-    date: '2026-06-20',
+    partySize: 8,
+    date: '2026-07-15',
     time: '7:00 PM',
   }
 
@@ -35,6 +35,12 @@ describe('reservationService validation', () => {
     expect(result.errors[0]).toMatch(/email/i)
   })
 
+  it('rejects party size under 8', () => {
+    const result = validateReservation({ ...validInput, partySize: 4 })
+    expect(result.valid).toBe(false)
+    expect(result.errors[0]).toMatch(/minimum party of 8/i)
+  })
+
   it('rejects party size over 20', () => {
     const result = validateReservation({ ...validInput, partySize: 25 })
     expect(result.valid).toBe(false)
@@ -47,7 +53,7 @@ describe('cateringService validation', () => {
     name: 'John Smith',
     email: 'john@example.com',
     phone: '2485559876',
-    eventDate: '2026-06-15',
+    eventDate: '2026-07-20',
     headcount: 50,
   }
 

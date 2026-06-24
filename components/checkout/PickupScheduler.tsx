@@ -1,12 +1,18 @@
-import React, { useEffect, useMemo } from 'react'
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native'
+import React, { useEffect, useMemo, useState } from 'react'
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { MOCK_PICKUP_ETA_MINUTES } from '../../constants/checkout'
 import {
+  getCustomPickupTimeInputBounds,
   getPickupDateOptions,
   getPickupTimeSlotsForDate,
+  isCustomPickupTimeValid,
+  isPresetPickupTime,
+  pickupTimeFromInputValue,
+  pickupTimeToInputValue,
   PICKUP_ASAP,
 } from '../../lib/services/pickupScheduling'
+import { Input } from '../ui/Input'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 interface PickupSchedulerProps {
@@ -14,6 +20,7 @@ interface PickupSchedulerProps {
   time: string
   pickupAddress: string
   locationName?: string
+  prepBufferMinutes?: number
   onDateChange: (date: string) => void
   onTimeChange: (time: string) => void
 }
@@ -23,17 +30,58 @@ export function PickupScheduler({
   time,
   pickupAddress,
   locationName,
+  prepBufferMinutes,
   onDateChange,
   onTimeChange,
 }: PickupSchedulerProps) {
+  const bufferMinutes = prepBufferMinutes ?? 30
   const dateOptions = useMemo(() => getPickupDateOptions(), [])
-  const timeSlots = useMemo(() => getPickupTimeSlotsForDate(date), [date])
+  const timeSlots = useMemo(
+    () => getPickupTimeSlotsForDate(date, bufferMinutes),
+    [date, bufferMinutes],
+  )
+  const inputBounds = useMemo(
+    () => getCustomPickupTimeInputBounds(date, bufferMinutes),
+    [date, bufferMinutes],
+  )
+  const [customMode, setCustomMode] = useState(
+    () => Boolean(time) && !isPresetPickupTime(time),
+  )
+
+  const customSelected = customMode
+  const customTimeInvalid =
+    customMode && Boolean(time) && !isCustomPickupTimeValid(date, time, bufferMinutes)
 
   useEffect(() => {
-    if (!timeSlots.includes(time as typeof timeSlots[number])) {
+    if (time && !isPresetPickupTime(time)) {
+      setCustomMode(true)
+    }
+  }, [time])
+
+  useEffect(() => {
+    if (!time || !isPresetPickupTime(time)) return
+    if (!timeSlots.includes(time as (typeof timeSlots)[number])) {
       onTimeChange(timeSlots[0] ?? '')
+      setCustomMode(false)
     }
   }, [date, time, timeSlots, onTimeChange])
+
+  const handleCustomPress = () => {
+    setCustomMode(true)
+    if (!time || time === PICKUP_ASAP) {
+      const normalized = pickupTimeFromInputValue(inputBounds.min)
+      if (normalized) onTimeChange(normalized)
+    }
+  }
+
+  const handleCustomInputChange = (rawValue: string) => {
+    const normalized = pickupTimeFromInputValue(rawValue)
+    if (normalized) {
+      onTimeChange(normalized)
+      return
+    }
+    onTimeChange(rawValue)
+  }
 
   return (
     <View style={styles.wrap}>
@@ -77,7 +125,7 @@ export function PickupScheduler({
       <Text style={styles.fieldLabel}>Pickup time</Text>
       <View style={styles.timeGrid}>
         {timeSlots.map((slot) => {
-          const selected = time === slot
+          const selected = !customMode && time === slot
           const isAsap = slot === PICKUP_ASAP
           return (
             <TouchableOpacity
@@ -87,7 +135,10 @@ export function PickupScheduler({
                 isAsap && styles.asapChip,
                 selected && styles.chipActive,
               ]}
-              onPress={() => onTimeChange(slot)}
+              onPress={() => {
+                setCustomMode(false)
+                onTimeChange(slot)
+              }}
             >
               <Text style={[styles.timeText, selected && styles.chipTextActive]}>
                 {isAsap ? `ASAP (~${MOCK_PICKUP_ETA_MINUTES} min)` : slot}
@@ -95,7 +146,61 @@ export function PickupScheduler({
             </TouchableOpacity>
           )
         })}
+        <TouchableOpacity
+          style={[styles.timeChip, customSelected && styles.chipActive]}
+          onPress={handleCustomPress}
+        >
+          <Text style={[styles.timeText, customSelected && styles.chipTextActive]}>
+            Custom
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {customMode ? (
+        <View style={styles.customTimeWrap}>
+          {Platform.OS === 'web' ? (
+            <input
+              type="time"
+              value={pickupTimeToInputValue(time)}
+              min={inputBounds.min}
+              max={inputBounds.max}
+              step={300}
+              onChange={(event) => handleCustomInputChange(event.target.value)}
+              style={{
+                width: '100%',
+                color: colors.white,
+                backgroundColor: colors.backgroundSecondary,
+                border: `1px solid ${customTimeInvalid ? colors.error : colors.border}`,
+                borderRadius: borderRadius.md,
+                padding: `${spacing.sm + 2}px ${spacing.md}px`,
+                fontSize: 15,
+                fontFamily: fonts.sans,
+              }}
+            />
+          ) : (
+            <Input
+              label="Custom time"
+              value={time === PICKUP_ASAP ? '' : time}
+              onChangeText={handleCustomInputChange}
+              placeholder="e.g. 6:45 PM"
+              autoCapitalize="none"
+              error={
+                customTimeInvalid
+                  ? `Choose a time at least ${bufferMinutes} min from now, between 11:30 AM and 11:00 PM.`
+                  : undefined
+              }
+            />
+          )}
+          {Platform.OS === 'web' && customTimeInvalid ? (
+            <Text style={styles.customError}>
+              Choose a time at least {bufferMinutes} min from now, between 11:30 AM and 11:00 PM.
+            </Text>
+          ) : null}
+          {!customTimeInvalid && customMode ? (
+            <Text style={styles.customHint}>Any time within restaurant hours for this date.</Text>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   )
 }
@@ -187,5 +292,18 @@ const styles = StyleSheet.create({
   },
   chipSubActive: {
     color: colors.goldLight,
+  },
+  customTimeWrap: {
+    gap: spacing.xs,
+  },
+  customHint: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 12,
+  },
+  customError: {
+    fontFamily: fonts.sans,
+    color: colors.error,
+    fontSize: 12,
   },
 })

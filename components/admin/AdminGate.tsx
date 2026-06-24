@@ -65,7 +65,7 @@ export function AdminGate({ children }: AdminGateProps) {
         setAdmin(admin)
         setPassword('')
       } catch (e) {
-        setError(getAuthErrorMessage(e))
+        setError(getAuthErrorMessage(e, { admin: true }))
       } finally {
         setLoading(false)
       }

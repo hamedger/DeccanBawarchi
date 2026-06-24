@@ -7,6 +7,7 @@ import {
   MOCK_PICKUP_ETA_MINUTES,
 } from '../constants/checkout'
 import { getDefaultPickupDate, PICKUP_ASAP } from '../lib/services/pickupScheduling'
+import { calculateTipFromPercent } from '../lib/services/cartService'
 
 interface CartState {
   items: OrderItem[]
@@ -21,6 +22,7 @@ interface CartState {
   giftCardCode: string
   giftCardAmount: number
   tip: number
+  tipPercent: number | null
   notes: string
 
   addItem: (item: Omit<OrderItem, 'quantity'>) => void
@@ -32,6 +34,7 @@ interface CartState {
   setLoyaltyPoints: (points: number) => void
   setGiftCard: (code: string, amount: number) => void
   setTip: (tip: number) => void
+  setTipPercent: (percent: number | null) => void
   setNotes: (notes: string) => void
   setFulfillmentType: (type: FulfillmentType) => void
   setPickupDate: (date: string) => void
@@ -56,6 +59,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   giftCardCode: '',
   giftCardAmount: 0,
   tip: 0,
+  tipPercent: null,
   notes: '',
 
   addItem: (item) => {
@@ -98,7 +102,14 @@ export const useCartStore = create<CartState>((set, get) => ({
   clearPromo: () => set({ promoCode: '', promoDiscount: 0 }),
   setLoyaltyPoints: (points) => set({ loyaltyPointsToRedeem: points }),
   setGiftCard: (code, amount) => set({ giftCardCode: code, giftCardAmount: amount }),
-  setTip: (tip) => set({ tip }),
+  setTip: (tip) => set({ tip, tipPercent: null }),
+  setTipPercent: (percent) => {
+    const subtotal = get().subtotal()
+    set({
+      tipPercent: percent,
+      tip: percent != null ? calculateTipFromPercent(subtotal, percent) : 0,
+    })
+  },
   setNotes: (notes) => set({ notes }),
 
   setFulfillmentType: (type) => {
@@ -130,6 +141,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       giftCardCode: '',
       giftCardAmount: 0,
       tip: 0,
+      tipPercent: null,
       notes: '',
     }),
 
@@ -150,6 +162,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       giftCardCode: '',
       giftCardAmount: 0,
       tip: order.tip ?? 0,
+      tipPercent: null,
       notes: order.notes ?? '',
     })
   },

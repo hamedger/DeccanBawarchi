@@ -71,7 +71,8 @@
     "test:watch": "jest --watch",
     "seed": "ts-node --project scripts/tsconfig.json scripts/seedFirestore.ts",
     "functions:serve": "cd functions && npm run serve",
-    "test:doordash-local": "node scripts/test-doordash-local.mjs"
+    "test:doordash-local": "node scripts/test-doordash-local.mjs",
+    "test:order-email": "node scripts/test-order-email.mjs"
   },
   "private": true
 }

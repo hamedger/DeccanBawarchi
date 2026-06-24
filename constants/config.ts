@@ -5,6 +5,8 @@ export const RESTAURANT_ADDRESS = '17933 Haggerty Rd, Township of Northville, MI
 export const RESTAURANT_WEBSITE = 'https://deccanbawarchi.com'
 export const SUPPORT_EMAIL = 'support@deccanbawarchi.com'
 export const ORDERS_EMAIL = 'orders@deccanbawarchi.com'
+/** Staff inbox for new paid order alerts (Cloud Functions). */
+export const ORDERS_NOTIFICATION_EMAIL = 'mjalaluddin63@gmail.com'
 
 export const BUSINESS_HOURS = {
   // 0=Sun, 1=Mon ... 6=Sat — Open 7 days 11:30 AM – 1:00 AM
@@ -20,7 +22,7 @@ export const BUSINESS_HOURS = {
 export const DELIVERY_RADIUS_MILES = 10
 
 /** DoorDash Drive delivery — Phase 3. Pickup-only until local testing passes. */
-export const DELIVERY_ENABLED = false
+export const DELIVERY_ENABLED = true
 
 export const LOYALTY = {
   pointsPerDollar: 1,
@@ -41,5 +43,7 @@ export const LOYALTY = {
 }
 
 export const DEFAULT_LOCATION_ID = 'northville-mi'
+
+export const DEFAULT_PICKUP_PREP_BUFFER_MINUTES = 30
 
 export const TIMEZONE = 'America/Detroit'

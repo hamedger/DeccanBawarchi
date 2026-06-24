@@ -2,6 +2,7 @@ import {
   calculateTax,
   calculateServiceFee,
   calculateOrderTotal,
+  calculateTipFromPercent,
   TAX_RATE,
   SERVICE_FEE_RATE,
 } from '../lib/services/cartService'
@@ -18,6 +19,13 @@ describe('cartService', () => {
     it('calculates 3% service fee rounded to nearest cent', () => {
       expect(calculateServiceFee(1000)).toBe(30)
       expect(calculateServiceFee(2000)).toBe(Math.round(2000 * SERVICE_FEE_RATE))
+    })
+  })
+
+  describe('calculateTipFromPercent', () => {
+    it('calculates tip rounded to nearest cent', () => {
+      expect(calculateTipFromPercent(1000, 15)).toBe(150)
+      expect(calculateTipFromPercent(1799, 20)).toBe(Math.round(1799 * 0.2))
     })
   })
 

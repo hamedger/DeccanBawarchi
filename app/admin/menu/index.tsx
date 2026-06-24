@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -10,7 +10,10 @@ import {
 import { useRouter } from 'expo-router'
 import { useAdminMenu, useInvalidateAdminMenu } from '../../../hooks/useAdminMenu'
 import { MENU_CATEGORIES } from '../../../constants/menu'
+import { DEFAULT_LOCATION_ID } from '../../../constants/config'
 import { AdminMenuItemRow } from '../../../components/admin/AdminMenuItemRow'
+import { AdminLocationFilter } from '../../../components/admin/AdminLocationFilter'
+import { useAdminLocationStore } from '../../../store/adminLocationStore'
 import { MenuItem } from '../../../types/menu'
 import { colors, spacing, borderRadius, fonts } from '../../../constants/theme'
 
@@ -38,9 +41,23 @@ function groupByCategory(items: MenuItem[]) {
 
 export default function AdminMenuListScreen() {
   const router = useRouter()
-  const { data: items = [], isLoading } = useAdminMenu()
+  const hydrate = useAdminLocationStore((s) => s.hydrate)
+  const filterLocationId = useAdminLocationStore((s) => s.filterLocationId)
+  const setFilterLocationId = useAdminLocationStore((s) => s.setFilterLocationId)
+  const stockLocationId = filterLocationId ?? DEFAULT_LOCATION_ID
+  const { data: items = [], isLoading } = useAdminMenu(stockLocationId)
   const invalidate = useInvalidateAdminMenu()
   const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    hydrate()
+  }, [hydrate])
+
+  useEffect(() => {
+    if (!filterLocationId) {
+      setFilterLocationId(DEFAULT_LOCATION_ID)
+    }
+  }, [filterLocationId, setFilterLocationId])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -62,7 +79,7 @@ export default function AdminMenuListScreen() {
         <View>
           <Text style={styles.heading}>Menu</Text>
           <Text style={styles.subheading}>
-            {items.length} items · toggle stock inline
+            {items.length} items · stock per location
           </Text>
         </View>
         {soldOut > 0 ? (
@@ -71,6 +88,8 @@ export default function AdminMenuListScreen() {
           </View>
         ) : null}
       </View>
+
+      <AdminLocationFilter showAll={false} />
 
       <View style={styles.searchWrap}>
         <TextInput
@@ -97,6 +116,7 @@ export default function AdminMenuListScreen() {
                   <AdminMenuItemRow
                     key={item.id}
                     item={item}
+                    locationId={stockLocationId}
                     onPress={() => router.push(`/admin/menu/${item.id}` as never)}
                     onStockChange={invalidate}
                   />

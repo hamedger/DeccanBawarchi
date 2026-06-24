@@ -9,6 +9,7 @@ import { useNotificationStore } from '../../store/notificationStore'
 import { useLoyalty } from '../../hooks/useLoyalty'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { Button } from '../../components/ui/Button'
+import { getProfileDisplayName, getProfileInitial } from '../../lib/profileDisplay'
 
 function Row({
   icon, label, right, onPress,
@@ -27,6 +28,10 @@ export default function ProfileScreen() {
   const { firebaseUser, userProfile, isLoading } = useAuth()
   const { prefs, setPrefs } = useNotificationStore()
   const { points, tier, pointsToNextTier } = useLoyalty()
+  const profileEmail = userProfile?.email?.trim() || firebaseUser?.email?.trim() || ''
+  const profileName = getProfileDisplayName(userProfile?.displayName, profileEmail)
+  const profileInitial = getProfileInitial(userProfile?.displayName, profileEmail)
+  const tierLabel = (tier ?? 'bronze').toUpperCase()
 
   if (isLoading) {
     return (
@@ -62,12 +67,10 @@ export default function ProfileScreen() {
       {/* Profile header */}
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {(userProfile?.displayName ?? firebaseUser.email ?? 'U')[0].toUpperCase()}
-          </Text>
+          <Text style={styles.avatarText}>{profileInitial}</Text>
         </View>
-        <Text style={styles.name}>{userProfile?.displayName ?? 'Guest'}</Text>
-        <Text style={styles.email}>{firebaseUser.email}</Text>
+        <Text style={styles.name}>{profileName}</Text>
+        <Text style={styles.email}>{profileEmail || firebaseUser.email}</Text>
       </View>
 
       {/* Loyalty card */}
@@ -76,7 +79,7 @@ export default function ProfileScreen() {
         onPress={() => router.push('/loyalty' as any)}
       >
         <View>
-          <Text style={styles.loyaltyTier}>{tier.toUpperCase()} MEMBER</Text>
+          <Text style={styles.loyaltyTier}>{tierLabel} MEMBER</Text>
           <Text style={styles.loyaltyPoints}>{points} pts</Text>
           {pointsToNextTier && (
             <Text style={styles.loyaltyNext}>{pointsToNextTier} pts to next tier</Text>

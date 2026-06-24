@@ -1,5 +1,5 @@
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from '../firebase'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+import app, { isFirebaseConfigured } from '../firebase'
 import { OrderStatus } from '../../types/order'
 
 export const ORDER_STATUS_FLOW: OrderStatus[] = [
@@ -24,9 +24,11 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 export async function updateAdminOrderStatus(orderId: string, status: OrderStatus) {
   if (!isFirebaseConfigured) throw new Error('Firebase is not configured')
 
-  await updateDoc(doc(db, 'orders', orderId), {
+  const functions = getFunctions(app, 'us-central1')
+  const updateOrderStatus = httpsCallable(functions, 'updateOrderStatus')
+  await updateOrderStatus({
+    orderId,
     status,
-    updatedAt: serverTimestamp(),
   })
 }
 

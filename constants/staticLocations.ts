@@ -1,4 +1,4 @@
-import { BUSINESS_HOURS } from './config'
+import { BUSINESS_HOURS, DEFAULT_PICKUP_PREP_BUFFER_MINUTES } from './config'
 import { Location } from '../types/location'
 
 export const STATIC_LOCATIONS: Location[] = [
@@ -22,6 +22,7 @@ export const STATIC_LOCATIONS: Location[] = [
     acceptsCatering: true,
     deliveryRadius: 10,
     timezone: 'America/Detroit',
+    pickupPrepBufferMinutes: DEFAULT_PICKUP_PREP_BUFFER_MINUTES,
   },
   {
     id: 'farmington-hills-mi',
@@ -43,6 +44,7 @@ export const STATIC_LOCATIONS: Location[] = [
     acceptsCatering: true,
     deliveryRadius: 10,
     timezone: 'America/Detroit',
+    pickupPrepBufferMinutes: DEFAULT_PICKUP_PREP_BUFFER_MINUTES,
   },
 ]
 

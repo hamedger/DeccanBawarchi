@@ -11,8 +11,12 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Image } from 'expo-image'
 import { useAdminMenu, useInvalidateAdminMenu } from '../../../hooks/useAdminMenu'
-import { saveMenuItem } from '../../../lib/admin/menuAdmin'
+import { saveMenuItem, setMenuAvailability } from '../../../lib/admin/menuAdmin'
 import { getDishImageUrl } from '../../../lib/menuImages'
+import { getMenuItemAvailability } from '../../../lib/menuMerge'
+import { DEFAULT_LOCATION_ID } from '../../../constants/config'
+import { AdminLocationFilter } from '../../../components/admin/AdminLocationFilter'
+import { useAdminLocationStore } from '../../../store/adminLocationStore'
 import { Input } from '../../../components/ui/Input'
 import { Button } from '../../../components/ui/Button'
 import { colors, spacing, borderRadius, fonts } from '../../../constants/theme'
@@ -20,7 +24,11 @@ import { colors, spacing, borderRadius, fonts } from '../../../constants/theme'
 export default function AdminMenuEditScreen() {
   const { itemId } = useLocalSearchParams<{ itemId: string }>()
   const router = useRouter()
-  const { data: items = [], isLoading } = useAdminMenu()
+  const hydrate = useAdminLocationStore((s) => s.hydrate)
+  const filterLocationId = useAdminLocationStore((s) => s.filterLocationId)
+  const setFilterLocationId = useAdminLocationStore((s) => s.setFilterLocationId)
+  const stockLocationId = filterLocationId ?? DEFAULT_LOCATION_ID
+  const { data: items = [], isLoading } = useAdminMenu(stockLocationId)
   const invalidate = useInvalidateAdminMenu()
 
   const item = items.find((i) => i.id === itemId)
@@ -32,12 +40,22 @@ export default function AdminMenuEditScreen() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    hydrate()
+  }, [hydrate])
+
+  useEffect(() => {
+    if (!filterLocationId) {
+      setFilterLocationId(DEFAULT_LOCATION_ID)
+    }
+  }, [filterLocationId, setFilterLocationId])
+
+  useEffect(() => {
     if (!item) return
     setPriceInput((item.price / 100).toFixed(2))
     setImageURL(item.imageURL ?? '')
     setDescription(item.description ?? '')
-    setIsAvailable(item.isAvailable !== false)
-  }, [item])
+    setIsAvailable(getMenuItemAvailability(item, stockLocationId))
+  }, [item, stockLocationId])
 
   if (isLoading) {
     return <ActivityIndicator color={colors.gold} style={{ flex: 1, marginTop: 80 }} />
@@ -67,8 +85,8 @@ export default function AdminMenuEditScreen() {
         price,
         imageURL: imageURL.trim(),
         description: description.trim(),
-        isAvailable,
       }, item)
+      await setMenuAvailability(item.id, isAvailable, stockLocationId, item)
       invalidate()
       Alert.alert('Saved', 'Menu item updated.', [{ text: 'OK', onPress: () => router.back() }])
     } catch (e) {
@@ -82,6 +100,8 @@ export default function AdminMenuEditScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>{item.name}</Text>
       <Text style={styles.category}>{item.category.replace(/-/g, ' ')}</Text>
+
+      <AdminLocationFilter showAll={false} />
 
       <Image source={{ uri: previewUri }} style={styles.image} contentFit="cover" />
 
@@ -111,8 +131,8 @@ export default function AdminMenuEditScreen() {
 
       <View style={styles.toggleRow}>
         <View>
-          <Text style={styles.toggleLabel}>Available to order</Text>
-          <Text style={styles.toggleHint}>Turn off to mark sold out</Text>
+          <Text style={styles.toggleLabel}>Available at this location</Text>
+          <Text style={styles.toggleHint}>Turn off to mark sold out at the selected store</Text>
         </View>
         <Switch
           value={isAvailable}

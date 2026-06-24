@@ -27,6 +27,7 @@ const EMPTY_FORM = {
   isActive: true,
   acceptsDelivery: true,
   acceptsPickup: true,
+  pickupPrepBufferMinutes: '30',
 }
 
 export default function AdminLocationsScreen() {
@@ -58,6 +59,7 @@ export default function AdminLocationsScreen() {
       isActive: location.isActive,
       acceptsDelivery: location.acceptsDelivery,
       acceptsPickup: location.acceptsPickup,
+      pickupPrepBufferMinutes: String(location.pickupPrepBufferMinutes ?? 30),
     })
   }
 
@@ -72,6 +74,12 @@ export default function AdminLocationsScreen() {
       return
     }
 
+    const pickupPrepBufferMinutes = parseInt(form.pickupPrepBufferMinutes, 10)
+    if (!Number.isFinite(pickupPrepBufferMinutes) || pickupPrepBufferMinutes < 5) {
+      Alert.alert('Invalid buffer', 'Pickup prep buffer must be at least 5 minutes.')
+      return
+    }
+
     setSaving(true)
     try {
       const payload = {
@@ -81,6 +89,7 @@ export default function AdminLocationsScreen() {
         isActive: form.isActive,
         acceptsDelivery: form.acceptsDelivery,
         acceptsPickup: form.acceptsPickup,
+        pickupPrepBufferMinutes,
         acceptsReservations: true,
         acceptsCatering: true,
         address: {
@@ -182,6 +191,18 @@ export default function AdminLocationsScreen() {
                 onChangeText={(phone) => setForm((f) => ({ ...f, phone }))}
                 placeholder="+12485551234"
               />
+              <Input
+                label="Pickup prep buffer (minutes)"
+                value={form.pickupPrepBufferMinutes}
+                onChangeText={(pickupPrepBufferMinutes) =>
+                  setForm((f) => ({ ...f, pickupPrepBufferMinutes }))
+                }
+                keyboardType="number-pad"
+                placeholder="30"
+              />
+              <Text style={styles.bufferHint}>
+                Earliest same-day pickup slot is this many minutes after the current time.
+              </Text>
               <ToggleRow
                 label="Active (visible to customers)"
                 value={form.isActive}
@@ -213,6 +234,9 @@ export default function AdminLocationsScreen() {
                   <View style={styles.cardBody}>
                     <Text style={styles.cardName}>{location.name}</Text>
                     <Text style={styles.cardMeta}>{formatLocationAddress(location.address)}</Text>
+                    <Text style={styles.cardMeta}>
+                      Pickup buffer: {location.pickupPrepBufferMinutes ?? 30} min
+                    </Text>
                     <Text style={styles.cardId}>ID: {location.id}</Text>
                   </View>
                   <Switch
@@ -334,6 +358,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     color: colors.whiteMuted,
     fontSize: 13,
+  },
+  bufferHint: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 12,
+    marginTop: -spacing.xs,
+    marginBottom: spacing.xs,
   },
   cardId: {
     fontFamily: fonts.sans,

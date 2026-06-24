@@ -21,7 +21,7 @@ service cloud.firestore {
       return ['loyaltyPoints', 'loyaltyTier', 'totalOrderCount', 'totalSpend', 'createdAt'];
     }
 
-    function clientSafeUserCreate() {
+    function clientSafeUserCreate(userId) {
       let data = request.resource.data;
       return data.uid == userId
         && data.keys().hasAll(['uid', 'email', 'displayName'])
@@ -33,7 +33,7 @@ service cloud.firestore {
         .hasAny(protectedUserFields());
     }
 
-    function clientSafeProfilePatch() {
+    function clientSafeProfilePatch(userId) {
       return request.resource.data.uid == userId
         && request.resource.data.email is string
         && request.resource.data.displayName is string
@@ -44,8 +44,8 @@ service cloud.firestore {
     // Users — profile fields client-writable; loyalty & stats server-only
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isAdmin() || (isOwner(userId) && clientSafeUserCreate());
-      allow update: if isAdmin() || (isOwner(userId) && (clientSafeUserUpdate() || clientSafeProfilePatch()));
+      allow create: if isAdmin() || (isOwner(userId) && clientSafeUserCreate(userId));
+      allow update: if isAdmin() || (isOwner(userId) && (clientSafeUserUpdate() || clientSafeProfilePatch(userId)));
       allow delete: if isAdmin();
     }
 
@@ -91,7 +91,7 @@ service cloud.firestore {
         && request.resource.data.email is string
         && request.resource.data.phone is string
         && request.resource.data.partySize is int
-        && request.resource.data.partySize >= 1
+        && request.resource.data.partySize >= 8
         && request.resource.data.partySize <= 20
         && request.resource.data.status == 'pending';
       allow read, update: if isAdmin()

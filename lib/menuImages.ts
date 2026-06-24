@@ -7,12 +7,13 @@
 import type { MenuItem } from '../types/menu'
 
 /** Bump when restaurant photos change — busts browser/CDN cache for /assets/menu/*.jpg */
-const LOCAL_DISH_IMAGE_VERSION = '20260620'
+const LOCAL_DISH_IMAGE_VERSION = '20260624'
 
 /** Restaurant-owned dish photos served from public/assets/menu/ (web) and bundled assets (native). */
 const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'boneless-chicken-dum-biryani': '/assets/menu/boneless-chicken-dum-biryani.jpg',
   'butter-chicken': '/assets/menu/butter-chicken.jpg',
+  'butter-naan': '/assets/menu/butter-naan.jpg',
   'chana-masala': '/assets/menu/chana-masala.jpg',
   'chicken-65': '/assets/menu/chicken-65.jpg',
   'chicken-65-biryani': '/assets/menu/chicken-65-biryani.jpg',
@@ -39,6 +40,7 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'fish-manchurian': '/assets/menu/fish-manchurian.jpg',
   'fish-pakora': '/assets/menu/fish-pakora.jpg',
   'fish-saag': '/assets/menu/fish-saag.jpg',
+  'garlic-naan': '/assets/menu/garlic-naan.jpg',
   'gobi-65': '/assets/menu/gobi-65.jpg',
   'gobi-manchurian': '/assets/menu/gobi-manchurian.jpg',
   'hyderabadi-chicken-dum-biryani': '/assets/menu/hyderabadi-chicken-dum-biryani.jpg',
@@ -48,9 +50,11 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'lamb-karahi': '/assets/menu/lamb-karahi.jpg',
   'lamb-saag': '/assets/menu/lamb-saag.jpg',
   'mix-veg-appetizer': '/assets/menu/mix-veg-appetizer.jpg',
+  'mix-veg-curry': '/assets/menu/mix-veg-curry.jpg',
   'mixed-tandoori-grill': '/assets/menu/mixed-tandoori-grill.jpg',
   'mutton-haleem': '/assets/menu/mutton-haleem.jpg',
   'mutton-marag': '/assets/menu/mutton-marag.jpg',
+  'naan': '/assets/menu/naan.jpg',
   'onion-bhajee': '/assets/menu/onion-bhajee.jpg',
   'onion-palak-pakora': '/assets/menu/onion-palak-pakora.jpg',
   'paneer-65': '/assets/menu/paneer-65.jpg',
@@ -69,6 +73,7 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'shrimp-pakora': '/assets/menu/shrimp-pakora.jpg',
   'shrimp-saag': '/assets/menu/shrimp-saag.jpg',
   'talawa-gosht': '/assets/menu/talawa-gosht.jpg',
+  'tandoori-veggie-shawarma': '/assets/menu/tandoori-veggie-shawarma.jpg',
   'tiranga-kabab': '/assets/menu/tiranga-kabab.jpg',
   'veg-dum-biryani': '/assets/menu/veg-dum-biryani.jpg',
   'veg-samosa': '/assets/menu/veg-samosa.jpg',

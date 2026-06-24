@@ -25,6 +25,7 @@ const FOLDER_TO_CATEGORY = {
   'breads & naan': 'breads',
   sizzler: 'sizzlers',
   sizzlers: 'sizzlers',
+  shawarma: 'shawarma',
 }
 
 function normalizeName(value) {
@@ -37,6 +38,7 @@ function normalizeName(value) {
     .replace(/\bbiryan\b/g, 'biryani')
     .replace(/\bchilli\b/g, 'chili')
     .replace(/\bhyderbadi\b/g, 'hyderabadi')
+    .replace(/\bsheek\b/g, 'seekh')
     .replace(/\bdum\b/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -110,22 +112,34 @@ function patchMenuImages(localMap) {
 
   const block = `const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {\n${entries}\n}`
 
-  const next = src.replace(
-    /const LOCAL_DISH_IMAGE_URLS: Record<string, string> = \{[\s\S]*?\}/,
-    block,
-  )
+  const pattern =
+    /const LOCAL_DISH_IMAGE_URLS: Record<string, string> = \{[\s\S]*?\n\}(?=\n\nfunction getLocalDishImageUrl)/
 
-  if (next === src) {
-    throw new Error('Could not patch LOCAL_DISH_IMAGE_URLS in lib/menuImages.ts')
+  if (!pattern.test(src)) {
+    throw new Error('Could not find LOCAL_DISH_IMAGE_URLS in lib/menuImages.ts')
   }
 
-  writeFileSync(MENU_IMAGES_PATH, next)
+  const next = src.replace(pattern, block)
+  if (next === src) {
+    console.log('lib/menuImages.ts already up to date')
+    return false
+  }
+
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const versioned = next.replace(
+    /const LOCAL_DISH_IMAGE_VERSION = '[^']+'/,
+    `const LOCAL_DISH_IMAGE_VERSION = '${today}'`,
+  )
+
+  writeFileSync(MENU_IMAGES_PATH, versioned)
+  return true
 }
 
 mkdirSync(OUT_DIR, { recursive: true })
 
 const items = parseMenuItems()
-const localMap = {}
+/** @type {Map<string, { score: number, filePath: string, photoName: string, match: { id: string, name: string } }>} */
+const bestByItemId = new Map()
 const unmatched = []
 
 for (const folder of readdirSync(PHOTOS_DIR)) {
@@ -152,16 +166,42 @@ for (const folder of readdirSync(PHOTOS_DIR)) {
       continue
     }
 
-    const outPath = join(OUT_DIR, `${match.id}.jpg`)
-    copyFileSync(filePath, outPath)
-    localMap[match.id] = `/assets/menu/${match.id}.jpg`
-    console.log(`✓ ${photoName} → ${match.name} (${match.id})`)
+    const score = scoreMatch(photoNorm, match.norm)
+    const existing = bestByItemId.get(match.id)
+    if (!existing || score > existing.score) {
+      bestByItemId.set(match.id, { score, filePath, photoName, match })
+    }
   }
 }
 
-patchMenuImages(localMap)
+const localMap = {}
+let copiedCount = 0
+for (const { filePath, photoName, match } of bestByItemId.values()) {
+  const outPath = join(OUT_DIR, `${match.id}.jpg`)
+  copyFileSync(filePath, outPath)
+  localMap[match.id] = `/assets/menu/${match.id}.jpg`
+  copiedCount++
+  console.log(`✓ ${photoName} → ${match.name} (${match.id})`)
+}
 
-console.log(`\nSynced ${Object.keys(localMap).length} photos to public/assets/menu/`)
+const menuImagesUpdated = patchMenuImages(localMap)
+if (!menuImagesUpdated && copiedCount > 0) {
+  const src = readFileSync(MENU_IMAGES_PATH, 'utf8')
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  const versioned = src.replace(
+    /const LOCAL_DISH_IMAGE_VERSION = '[^']+'/,
+    `const LOCAL_DISH_IMAGE_VERSION = '${today}'`,
+  )
+  if (versioned !== src) {
+    writeFileSync(MENU_IMAGES_PATH, versioned)
+    console.log(`Bumped LOCAL_DISH_IMAGE_VERSION to ${today}`)
+  }
+}
+
+console.log(`\nSynced ${copiedCount} photos to public/assets/menu/`)
+if (menuImagesUpdated) {
+  console.log('Updated lib/menuImages.ts and bumped LOCAL_DISH_IMAGE_VERSION')
+}
 if (unmatched.length) {
   console.log('\nUnmatched photos:')
   for (const row of unmatched) {

@@ -8,6 +8,7 @@ import {
   getStaticMenuCatalog,
   mergeMenuItems,
   REMOVED_MENU_IDS,
+  withLocationAvailability,
 } from '../lib/menuMerge'
 import { STATIC_MENU } from '../constants/staticMenu'
 import { resolveMenuItemImage } from '../lib/menuImages'
@@ -59,16 +60,16 @@ export function useMenu(locationId: string = DEFAULT_LOCATION_ID, category?: str
   })
 }
 
-export function useMenuItem(itemId: string) {
+export function useMenuItem(itemId: string, locationId: string = DEFAULT_LOCATION_ID) {
   return useQuery({
-    queryKey: ['menuItem', itemId],
+    queryKey: ['menuItem', itemId, locationId],
     queryFn: async () => {
       if (REMOVED_MENU_IDS.has(itemId)) throw new Error('Item not found')
 
       const staticItem = STATIC_MENU.find((i) => i.id === itemId)
       if (!isFirebaseConfigured) {
         if (!staticItem) throw new Error('Item not found')
-        return ensureImage(staticItem as MenuItem)
+        return withLocationAvailability(ensureImage(staticItem as MenuItem), locationId)
       }
       try {
         const { getDoc, doc } = await import('firebase/firestore')
@@ -76,15 +77,18 @@ export function useMenuItem(itemId: string) {
         if (snap.exists()) {
           const remote = ensureImage({ id: snap.id, ...snap.data() } as MenuItem)
           if (staticItem) {
-            return ensureImage({ ...staticItem, ...remote, id: itemId } as MenuItem)
+            return withLocationAvailability(
+              ensureImage({ ...staticItem, ...remote, id: itemId } as MenuItem),
+              locationId,
+            )
           }
-          return remote
+          return withLocationAvailability(remote, locationId)
         }
       } catch {
         // fall through to static lookup
       }
       if (!staticItem) throw new Error('Item not found')
-      return ensureImage(staticItem as MenuItem)
+      return withLocationAvailability(ensureImage(staticItem as MenuItem), locationId)
     },
   })
 }

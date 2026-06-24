@@ -1,6 +1,11 @@
 import { useCartStore } from '../store/cartStore'
 import { MenuItem } from '../types/menu'
-import { calculateOrderTotal, calculateTax, calculateServiceFee } from '../lib/services/cartService'
+import {
+  calculateOrderTotal,
+  calculateTax,
+  calculateServiceFee,
+  calculateTipFromPercent,
+} from '../lib/services/cartService'
 
 export function useCart() {
   const store = useCartStore()
@@ -8,10 +13,14 @@ export function useCart() {
   const tax = calculateTax(subtotal)
   const serviceFee = calculateServiceFee(subtotal)
   const deliveryFee = store.fulfillmentType === 'delivery' ? store.deliveryFee : 0
+  const tip =
+    store.tipPercent != null
+      ? calculateTipFromPercent(subtotal, store.tipPercent)
+      : store.tip
   const total =
     calculateOrderTotal({
       subtotal,
-      tip: store.tip,
+      tip,
       promoDiscount: store.promoDiscount,
       loyaltyPointsToRedeem: store.loyaltyPointsToRedeem,
       giftCardAmount: store.giftCardAmount,
@@ -32,6 +41,7 @@ export function useCart() {
     tax,
     serviceFee,
     deliveryFee,
+    tip,
     total,
   }
 }

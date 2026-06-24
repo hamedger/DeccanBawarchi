@@ -1,5 +1,11 @@
 import { Timestamp } from 'firebase/firestore'
 
+export interface MenuLocationStock {
+  isAvailable?: boolean
+  trackStock?: boolean
+  stockQty?: number | null
+}
+
 export interface MenuItem {
   id: string
   name: string
@@ -23,6 +29,8 @@ export interface MenuItem {
   rating: number
   reviewCount: number
   locationIds: string[]
+  /** Per-store stock overrides; falls back to global isAvailable when unset. */
+  locationStock?: Record<string, MenuLocationStock>
   createdAt: Timestamp
   updatedAt: Timestamp
 }
