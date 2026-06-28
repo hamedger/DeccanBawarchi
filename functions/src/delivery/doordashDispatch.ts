@@ -1,7 +1,7 @@
 import * as functions from 'firebase-functions/v2'
 import * as admin from 'firebase-admin'
-import * as jwt from 'jsonwebtoken'
 import fetch from 'node-fetch'
+import { buildDoorDashJwt } from './doordashJwt'
 
 if (!admin.apps.length) admin.initializeApp()
 
@@ -10,27 +10,21 @@ const DOORDASH_BASE = 'https://openapi.doordash.com'
 const RESTAURANT_ADDRESS = '17933 Haggerty Rd, Northville Township, MI 48168'
 const RESTAURANT_PHONE = '+12489857209'
 
-function buildJwt(): string {
-  const developerId = process.env.DOORDASH_DEVELOPER_ID!
-  const keyId = process.env.DOORDASH_KEY_ID!
-  const signingSecret = process.env.DOORDASH_SIGNING_SECRET!
-  return jwt.sign(
-    { aud: 'doordash', iss: developerId, kid: keyId, exp: Math.floor(Date.now() / 1000) + 300 },
-    Buffer.from(signingSecret, 'base64'),
-    { algorithm: 'HS256', header: { dd_ver: 'DD-JWT-V1', kid: keyId } as any },
-  )
-}
-
-export const doordashDispatch = functions.https.onCall(async (request) => {
-  const { auth, data } = request
-  if (!auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in')
-
-  const { orderId } = data
+export async function dispatchOrderToDoorDash(orderId: string) {
   const orderSnap = await db.collection('orders').doc(orderId).get()
   if (!orderSnap.exists) throw new functions.https.HttpsError('not-found', 'Order not found')
 
   const order = orderSnap.data()!
-  const token = buildJwt()
+  if (order.fulfillmentType !== 'delivery') {
+    throw new functions.https.HttpsError('failed-precondition', 'Order is not delivery')
+  }
+  if (!order.deliveryAddress) {
+    throw new functions.https.HttpsError('failed-precondition', 'Missing delivery address')
+  }
+  if (String(order.doordashDeliveryId ?? '').trim()) {
+    return { success: true, trackingUrl: order.doordashTrackingUrl ?? '' }
+  }
+  const token = buildDoorDashJwt()
 
   const resp = await fetch(`${DOORDASH_BASE}/drive/v2/deliveries`, {
     method: 'POST',
@@ -59,9 +53,15 @@ export const doordashDispatch = functions.https.onCall(async (request) => {
   await db.collection('orders').doc(orderId).update({
     doordashDeliveryId: result.external_delivery_id,
     doordashTrackingUrl: result.tracking_url ?? '',
-    status: 'confirmed',
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   })
 
   return { success: true, trackingUrl: result.tracking_url }
+}
+
+export const doordashDispatch = functions.https.onCall(async (request) => {
+  const { auth, data } = request
+  if (!auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in')
+  const { orderId } = data
+  return dispatchOrderToDoorDash(orderId)
 })

@@ -3,7 +3,7 @@ import { DEFAULT_LOCATION_ID } from '../constants/config'
 import { STATIC_LOCATIONS } from '../constants/staticLocations'
 import { useLocationStore } from '../store/locationStore'
 import { useLocations } from './useLocations'
-import { isLocationActive } from '../lib/locationUtils'
+import { isLocationActive, normalizeLocationId } from '../lib/locationUtils'
 
 const PICKABLE_LOCATIONS = STATIC_LOCATIONS.filter(isLocationActive)
 
@@ -17,24 +17,31 @@ export function useSelectedLocation() {
     hydrate()
   }, [hydrate])
 
+  const normalizedSelectedId = selectedLocationId
+    ? normalizeLocationId(selectedLocationId)
+    : null
+
   const location = useMemo(() => {
-    if (!selectedLocationId) return null
+    if (!normalizedSelectedId) return null
     return (
-      locations.find((l) => l.id === selectedLocationId) ??
-      PICKABLE_LOCATIONS.find((l) => l.id === selectedLocationId) ??
+      locations.find((l) => l.id === normalizedSelectedId) ??
+      PICKABLE_LOCATIONS.find((l) => l.id === normalizedSelectedId) ??
       null
     )
-  }, [locations, selectedLocationId])
+  }, [locations, normalizedSelectedId])
 
-  const orderingLocationId = location?.id ?? selectedLocationId ?? DEFAULT_LOCATION_ID
+  const orderingLocationId = location?.id ?? normalizedSelectedId ?? DEFAULT_LOCATION_ID
 
   return {
     location,
     locationId: orderingLocationId,
-    selectedLocationId,
+    selectedLocationId: normalizedSelectedId,
     locations,
     loading: loading || !hasHydrated,
     hasHydrated,
-    hasSelection: Boolean(selectedLocationId && (location ?? PICKABLE_LOCATIONS.some((l) => l.id === selectedLocationId))),
+    hasSelection: Boolean(
+      normalizedSelectedId &&
+        (location ?? PICKABLE_LOCATIONS.some((l) => l.id === normalizedSelectedId)),
+    ),
   }
 }

@@ -59,14 +59,29 @@ export function buildOrderNotificationBody(input: OrderNotificationInput): strin
   return lines.join('\n')
 }
 
-export async function sendOrderNotificationEmail(input: OrderNotificationInput): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY?.trim()
-  const fromEmail = process.env.RESEND_FROM_EMAIL?.trim() || 'orders@deccanbawarchi.com'
-  const toEmail = process.env.ORDERS_NOTIFICATION_EMAIL?.trim() || DEFAULT_NOTIFICATION_EMAIL
+export interface ResendMailConfig {
+  apiKey: string
+  fromEmail: string
+  toEmail: string
+}
+
+function resolveResendConfig(config?: ResendMailConfig): ResendMailConfig {
+  if (config) return config
+  return {
+    apiKey: process.env.RESEND_API_KEY?.trim() ?? '',
+    fromEmail: process.env.RESEND_FROM_EMAIL?.trim() || 'orders@deccanbawarchi.com',
+    toEmail: process.env.ORDERS_NOTIFICATION_EMAIL?.trim() || DEFAULT_NOTIFICATION_EMAIL,
+  }
+}
+
+export async function sendOrderNotificationEmail(
+  input: OrderNotificationInput,
+  config?: ResendMailConfig,
+): Promise<void> {
+  const { apiKey, fromEmail, toEmail } = resolveResendConfig(config)
 
   if (!apiKey) {
-    functions.logger.warn('RESEND_API_KEY not set — skipping order notification email')
-    return
+    throw new Error('RESEND_API_KEY is not configured')
   }
 
   const subject = buildOrderNotificationSubject(input)

@@ -25,6 +25,14 @@ export function normalizeLocationId(id: string): string {
   return LOCATION_ID_ALIASES[key] ?? id
 }
 
+/** Match Firestore orders written with legacy or canonical location ids. */
+export function locationIdsForFirestoreQuery(locationId: string): string[] {
+  const normalized = normalizeLocationId(locationId)
+  const ids = new Set([normalized])
+  if (normalized === 'farmington-hills-mi') ids.add('farmingtonhills')
+  return [...ids]
+}
+
 function resolveLocationPhone(staticPhone: string, remotePhone?: string): string {
   const remote = remotePhone?.trim()
   if (!remote || remote === LEGACY_SHARED_PHONE) return staticPhone
@@ -67,6 +75,28 @@ export function formatLocationShort(location: Location): string {
   return location.address.city
 }
 
+/** Resolve a display label for an order's locationId (handles legacy ids and missing Firestore docs). */
+export function resolveOrderLocationLabel(
+  locationId: string | undefined | null,
+  locations: Location[] = STATIC_LOCATIONS,
+): string {
+  const raw = String(locationId ?? '').trim()
+  if (!raw) return 'Unknown location'
+
+  const normalized = normalizeLocationId(raw)
+  const match =
+    locations.find((l) => l.id === normalized || normalizeLocationId(l.id) === normalized) ??
+    STATIC_LOCATIONS.find((l) => l.id === normalized)
+
+  if (match) return formatLocationShort(match)
+
+  return normalized
+    .split('-')
+    .slice(0, -1)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ') || normalized
+}
+
 export function slugifyLocationId(name: string, city: string, state: string): string {
   const base = `${city}-${state}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
   return base || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -85,6 +115,35 @@ export function mergePickableLocations(remote: Location[]): Location[] {
   }
 
   for (const loc of remote.filter(isLocationActive)) {
+    const canonicalId = normalizeLocationId(loc.id)
+    const base = byId.get(canonicalId)
+    const remoteLoc = canonicalId === loc.id ? loc : { ...loc, id: canonicalId }
+    byId.set(
+      canonicalId,
+      base
+        ? {
+            ...base,
+            ...remoteLoc,
+            phone: resolveLocationPhone(base.phone, remoteLoc.phone),
+            pickupPrepBufferMinutes:
+              remoteLoc.pickupPrepBufferMinutes ?? base.pickupPrepBufferMinutes,
+          }
+        : remoteLoc,
+    )
+  }
+
+  return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/** Admin + settings: merge Firestore locations with static fallbacks so all stores stay visible. */
+export function mergeAllLocations(remote: Location[]): Location[] {
+  const byId = new Map<string, Location>()
+
+  for (const loc of STATIC_LOCATIONS) {
+    byId.set(loc.id, loc)
+  }
+
+  for (const loc of remote) {
     const canonicalId = normalizeLocationId(loc.id)
     const base = byId.get(canonicalId)
     const remoteLoc = canonicalId === loc.id ? loc : { ...loc, id: canonicalId }

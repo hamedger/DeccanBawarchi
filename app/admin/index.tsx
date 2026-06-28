@@ -10,7 +10,7 @@ import {
 import { useRouter } from 'expo-router'
 import { useAdminOrders } from '../../hooks/useAdminOrders'
 import { computeAdminStats, formatCents, formatOrderTime } from '../../lib/admin/stats'
-import { ORDER_STATUS_LABELS } from '../../lib/admin/orderAdmin'
+import { ORDER_STATUS_LABELS, isPaidOrder } from '../../lib/admin/orderAdmin'
 import { StatCard } from '../../components/admin/StatCard'
 import { AdminLocationFilter } from '../../components/admin/AdminLocationFilter'
 import { useAdminLocationStore } from '../../store/adminLocationStore'
@@ -29,7 +29,7 @@ export default function AdminDashboardScreen() {
 
   const stats = useMemo(() => computeAdminStats(orders), [orders])
   const liveOrders = orders
-    .filter((o) => !['delivered', 'cancelled'].includes(o.status))
+    .filter((o) => isPaidOrder(o) && !['delivered', 'cancelled'].includes(o.status))
     .slice(0, 8)
 
   return (

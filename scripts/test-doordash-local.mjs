@@ -2,12 +2,14 @@
  * Smoke-test DoorDash Cloud Functions against the local emulator.
  *
  * Prerequisites:
- *   1. Terminal A: npm run functions:serve
+ *   1. Terminal A: npm run functions:serve:doordash
  *   2. functions/.env has real DOORDASH_* credentials
  *
  * Quote test auth (pick one):
- *   - FIREBASE_ID_TOKEN from browser devtools after sign-in
- *   - TEST_USER_EMAIL + TEST_USER_PASSWORD (may fail if API key has referrer restrictions)
+ *   - Auth emulator (default) — uses test@deccan.local / testpass123
+ *   - FIREBASE_ID_TOKEN from browser after sign-in on production auth
+ *   - TEST_USER_EMAIL + TEST_USER_PASSWORD with USE_AUTH_EMULATOR=false
+ *     (fails if API key has HTTP referrer restrictions)
  *
  * Usage:
  *   npm run test:doordash-local
@@ -15,7 +17,12 @@
  */
 import { config } from 'dotenv'
 import { initializeApp } from 'firebase/app'
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth'
+import {
+  connectAuthEmulator,
+  createUserWithEmailAndPassword,
+  getAuth,
+  signInWithEmailAndPassword,
+} from 'firebase/auth'
 import { connectFunctionsEmulator, getFunctions, httpsCallable } from 'firebase/functions'
 
 config({ path: '.env' })
@@ -23,9 +30,16 @@ config({ path: '.env' })
 const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID
 const emulatorHost = process.env.EXPO_PUBLIC_FUNCTIONS_EMULATOR_HOST ?? '127.0.0.1'
 const emulatorPort = Number(process.env.EXPO_PUBLIC_FUNCTIONS_EMULATOR_PORT ?? 5001)
+const authEmulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST ?? '127.0.0.1'
+const authEmulatorPort = Number(process.env.FIREBASE_AUTH_EMULATOR_PORT ?? 9099)
 const idToken = process.env.FIREBASE_ID_TOKEN
-const testEmail = process.env.TEST_USER_EMAIL
-const testPassword = process.env.TEST_USER_PASSWORD
+const useAuthEmulator = process.env.USE_AUTH_EMULATOR !== 'false' && !idToken
+const emulatorEmail =
+  process.env.AUTH_EMULATOR_EMAIL ?? 'test@deccan.local'
+const emulatorPassword =
+  process.env.AUTH_EMULATOR_PASSWORD ?? 'testpass123'
+const productionEmail = process.env.TEST_USER_EMAIL
+const productionPassword = process.env.TEST_USER_PASSWORD
 
 if (!projectId) {
   console.error('Missing EXPO_PUBLIC_FIREBASE_PROJECT_ID in .env')
@@ -48,6 +62,46 @@ const orderValue = Number(process.env.TEST_ORDER_VALUE ?? 2500)
 
 console.log(`\nDoorDash local test → emulator ${emulatorHost}:${emulatorPort}\n`)
 
+async function signInForQuote() {
+  if (useAuthEmulator) {
+    connectAuthEmulator(auth, `http://${authEmulatorHost}:${authEmulatorPort}`, {
+      disableWarnings: true,
+    })
+    try {
+      await signInWithEmailAndPassword(auth, emulatorEmail, emulatorPassword)
+    } catch (err) {
+      if (err?.code === 'auth/user-not-found') {
+        await createUserWithEmailAndPassword(auth, emulatorEmail, emulatorPassword)
+        return
+      }
+      if (err?.code === 'auth/network-request-failed') {
+        throw new Error(
+          `Auth emulator not reachable at ${authEmulatorHost}:${authEmulatorPort}. Start Terminal A with: npm run functions:serve:doordash`,
+        )
+      }
+      throw err
+    }
+    return
+  }
+
+  if (!productionEmail || !productionPassword) {
+    throw new Error(
+      'Set TEST_USER_EMAIL + TEST_USER_PASSWORD, FIREBASE_ID_TOKEN, or run with auth emulator: npm run functions:serve:doordash',
+    )
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, productionEmail, productionPassword)
+  } catch (err) {
+    if (err?.code?.includes('requests-from-referer')) {
+      throw new Error(
+        'Firebase API key blocks CLI sign-in. Use npm run functions:serve:doordash (Terminal A) and retry, or set FIREBASE_ID_TOKEN from the browser after sign-in.',
+      )
+    }
+    throw err
+  }
+}
+
 async function testQuote() {
   console.log('1) doordashQuote (callable, requires auth)')
 
@@ -67,14 +121,11 @@ async function testQuote() {
     return
   }
 
-  if (!testEmail || !testPassword) {
-    console.log('   Skipped — set FIREBASE_ID_TOKEN or TEST_USER_EMAIL + TEST_USER_PASSWORD')
-    console.log('   Tip: sign in on http://localhost:8081, then in devtools run:')
-    console.log('   (await import("firebase/auth")).getAuth().currentUser.getIdToken()')
-    return
+  if (useAuthEmulator) {
+    console.log(`   Using auth emulator ${authEmulatorHost}:${authEmulatorPort} as ${emulatorEmail}`)
   }
 
-  await signInWithEmailAndPassword(auth, testEmail, testPassword)
+  await signInForQuote()
   const quoteFn = httpsCallable(functions, 'doordashQuote')
   const { data } = await quoteFn({ dropoffAddress, orderValue })
   console.log('   Quote OK:', data)

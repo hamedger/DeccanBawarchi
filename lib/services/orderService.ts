@@ -3,7 +3,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions'
 import app, { auth, db, isFirebaseConfigured } from '../firebase'
 import { DEFAULT_LOCATION_ID } from '../../constants/config'
 import { calculateEarnedPoints } from './loyaltyService'
-import { FulfillmentType, OrderItem } from '../../types/order'
+import { FulfillmentType, OrderItem, OrderStatus } from '../../types/order'
 import { Address } from '../../types/user'
 
 export interface SubmitOrderInput {
@@ -67,6 +67,20 @@ async function createOrderDirect(input: SubmitOrderInput): Promise<string> {
   const orderRef = doc(collection(db, 'orders'))
   await setDoc(orderRef, buildOrderDoc(input, orderRef.id, userId))
   return orderRef.id
+}
+
+export const USER_CANCELLABLE_STATUSES: OrderStatus[] = ['pending', 'placed', 'confirmed', 'preparing']
+
+export function canUserCancelOrder(status: OrderStatus): boolean {
+  return USER_CANCELLABLE_STATUSES.includes(status)
+}
+
+export async function cancelUserOrder(orderId: string): Promise<void> {
+  if (!isFirebaseConfigured) throw new Error('Firebase is not configured')
+
+  const functions = getFunctions(app, 'us-central1')
+  const updateOrderStatus = httpsCallable(functions, 'updateOrderStatus')
+  await updateOrderStatus({ orderId, status: 'cancelled' })
 }
 
 export async function submitOrder(input: SubmitOrderInput): Promise<string> {

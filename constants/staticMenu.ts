@@ -163,6 +163,11 @@ const RAW_MENU: StaticItem[] = [
   item({ id:'sufiyani-biryani', name:'Sufiyani Biryani', description:'One of the hidden gems of Hyderabadi cuisine. Rich royal biryani prepared with milk, paste of almonds, khoya (mawa) and minimal ghee. No red chilies are used.', price:2299, category:'weekend-specials', subcategory:'non-veg', isVegetarian:false, isSpicy:false, spiceLevel:1, allergens:['dairy','nuts'], tags:['signature'], isBuffetItem:false }),
 
   // ── DESSERTS ───────────────────────────────────────────────────────
+  item({ id:'sunrise-pudding', name:'Sunrise Pudding', description:'A colorful layered pudding dessert with a smooth, creamy finish.', price:699, category:'desserts', subcategory:'veg', isVegetarian:true, isSpicy:false, spiceLevel:1, allergens:['dairy'], tags:[], isBuffetItem:false }),
+  item({ id:'kaddu-ki-kheer', name:'Kaddu Ki Kheer', description:'Traditional pumpkin kheer slow-cooked with milk, sugar, and cardamom.', price:699, category:'desserts', subcategory:'veg', isVegetarian:true, isSpicy:false, spiceLevel:1, allergens:['dairy'], tags:[], isBuffetItem:false }),
+  item({ id:'kaser-rabdi', name:'Kaser Rabdi', description:'Rich, thickened milk dessert flavored with saffron and nuts.', price:499, category:'desserts', subcategory:'veg', isVegetarian:true, isSpicy:false, spiceLevel:1, allergens:['dairy','nuts'], tags:[], isBuffetItem:false }),
+  item({ id:'gulab-jamun', name:'Gulab Jamun', description:'Soft fried milk dumplings soaked in rose-cardamom syrup.', price:499, category:'desserts', subcategory:'veg', isVegetarian:true, isSpicy:false, spiceLevel:1, allergens:['dairy'], tags:['bestseller'], isBuffetItem:false }),
+  item({ id:'ras-malai', name:'Ras Malai', description:'Soft cottage cheese patties served in sweetened, saffron-infused milk.', price:499, category:'desserts', subcategory:'veg', isVegetarian:true, isSpicy:false, spiceLevel:1, allergens:['dairy'], tags:[], isBuffetItem:false }),
   item({ id:'mango-malai', name:'Mango Malai', description:'Creamy mango dessert with condensed milk.', price:699, category:'desserts', subcategory:'veg', isVegetarian:true, isSpicy:false, spiceLevel:1, allergens:['dairy'], tags:[], isBuffetItem:true }),
 
   // ── DRINKS ─────────────────────────────────────────────────────────

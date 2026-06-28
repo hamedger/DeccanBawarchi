@@ -22,8 +22,17 @@ export function createApp() {
   )
 
   app.use((req, res, next) => {
-    if (req.path === '/api/clover/webhook') {
-      express.raw({ type: 'application/json' })(req, res, next)
+    const isCloverWebhook =
+      req.path === '/api/clover/webhook' ||
+      req.originalUrl.split('?')[0] === '/api/clover/webhook'
+
+    if (isCloverWebhook) {
+      express.raw({
+        type: (req) => {
+          const contentType = req.headers['content-type']
+          return typeof contentType === 'string' && contentType.toLowerCase().includes('json')
+        },
+      })(req, res, next)
       return
     }
     express.json()(req, res, next)

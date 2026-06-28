@@ -3,6 +3,9 @@ import { calculateTotal, calculateTax, calculateServiceFee } from '../lib/cartTo
 import { calculateEarnedPoints, loyaltyDiscountCents, validateRedemption } from '../lib/loyalty'
 import { db } from '../lib/firebase'
 import { CloverLineItem } from './cloverClient'
+import { trySendStaffOrderNotification } from './orderNotification'
+
+const POST_PAYMENT_STATUSES = new Set(['placed', 'confirmed', 'preparing', 'ready'])
 
 export interface OrderItemInput {
   menuItemId: string
@@ -57,6 +60,57 @@ export interface CreatePendingOrderResult {
   }
 }
 
+function isUnpaidPending(data: Record<string, unknown>): boolean {
+  return (
+    data.status === 'pending' &&
+    !String(data.cloverPaymentId ?? '').trim() &&
+    !String(data.stripePaymentIntentId ?? '').trim()
+  )
+}
+
+/** Cancel stale checkout attempts so only successful payments become real orders. */
+export async function cancelAbandonedPendingOrders(uid: string): Promise<void> {
+  const snapshot = await db.collection('orders').where('userId', '==', uid).where('status', '==', 'pending').get()
+  const cutoffMs = Date.now() - 2 * 60 * 60 * 1000
+
+  for (const doc of snapshot.docs) {
+    const data = doc.data()
+    if (!isUnpaidPending(data)) continue
+
+    const createdAt = data.createdAt?.toDate?.()?.getTime?.() ?? Date.now()
+    if (createdAt < cutoffMs) continue
+
+    await cancelUnpaidPendingOrder(doc.id, uid)
+  }
+}
+
+export async function cancelUnpaidPendingOrder(orderId: string, uid: string): Promise<void> {
+  const orderRef = db.collection('orders').doc(orderId)
+  const userRef = db.collection('users').doc(uid)
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(orderRef)
+    if (!snap.exists) return
+
+    const order = snap.data()!
+    if (order.userId !== uid || !isUnpaidPending(order)) return
+
+    tx.update(orderRef, {
+      status: 'cancelled',
+      cancelledReason: 'abandoned_checkout',
+      updatedAt: FieldValue.serverTimestamp(),
+    })
+
+    const loyaltyUsed = Number(order.loyaltyPointsUsed ?? 0)
+    if (loyaltyUsed > 0) {
+      tx.update(userRef, {
+        loyaltyPoints: FieldValue.increment(loyaltyUsed),
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+    }
+  })
+}
+
 export async function createPendingOrder(
   input: CreatePendingOrderInput,
 ): Promise<CreatePendingOrderResult> {
@@ -90,6 +144,8 @@ export async function createPendingOrder(
   if (recentOrders.data().count >= 5) {
     throw new Error('Order limit reached. Try again later.')
   }
+
+  await cancelAbandonedPendingOrders(input.uid)
 
   const orderRef = db.collection('orders').doc()
   const userRef = db.collection('users').doc(input.uid)
@@ -145,8 +201,9 @@ export async function createPendingOrder(
     const order = {
       id: orderRef.id,
       userId: input.uid,
-      guestEmail: '',
-      guestPhone: '',
+      guestName: input.customerName?.trim() ?? '',
+      guestEmail: input.customerEmail?.trim() ?? '',
+      guestPhone: input.customerPhone?.trim() ?? '',
       locationId: input.locationId,
       items: input.items,
       subtotal: input.subtotal,
@@ -217,16 +274,27 @@ export async function markOrderPaidByCheckoutSession(
   }
 
   const doc = snapshot.docs[0]
-  const currentStatus = doc.data().status as string
-  if (currentStatus === 'confirmed' || currentStatus === 'preparing') {
+  const orderData = doc.data()
+  const currentStatus = orderData.status as string
+  if (currentStatus === 'cancelled') {
+    console.warn('[orderService] Ignoring payment for cancelled order', {
+      orderId: doc.id,
+      checkoutSessionId,
+    })
+    return null
+  }
+  if (POST_PAYMENT_STATUSES.has(currentStatus)) {
+    void trySendStaffOrderNotification(db, doc.id)
     return doc.id
   }
 
   await doc.ref.update({
-    status: 'confirmed',
+    status: 'placed',
     cloverPaymentId: paymentId,
     updatedAt: FieldValue.serverTimestamp(),
   })
+
+  void trySendStaffOrderNotification(db, doc.id)
 
   return doc.id
 }

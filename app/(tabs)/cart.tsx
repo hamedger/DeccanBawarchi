@@ -23,7 +23,10 @@ import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { Button } from '../../components/ui/Button'
 import { OrderItem } from '../../types/order'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
-import { formatLocationAddress } from '../../lib/locationUtils'
+import { LocationConfirmCard } from '../../components/location/LocationConfirmCard'
+import { PickupScheduler } from '../../components/checkout/PickupScheduler'
+import { formatPickupSchedule } from '../../lib/services/pickupScheduling'
+import { formatLocationAddress, getPickupPrepBufferMinutes } from '../../lib/locationUtils'
 
 function CartRow({
   item,
@@ -119,7 +122,10 @@ export default function CartScreen() {
   const itemCount = cart.itemCount()
   const showLoyalty = !!firebaseUser && !userProfile?.isGuest
   const loyaltyDiscount = loyaltyDiscountCents(cart.loyaltyPointsToRedeem)
-  const { location } = useSelectedLocation()
+  const { location, locationId, locations, loading: locationsLoading } = useSelectedLocation()
+  const isPickup = !DELIVERY_ENABLED || cart.fulfillmentType === 'pickup'
+  const prepBufferMinutes = getPickupPrepBufferMinutes(location)
+  const pickupSchedule = formatPickupSchedule(cart.pickupDate, cart.pickupTime)
 
   if (cart.items.length === 0) {
     return (
@@ -149,9 +155,17 @@ export default function CartScreen() {
             <Text style={styles.heading}>Your Cart</Text>
             <Text style={styles.subheading}>
               {itemCount} {itemCount === 1 ? 'item' : 'items'}
-              {location ? ` · ${location.name}` : ''}
             </Text>
           </View>
+
+          {location ? (
+            <LocationConfirmCard
+              location={location}
+              locations={locations}
+              selectedLocationId={locationId}
+              loading={locationsLoading}
+            />
+          ) : null}
 
           <View style={styles.itemsSection}>
             {cart.items.map((item) => (
@@ -169,7 +183,20 @@ export default function CartScreen() {
             value={cart.fulfillmentType}
             onChange={cart.setFulfillmentType}
             pickupAddress={location ? formatLocationAddress(location.address) : undefined}
+            pickupSchedule={isPickup ? pickupSchedule : undefined}
           />
+
+          {isPickup ? (
+            <PickupScheduler
+              date={cart.pickupDate}
+              time={cart.pickupTime}
+              pickupAddress={location ? formatLocationAddress(location.address) : ''}
+              locationName={location?.name}
+              prepBufferMinutes={prepBufferMinutes}
+              onDateChange={cart.setPickupDate}
+              onTimeChange={cart.setPickupTime}
+            />
+          ) : null}
 
           <View style={styles.summaryCard}>
             <View style={styles.promoRow}>

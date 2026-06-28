@@ -33,7 +33,9 @@ yarn-error.*
 # Environment files — NEVER commit these
 .env
 .env.local
+.env.clover.local
 functions/.env
+functions/.secret.local
 
 # Firebase service account keys
 service-account.json

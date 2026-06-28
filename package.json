@@ -71,8 +71,15 @@
     "test:watch": "jest --watch",
     "seed": "ts-node --project scripts/tsconfig.json scripts/seedFirestore.ts",
     "functions:serve": "cd functions && npm run serve",
+    "functions:serve:doordash": "cd functions && npm run serve:doordash",
+    "functions:serve:doordash:lite": "cd functions && npm run serve:doordash:lite",
     "test:doordash-local": "node scripts/test-doordash-local.mjs",
-    "test:order-email": "node scripts/test-order-email.mjs"
+    "test:stripe-webhook-local": "node scripts/test-stripe-webhook-local.mjs",
+    "test:order-email": "node scripts/test-order-email.mjs",
+    "test:order-notification-e2e": "node scripts/test-order-notification-e2e.mjs",
+    "test:order-notification-content": "cd functions && npm run build && cd .. && jest __tests__/orderNotificationContent.test.ts",
+    "test:clover-webhook-e2e": "node scripts/test-clover-webhook-e2e.mjs",
+    "test:clover-webhook-diag": "node scripts/test-clover-webhook-diag.mjs"
   },
   "private": true
 }

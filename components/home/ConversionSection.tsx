@@ -15,7 +15,7 @@ interface ConversionCard {
 const CONVERSION_CARDS: ConversionCard[] = [
   {
     title: 'Order Online',
-    description: 'Pickup or delivery — browse our full Hyderabadi menu.',
+    description: 'Order for pickup — browse our full Hyderabadi menu.',
     cta: 'Start Order',
     route: '/(tabs)/menu',
     accent: true,

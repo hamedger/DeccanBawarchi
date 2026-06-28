@@ -1,14 +1,16 @@
 import { Router } from 'express'
-import { assertAnyCloverLocationConfigured, getCloverLocationByMerchantId, getCloverLocationConfig } from '../lib/cloverLocations'
+import { assertAnyCloverLocationConfigured, getAllCloverWebhookSecrets, getCloverLocationConfig, getCloverWebhookSecretsForMerchant } from '../lib/cloverLocations'
+import { normalizeLocationId } from '../lib/locationIds'
 import { requireAuth, AuthedRequest } from '../middleware/auth'
 import { createCheckoutSession } from '../services/cloverClient'
 import {
   attachCheckoutSession,
+  cancelUnpaidPendingOrder,
   createPendingOrder,
   markOrderDeclinedByCheckoutSession,
   markOrderPaidByCheckoutSession,
 } from '../services/orderService'
-import { parseCloverWebhook, verifyCloverSignature } from '../services/cloverWebhook'
+import { parseCloverWebhook, verifyCloverSignatureWithAnySecret } from '../services/cloverWebhook'
 
 export const cloverRouter = Router()
 
@@ -52,7 +54,13 @@ cloverRouter.post('/checkout', requireAuth, async (req: AuthedRequest, res) => {
       return
     }
 
-    const clover = getCloverLocationConfig(locationId)
+    const normalizedLocationId = normalizeLocationId(locationId)
+    if (!normalizedLocationId) {
+      res.status(400).json({ error: 'locationId is required' })
+      return
+    }
+
+    const clover = getCloverLocationConfig(normalizedLocationId)
 
     const pending = await createPendingOrder({
       cloverMerchantId: clover.merchantId,
@@ -73,18 +81,24 @@ cloverRouter.post('/checkout', requireAuth, async (req: AuthedRequest, res) => {
       total,
       fulfillmentType,
       deliveryAddress,
-      locationId,
+      locationId: normalizedLocationId,
       notes,
       pickupDate,
       pickupTime,
     })
 
-    const session = await createCheckoutSession({
-      clover,
-      customer: pending.customer,
-      lineItems: pending.lineItems,
-      orderId: pending.orderId,
-    })
+    let session
+    try {
+      session = await createCheckoutSession({
+        clover,
+        customer: pending.customer,
+        lineItems: pending.lineItems,
+        orderId: pending.orderId,
+      })
+    } catch (sessionError) {
+      await cancelUnpaidPendingOrder(pending.orderId, uid)
+      throw sessionError
+    }
 
     await attachCheckoutSession(pending.orderId, session.checkoutSessionId)
 
@@ -114,21 +128,23 @@ cloverRouter.post('/webhook', async (req, res) => {
     const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : ''
     const signature = req.header('Clover-Signature') ?? req.header('clover-signature') ?? undefined
 
+    if (!rawBody.trim()) {
+      res.status(400).json({ error: 'Empty webhook body — check raw JSON parser for this route' })
+      return
+    }
+
     const event = parseCloverWebhook(rawBody)
     if (!event) {
       res.status(400).json({ error: 'Invalid webhook payload' })
       return
     }
 
-    const cloverLocation = event.merchantId
-      ? getCloverLocationByMerchantId(event.merchantId)
-      : null
-    if (!cloverLocation) {
-      res.status(400).json({ error: 'Unknown Clover merchant' })
-      return
-    }
+    const secrets = event.merchantId
+      ? getCloverWebhookSecretsForMerchant(event.merchantId)
+      : getAllCloverWebhookSecrets()
+    const verificationSecrets = secrets.length > 0 ? secrets : getAllCloverWebhookSecrets()
 
-    if (!verifyCloverSignature(rawBody, signature, cloverLocation.webhookSecret)) {
+    if (!verifyCloverSignatureWithAnySecret(rawBody, signature, verificationSecrets)) {
       res.status(400).json({ error: 'Invalid Clover signature' })
       return
     }

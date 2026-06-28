@@ -7,6 +7,7 @@ const db = admin.firestore()
 
 export const onUserCreated = functions.auth.user().onCreate(async (user) => {
   const isGuest = user.providerData.length === 0
+  const now = admin.firestore.Timestamp.now()
 
   await db.collection('users').doc(user.uid).set(
     {
@@ -23,8 +24,8 @@ export const onUserCreated = functions.auth.user().onCreate(async (user) => {
       totalSpend: 0,
       dietaryPreferences: [],
       pushToken: '',
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: now,
+      updatedAt: now,
     },
     { merge: true },
   )

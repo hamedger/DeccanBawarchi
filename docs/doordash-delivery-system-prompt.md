@@ -111,7 +111,7 @@ Every DoorDash request uses a short-lived JWT (5 minutes) signed with HS256.
 
 - Algorithm: `HS256`
 - Secret: `Buffer.from(DOORDASH_SIGNING_SECRET, 'base64')`
-- Header must include: `{ "dd_ver": "DD-JWT-V1", "kid": "<DOORDASH_KEY_ID>" }`
+- Header must include: `{ "dd-ver": "DD-JWT-V1" }` (hyphen, not underscore)
 
 **Reference implementation (Node.js):**
 
@@ -131,7 +131,7 @@ function buildDoorDashJwt(): string {
       exp: Math.floor(Date.now() / 1000) + 300,
     },
     Buffer.from(signingSecret, 'base64'),
-    { algorithm: 'HS256', header: { dd_ver: 'DD-JWT-V1', kid: keyId } as any },
+    { algorithm: 'HS256', header: { 'dd-ver': 'DD-JWT-V1' } },
   )
 }
 ```

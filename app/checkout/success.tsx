@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useCartStore } from '../../store/cartStore'
 import { Button } from '../../components/ui/Button'
 import { HomeButton } from '../../components/navigation/HomeButton'
-import { clearCheckoutContext, readCheckoutContext } from '../../lib/services/cloverCheckout'
+import { clearCheckoutContext, confirmCloverOrderAfterRedirect, readCheckoutContext } from '../../lib/services/cloverCheckout'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
@@ -14,6 +14,7 @@ export default function CheckoutSuccessScreen() {
   const clearCart = useCartStore((s) => s.clearCart)
   const params = useLocalSearchParams<{
     orderId?: string
+    session_id?: string
     fulfillment?: string
     eta?: string
     address?: string
@@ -25,6 +26,16 @@ export default function CheckoutSuccessScreen() {
     clearCart()
     clearCheckoutContext()
   }, [clearCart])
+
+  useEffect(() => {
+    const orderId = params.orderId?.trim()
+    const checkoutSessionId = params.session_id?.trim()
+    if (!orderId || !checkoutSessionId) return
+
+    void confirmCloverOrderAfterRedirect(orderId, checkoutSessionId).catch(() => {
+      // Webhook may have already confirmed the order; ignore transient errors on success page.
+    })
+  }, [params.orderId, params.session_id])
 
   const saved = readCheckoutContext()
   const isDelivery = (params.fulfillment ?? saved?.fulfillment) === 'delivery'

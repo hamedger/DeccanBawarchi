@@ -1,3 +1,5 @@
+import { normalizeLocationId } from './locationIds'
+
 export interface CloverLocationConfig {
   locationId: string
   merchantId: string
@@ -119,11 +121,12 @@ export function getCloverLocations(): CloverLocationConfig[] {
 }
 
 export function getCloverLocationConfig(locationId: string): CloverLocationConfig {
+  const normalizedLocationId = normalizeLocationId(locationId)
   const locations = getCloverLocations()
-  const match = locations.find((location) => location.locationId === locationId)
+  const match = locations.find((location) => location.locationId === normalizedLocationId)
   if (!match) {
     const available = locations.map((location) => location.locationId).join(', ') || 'none'
-    throw new Error(`Clover is not configured for location "${locationId}". Available: ${available}`)
+    throw new Error(`Clover is not configured for location "${normalizedLocationId}". Available: ${available}`)
   }
   return match
 }
@@ -131,6 +134,26 @@ export function getCloverLocationConfig(locationId: string): CloverLocationConfi
 export function getCloverLocationByMerchantId(merchantId: string): CloverLocationConfig | null {
   const locations = getCloverLocations()
   return locations.find((location) => location.merchantId === merchantId) ?? null
+}
+
+/** All signing secrets for a merchant (each Hosted Checkout page can have its own). */
+export function getCloverWebhookSecretsForMerchant(merchantId: string): string[] {
+  const secrets = new Set<string>()
+  for (const location of getCloverLocations()) {
+    if (location.merchantId === merchantId && location.webhookSecret) {
+      secrets.add(location.webhookSecret)
+    }
+  }
+  return [...secrets]
+}
+
+/** Every configured webhook signing secret (small list — used as verification fallback). */
+export function getAllCloverWebhookSecrets(): string[] {
+  const secrets = new Set<string>()
+  for (const location of getCloverLocations()) {
+    if (location.webhookSecret) secrets.add(location.webhookSecret)
+  }
+  return [...secrets]
 }
 
 export function assertAnyCloverLocationConfigured(): void {

@@ -10,12 +10,17 @@ import {
 import { useLocalSearchParams } from 'expo-router'
 import { useAdminOrders } from '../../hooks/useAdminOrders'
 import { useAllLocations } from '../../hooks/useLocations'
+import { resolveOrderLocationLabel } from '../../lib/locationUtils'
 import { useAdminLocationStore } from '../../store/adminLocationStore'
 import { AdminLocationFilter } from '../../components/admin/AdminLocationFilter'
 import {
   nextOrderStatus,
   ORDER_STATUS_LABELS,
   updateAdminOrderStatus,
+  getCallableErrorMessage,
+  isPaidOrder,
+  resolveOrderCustomerInfo,
+  type OrderCustomerProfile,
 } from '../../lib/admin/orderAdmin'
 import { formatCents, formatOrderTime } from '../../lib/admin/stats'
 import { Order, OrderStatus } from '../../types/order'
@@ -27,6 +32,7 @@ function statusColor(status: OrderStatus): string {
   switch (status) {
     case 'pending':
       return colors.goldLight
+    case 'placed':
     case 'confirmed':
     case 'preparing':
       return colors.gold
@@ -43,9 +49,20 @@ function statusColor(status: OrderStatus): string {
   }
 }
 
-function OrderCard({ order, locationName }: { order: Order; locationName?: string }) {
+function OrderCard({
+  order,
+  locationLabel,
+  showLocation,
+  customerProfiles,
+}: {
+  order: Order
+  locationLabel: string
+  showLocation: boolean
+  customerProfiles: Map<string, OrderCustomerProfile>
+}) {
   const [updating, setUpdating] = useState(false)
   const next = nextOrderStatus(order.status)
+  const customer = resolveOrderCustomerInfo(order, customerProfiles)
 
   const advance = async () => {
     if (!next) return
@@ -53,7 +70,7 @@ function OrderCard({ order, locationName }: { order: Order; locationName?: strin
     try {
       await updateAdminOrderStatus(order.id, next)
     } catch (e) {
-      Alert.alert('Update failed', e instanceof Error ? e.message : 'Could not update order')
+      Alert.alert('Update failed', getCallableErrorMessage(e))
     } finally {
       setUpdating(false)
     }
@@ -64,7 +81,7 @@ function OrderCard({ order, locationName }: { order: Order; locationName?: strin
     try {
       await updateAdminOrderStatus(order.id, 'cancelled')
     } catch (e) {
-      Alert.alert('Update failed', e instanceof Error ? e.message : 'Could not cancel order')
+      Alert.alert('Update failed', getCallableErrorMessage(e))
     } finally {
       setUpdating(false)
     }
@@ -84,11 +101,13 @@ function OrderCard({ order, locationName }: { order: Order; locationName?: strin
         </View>
       </View>
 
-      {locationName ? <Text style={styles.locationLine}>{locationName}</Text> : null}
+      {showLocation ? <Text style={styles.locationLine}>{locationLabel}</Text> : null}
+
+      {customer.name ? <Text style={styles.customerName}>{customer.name}</Text> : null}
+      {customer.phone ? <Text style={styles.customerPhone}>{customer.phone}</Text> : null}
 
       <Text style={styles.fulfillment}>
         {order.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}
-        {order.guestPhone ? ` · ${order.guestPhone}` : ''}
       </Text>
 
       {order.items.map((item, idx) => (
@@ -143,20 +162,19 @@ export default function AdminOrdersScreen() {
   }, [locationParam, setFilterLocationId])
 
   const activeLocationId = filterLocationId ?? undefined
-  const { orders, loading } = useAdminOrders(150, activeLocationId)
+  const { orders, customerProfiles, loading } = useAdminOrders(150, activeLocationId)
   const [filter, setFilter] = useState<OrderFilter>('active')
 
-  const locationNameById = useMemo(
-    () => new Map(locations.map((l) => [l.id, l.name])),
-    [locations],
-  )
+  const showAllLocations = filterLocationId === null
 
   const filtered = useMemo(() => {
-    if (filter === 'all') return orders
+    if (filter === 'all') return orders.filter(isPaidOrder)
     if (filter === 'active') {
-      return orders.filter((o) => !['delivered', 'cancelled'].includes(o.status))
+      return orders.filter(
+        (o) => isPaidOrder(o) && !['delivered', 'cancelled'].includes(o.status),
+      )
     }
-    return orders.filter((o) => o.status === filter)
+    return orders.filter((o) => o.status === filter && isPaidOrder(o))
   }, [orders, filter])
 
   return (
@@ -180,7 +198,9 @@ export default function AdminOrdersScreen() {
               <OrderCard
                 key={order.id}
                 order={order}
-                locationName={locationNameById.get(order.locationId)}
+                showLocation={showAllLocations}
+                locationLabel={resolveOrderLocationLabel(order.locationId, locations)}
+                customerProfiles={customerProfiles}
               />
             ))
           )}
@@ -266,6 +286,16 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansMedium,
     color: colors.goldLight,
     fontSize: 12,
+  },
+  customerName: {
+    fontFamily: fonts.sansBold,
+    color: colors.white,
+    fontSize: 14,
+  },
+  customerPhone: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 13,
   },
   fulfillment: {
     fontFamily: fonts.sansMedium,

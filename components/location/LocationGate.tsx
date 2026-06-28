@@ -3,7 +3,7 @@ import { DEFAULT_LOCATION_ID } from '../../constants/config'
 import { STATIC_LOCATIONS } from '../../constants/staticLocations'
 import { useLocationStore } from '../../store/locationStore'
 import { useLocationSelection } from '../../hooks/useLocationSelection'
-import { isLocationActive } from '../../lib/locationUtils'
+import { isLocationActive, normalizeLocationId } from '../../lib/locationUtils'
 import { LocationPickerModal } from './LocationPickerModal'
 
 const PICKABLE_LOCATIONS = STATIC_LOCATIONS.filter(isLocationActive)
@@ -23,10 +23,11 @@ export function LocationGate({ children }: LocationGateProps) {
     hydrate()
   }, [hydrate])
 
-  const validSelection = useMemo(
-    () => Boolean(selectedLocationId && PICKABLE_LOCATIONS.some((l) => l.id === selectedLocationId)),
-    [selectedLocationId],
-  )
+  const validSelection = useMemo(() => {
+    if (!selectedLocationId) return false
+    const normalizedId = normalizeLocationId(selectedLocationId)
+    return PICKABLE_LOCATIONS.some((l) => l.id === normalizedId)
+  }, [selectedLocationId])
 
   useEffect(() => {
     if (!hasHydrated || validSelection) return

@@ -7,7 +7,7 @@
 import type { MenuItem } from '../types/menu'
 
 /** Bump when restaurant photos change — busts browser/CDN cache for /assets/menu/*.jpg */
-const LOCAL_DISH_IMAGE_VERSION = '20260624'
+const LOCAL_DISH_IMAGE_VERSION = '20260628'
 
 /** Restaurant-owned dish photos served from public/assets/menu/ (web) and bundled assets (native). */
 const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
@@ -43,8 +43,11 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'garlic-naan': '/assets/menu/garlic-naan.jpg',
   'gobi-65': '/assets/menu/gobi-65.jpg',
   'gobi-manchurian': '/assets/menu/gobi-manchurian.jpg',
+  'gulab-jamun': '/assets/menu/gulab-jamun.jpg',
   'hyderabadi-chicken-dum-biryani': '/assets/menu/hyderabadi-chicken-dum-biryani.jpg',
   'hyderabadi-goat-dum-biryani': '/assets/menu/hyderabadi-goat-dum-biryani.jpg',
+  'kaddu-ki-kheer': '/assets/menu/kaddu-ki-kheer.jpg',
+  'kaser-rabdi': '/assets/menu/kaser-rabdi.jpg',
   'lamb-achari': '/assets/menu/lamb-achari.jpg',
   'lamb-bhuna': '/assets/menu/lamb-bhuna.jpg',
   'lamb-karahi': '/assets/menu/lamb-karahi.jpg',
@@ -63,6 +66,7 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'paneer-manchurian': '/assets/menu/paneer-manchurian.jpg',
   'paneer-tandoori': '/assets/menu/paneer-tandoori.jpg',
   'paneer-tikka-masala': '/assets/menu/paneer-tikka-masala.jpg',
+  'ras-malai': '/assets/menu/ras-malai.jpg',
   'roti': '/assets/menu/roti.jpg',
   'saag-dal': '/assets/menu/saag-dal.jpg',
   'saag-palak-paneer': '/assets/menu/saag-palak-paneer.jpg',
@@ -72,6 +76,7 @@ const LOCAL_DISH_IMAGE_URLS: Record<string, string> = {
   'shrimp-majestic': '/assets/menu/shrimp-majestic.jpg',
   'shrimp-pakora': '/assets/menu/shrimp-pakora.jpg',
   'shrimp-saag': '/assets/menu/shrimp-saag.jpg',
+  'sunrise-pudding': '/assets/menu/sunrise-pudding.jpg',
   'talawa-gosht': '/assets/menu/talawa-gosht.jpg',
   'tandoori-veggie-shawarma': '/assets/menu/tandoori-veggie-shawarma.jpg',
   'tiranga-kabab': '/assets/menu/tiranga-kabab.jpg',

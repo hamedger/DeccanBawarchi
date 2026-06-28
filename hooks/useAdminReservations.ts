@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../lib/firebase'
 import { handleFirestoreListenerError } from '../lib/firestoreErrors'
+import { locationIdsForFirestoreQuery } from '../lib/locationUtils'
 import { useAuthStore } from '../store/authStore'
 import { Reservation } from '../types/reservation'
 
@@ -19,7 +20,12 @@ export function useAdminReservations(maxItems = 100, locationId?: string | null)
 
     const base = collection(db, 'reservations')
     const q = locationId
-      ? query(base, where('locationId', '==', locationId), orderBy('createdAt', 'desc'), limit(maxItems))
+      ? query(
+          base,
+          where('locationId', 'in', locationIdsForFirestoreQuery(locationId)),
+          orderBy('createdAt', 'desc'),
+          limit(maxItems),
+        )
       : query(base, orderBy('createdAt', 'desc'), limit(maxItems))
 
     const unsub = onSnapshot(

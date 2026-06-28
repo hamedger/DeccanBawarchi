@@ -3,6 +3,7 @@ import { Address } from './user'
 
 export type OrderStatus =
   | 'pending'
+  | 'placed'
   | 'confirmed'
   | 'preparing'
   | 'ready'
@@ -24,6 +25,7 @@ export interface OrderItem {
 export interface Order {
   id: string
   userId: string | 'guest'
+  guestName?: string
   guestEmail: string
   guestPhone: string
   locationId: string

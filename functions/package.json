@@ -6,6 +6,8 @@
   "scripts": {
     "build": "tsc",
     "serve": "npm run build && firebase emulators:start --only functions",
+    "serve:doordash": "npm run build && firebase emulators:start --only functions,auth,firestore",
+    "serve:doordash:lite": "npm run build && firebase emulators:start --only functions,auth",
     "deploy": "firebase deploy --only functions",
     "logs": "firebase functions:log",
     "seed": "npm run seed --prefix .."

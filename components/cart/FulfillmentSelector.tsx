@@ -14,13 +14,19 @@ interface FulfillmentSelectorProps {
   value: FulfillmentType
   onChange: (type: FulfillmentType) => void
   pickupAddress?: string
+  pickupSchedule?: string
 }
 
 function formatFee(cents: number) {
   return cents === 0 ? 'Free' : `$${(cents / 100).toFixed(2)}`
 }
 
-export function FulfillmentSelector({ value, onChange, pickupAddress }: FulfillmentSelectorProps) {
+export function FulfillmentSelector({
+  value,
+  onChange,
+  pickupAddress,
+  pickupSchedule,
+}: FulfillmentSelectorProps) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>How would you like your order?</Text>
@@ -90,7 +96,11 @@ export function FulfillmentSelector({ value, onChange, pickupAddress }: Fulfillm
             <View style={styles.radio} />
           )}
         </View>
-        <Text style={styles.cardMeta}>Schedule date and time at checkout</Text>
+        <Text style={styles.cardMeta}>
+          {value === 'pickup' && pickupSchedule
+            ? pickupSchedule
+            : 'Schedule date and time below'}
+        </Text>
         <Text style={styles.cardHint} numberOfLines={2}>
           {pickupAddress ?? RESTAURANT_ADDRESS}
         </Text>

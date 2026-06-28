@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { readAdminLocationFilter, writeAdminLocationFilter } from '../lib/locationStorage'
+import { normalizeLocationId } from '../lib/locationUtils'
 
 interface AdminLocationState {
   filterLocationId: string | null
@@ -14,11 +15,16 @@ export const useAdminLocationStore = create<AdminLocationState>((set) => ({
 
   hydrate: () => {
     const stored = readAdminLocationFilter()
-    set({ filterLocationId: stored, hasHydrated: true })
+    const normalized = stored ? normalizeLocationId(stored) : null
+    if (stored && normalized !== stored) {
+      writeAdminLocationFilter(normalized)
+    }
+    set({ filterLocationId: normalized, hasHydrated: true })
   },
 
   setFilterLocationId: (id) => {
-    writeAdminLocationFilter(id)
-    set({ filterLocationId: id })
+    const normalized = id ? normalizeLocationId(id) : null
+    writeAdminLocationFilter(normalized)
+    set({ filterLocationId: normalized })
   },
 }))

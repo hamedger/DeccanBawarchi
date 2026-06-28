@@ -47,8 +47,22 @@ export function parseCloverWebhook(rawBody: string): ParsedCloverWebhook | null 
     const status = String(payload.status ?? payload.Status ?? '').toUpperCase()
     const type = String(payload.type ?? payload.Type ?? '').toUpperCase()
     const paymentId = String(payload.id ?? payload.Id ?? '')
-    const checkoutSessionId = String(payload.data ?? payload.Data ?? '')
     const merchantId = String(payload.merchantId ?? payload.MerchantId ?? '')
+
+    const rawData = payload.data ?? payload.Data
+    let checkoutSessionId = ''
+    if (typeof rawData === 'string') {
+      checkoutSessionId = rawData.trim()
+    } else if (rawData && typeof rawData === 'object') {
+      const dataObj = rawData as Record<string, unknown>
+      checkoutSessionId = String(
+        dataObj.checkoutSessionId ??
+          dataObj.checkoutSessionUUID ??
+          dataObj.id ??
+          dataObj.Id ??
+          '',
+      ).trim()
+    }
 
     if (!status || !type) {
       return null
@@ -64,4 +78,12 @@ export function parseCloverWebhook(rawBody: string): ParsedCloverWebhook | null 
   } catch {
     return null
   }
+}
+
+export function verifyCloverSignatureWithAnySecret(
+  rawBody: string,
+  signatureHeader: string | undefined,
+  secrets: string[],
+): boolean {
+  return secrets.some((secret) => verifyCloverSignature(rawBody, signatureHeader, secret))
 }

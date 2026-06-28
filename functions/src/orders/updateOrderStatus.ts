@@ -1,29 +1,12 @@
 import * as functions from 'firebase-functions/v2'
 import * as admin from 'firebase-admin'
-import * as jwt from 'jsonwebtoken'
 import fetch from 'node-fetch'
+import { isAdminUser } from '../admin/isAdmin'
+import { buildDoorDashJwt } from '../delivery/doordashJwt'
 
 if (!admin.apps.length) admin.initializeApp()
 const db = admin.firestore()
 const DOORDASH_BASE = 'https://openapi.doordash.com'
-
-function buildDoorDashJwt(): string {
-  const developerId = process.env.DOORDASH_DEVELOPER_ID
-  const keyId = process.env.DOORDASH_KEY_ID
-  const signingSecret = process.env.DOORDASH_SIGNING_SECRET
-  if (!developerId || !keyId || !signingSecret) {
-    throw new functions.https.HttpsError(
-      'failed-precondition',
-      'DoorDash credentials are missing on the server',
-    )
-  }
-
-  return jwt.sign(
-    { aud: 'doordash', iss: developerId, kid: keyId, exp: Math.floor(Date.now() / 1000) + 300 },
-    Buffer.from(signingSecret, 'base64'),
-    { algorithm: 'HS256', header: { dd_ver: 'DD-JWT-V1', kid: keyId } as any },
-  )
-}
 
 async function cancelDoorDashDelivery(externalDeliveryId: string) {
   const token = buildDoorDashJwt()
@@ -49,16 +32,16 @@ async function cancelDoorDashDelivery(externalDeliveryId: string) {
   throw new functions.https.HttpsError('failed-precondition', errorMessage)
 }
 
+const USER_CANCELLABLE_STATUSES = ['pending', 'placed', 'confirmed', 'preparing']
+
 export const updateOrderStatus = functions.https.onCall(async (request) => {
   const { auth, data } = request
   if (!auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in')
 
-  const tokenResult = await admin.auth().getUser(auth.uid)
-  const claims = (tokenResult.customClaims ?? {}) as Record<string, unknown>
-  if (!claims.admin) throw new functions.https.HttpsError('permission-denied', 'Admin only')
+  const isAdmin = await isAdminUser(auth.uid)
 
   const { orderId, status } = data
-  const validStatuses = ['pending', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered', 'cancelled']
+  const validStatuses = ['pending', 'placed', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered', 'cancelled']
   if (!validStatuses.includes(status)) {
     throw new functions.https.HttpsError('invalid-argument', 'Invalid status')
   }
@@ -70,12 +53,39 @@ export const updateOrderStatus = functions.https.onCall(async (request) => {
   }
 
   const order = orderSnap.data() as {
+    userId?: string
+    status?: string
     fulfillmentType?: string
     doordashDeliveryId?: string
   }
+
+  if (!isAdmin) {
+    if (status !== 'cancelled') {
+      throw new functions.https.HttpsError('permission-denied', 'Only admins can update order status')
+    }
+    if (order.userId !== auth.uid) {
+      throw new functions.https.HttpsError('permission-denied', 'You can only cancel your own orders')
+    }
+    if (!order.status || !USER_CANCELLABLE_STATUSES.includes(order.status)) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'This order can no longer be cancelled online. Please call the restaurant.',
+      )
+    }
+  }
   if (status === 'cancelled' && order.fulfillmentType === 'delivery') {
-    const externalDeliveryId = order.doordashDeliveryId?.trim() || `order_${orderId}`
-    await cancelDoorDashDelivery(externalDeliveryId)
+    const externalDeliveryId = order.doordashDeliveryId?.trim()
+    if (externalDeliveryId) {
+      try {
+        await cancelDoorDashDelivery(externalDeliveryId)
+      } catch (err) {
+        functions.logger.warn('DoorDash cancel failed; proceeding with local cancel', {
+          orderId,
+          externalDeliveryId,
+          err,
+        })
+      }
+    }
   }
 
   await db.collection('orders').doc(orderId).update({

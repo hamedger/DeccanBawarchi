@@ -49,12 +49,14 @@
     }
   ],
   "emulators": {
+    "auth": {
+      "port": 9099
+    },
     "functions": {
       "port": 5001
     },
     "ui": {
-      "enabled": true,
-      "port": 4000
+      "enabled": false
     },
     "singleProjectMode": true
   }

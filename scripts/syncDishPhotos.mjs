@@ -26,6 +26,7 @@ const FOLDER_TO_CATEGORY = {
   sizzler: 'sizzlers',
   sizzlers: 'sizzlers',
   shawarma: 'shawarma',
+  desserts: 'desserts',
 }
 
 function normalizeName(value) {

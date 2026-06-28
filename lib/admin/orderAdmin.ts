@@ -1,9 +1,38 @@
 import { getFunctions, httpsCallable } from 'firebase/functions'
+import { FirebaseError } from 'firebase/app'
 import app, { isFirebaseConfigured } from '../firebase'
-import { OrderStatus } from '../../types/order'
+import { Order, OrderStatus } from '../../types/order'
+
+export type OrderCustomerProfile = {
+  displayName: string
+  phone: string
+}
+
+export function resolveOrderCustomerInfo(
+  order: Pick<Order, 'guestName' | 'guestPhone' | 'userId'>,
+  profiles: Map<string, OrderCustomerProfile>,
+): { name: string; phone: string } {
+  const profile =
+    order.userId && order.userId !== 'guest' ? profiles.get(order.userId) : undefined
+  const name = String(order.guestName ?? '').trim() || profile?.displayName || ''
+  const phone = String(order.guestPhone ?? '').trim() || profile?.phone || ''
+  return { name, phone }
+}
+
+export function isPaidOrder(order: {
+  status: OrderStatus
+  cloverPaymentId?: string
+  stripePaymentIntentId?: string
+}): boolean {
+  if (order.status === 'placed') return true
+  if (String(order.cloverPaymentId ?? '').trim()) return true
+  if (String(order.stripePaymentIntentId ?? '').trim()) return true
+  return order.status !== 'pending' && order.status !== 'cancelled'
+}
 
 export const ORDER_STATUS_FLOW: OrderStatus[] = [
   'pending',
+  'placed',
   'confirmed',
   'preparing',
   'ready',
@@ -13,6 +42,7 @@ export const ORDER_STATUS_FLOW: OrderStatus[] = [
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending: 'Pending',
+  placed: 'Placed',
   confirmed: 'Confirmed',
   preparing: 'Preparing',
   ready: 'Ready',
@@ -36,4 +66,14 @@ export function nextOrderStatus(current: OrderStatus): OrderStatus | null {
   const idx = ORDER_STATUS_FLOW.indexOf(current)
   if (idx < 0 || idx >= ORDER_STATUS_FLOW.length - 1) return null
   return ORDER_STATUS_FLOW[idx + 1]
+}
+
+export function getCallableErrorMessage(error: unknown): string {
+  if (error instanceof FirebaseError && error.message) {
+    return error.message
+  }
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
+  return 'Something went wrong. Please try again.'
 }

@@ -1,17 +1,28 @@
-import React from 'react'
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native'
+import React, { useMemo, useState } from 'react'
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+} from 'react-native'
 import { useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useOrders } from '../../hooks/useOrders'
 import { useOrderStore } from '../../store/orderStore'
 import { useAuth } from '../../hooks/useAuth'
+import { useLocations } from '../../hooks/useLocations'
 import { Order, OrderStatus } from '../../types/order'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { Button } from '../../components/ui/Button'
 import { reorderToCart } from '../../lib/reorder'
+import { canUserCancelOrder, cancelUserOrder } from '../../lib/services/orderService'
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending: 'Pending',
+  placed: 'Placed',
   confirmed: 'Confirmed',
   preparing: 'Preparing',
   ready: 'Ready',
@@ -22,6 +33,7 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
   pending: colors.whiteMuted,
+  placed: colors.gold,
   confirmed: colors.gold,
   preparing: colors.goldLight,
   ready: '#4fc3f7',
@@ -30,12 +42,47 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
   cancelled: colors.error,
 }
 
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({
+  order,
+  locationName,
+}: {
+  order: Order
+  locationName?: string
+}) {
   const router = useRouter()
+  const [cancelling, setCancelling] = useState(false)
+  const canCancel = canUserCancelOrder(order.status)
 
   const handleReorder = () => {
     reorderToCart(order)
     router.push('/(tabs)/cart' as never)
+  }
+
+  const handleCancel = () => {
+    Alert.alert(
+      'Cancel order?',
+      'This cannot be undone. If you paid online, contact the restaurant for refund details.',
+      [
+        { text: 'Keep order', style: 'cancel' },
+        {
+          text: 'Cancel order',
+          style: 'destructive',
+          onPress: async () => {
+            setCancelling(true)
+            try {
+              await cancelUserOrder(order.id)
+            } catch (e) {
+              Alert.alert(
+                'Could not cancel',
+                e instanceof Error ? e.message : 'Please try again or call the restaurant.',
+              )
+            } finally {
+              setCancelling(false)
+            }
+          },
+        },
+      ],
+    )
   }
 
   return (
@@ -49,6 +96,15 @@ function OrderCard({ order }: { order: Order }) {
             </Text>
           </View>
         </View>
+        {locationName ? (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={13} color={colors.goldLight} />
+            <Text style={styles.locationText}>{locationName}</Text>
+          </View>
+        ) : null}
+        <Text style={styles.fulfillment}>
+          {order.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}
+        </Text>
         <Text style={styles.items}>{order.items.map((i) => i.name).join(', ')}</Text>
         <View style={styles.cardFooter}>
           <Text style={styles.total}>${(order.total / 100).toFixed(2)}</Text>
@@ -57,13 +113,26 @@ function OrderCard({ order }: { order: Order }) {
           </Text>
         </View>
       </TouchableOpacity>
-      <Button
-        label="Reorder"
-        onPress={handleReorder}
-        variant="secondary"
-        size="sm"
-        style={styles.reorderBtn}
-      />
+      <View style={styles.actions}>
+        {canCancel ? (
+          <Button
+            label="Cancel"
+            onPress={handleCancel}
+            variant="ghost"
+            size="sm"
+            loading={cancelling}
+            disabled={cancelling}
+            style={styles.cancelBtn}
+          />
+        ) : null}
+        <Button
+          label="Reorder"
+          onPress={handleReorder}
+          variant="secondary"
+          size="sm"
+          style={styles.reorderBtn}
+        />
+      </View>
     </View>
   )
 }
@@ -72,7 +141,13 @@ export default function OrdersScreen() {
   const router = useRouter()
   const { firebaseUser, isLoading } = useAuth()
   const { orderHistory } = useOrderStore()
+  const { locations } = useLocations()
   useOrders()
+
+  const locationNameById = useMemo(
+    () => new Map(locations.map((l) => [l.id, l.name])),
+    [locations],
+  )
 
   if (isLoading) {
     return (
@@ -98,7 +173,12 @@ export default function OrdersScreen() {
         data={orderHistory}
         keyExtractor={(o) => o.id}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => <OrderCard order={item} />}
+        renderItem={({ item }) => (
+          <OrderCard
+            order={item}
+            locationName={locationNameById.get(item.locationId)}
+          />
+        )}
         ListEmptyComponent={
           <View style={styles.centered}>
             <Text style={styles.emptyIcon}>📋</Text>
@@ -141,9 +221,34 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   statusText: { fontFamily: fonts.sansMedium, fontSize: 11 },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 4,
+  },
+  locationText: {
+    fontFamily: fonts.sansMedium,
+    color: colors.goldLight,
+    fontSize: 12,
+    flex: 1,
+  },
+  fulfillment: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 12,
+    marginBottom: 6,
+  },
   items: { fontFamily: fonts.sans, color: colors.whiteMuted, fontSize: 13, marginBottom: 8, lineHeight: 18 },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between' },
-  reorderBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  cancelBtn: { alignSelf: 'flex-start' },
+  reorderBtn: { alignSelf: 'flex-start' },
   total: { fontFamily: fonts.serif, color: colors.white, fontSize: 16 },
   date: { fontFamily: fonts.sans, color: colors.whiteMuted, fontSize: 12 },
   emptyIcon: { fontSize: 52, marginBottom: spacing.md },

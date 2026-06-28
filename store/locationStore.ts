@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { readStoredLocationId, writeStoredLocationId } from '../lib/locationStorage'
+import { normalizeLocationId } from '../lib/locationUtils'
 
 interface LocationState {
   selectedLocationId: string | null
@@ -15,12 +16,17 @@ export const useLocationStore = create<LocationState>((set) => ({
 
   hydrate: () => {
     const stored = readStoredLocationId()
-    set({ selectedLocationId: stored, hasHydrated: true })
+    const normalized = stored ? normalizeLocationId(stored) : null
+    if (stored && normalized !== stored) {
+      writeStoredLocationId(normalized)
+    }
+    set({ selectedLocationId: normalized, hasHydrated: true })
   },
 
   setSelectedLocationId: (id) => {
-    writeStoredLocationId(id)
-    set({ selectedLocationId: id })
+    const normalized = normalizeLocationId(id)
+    writeStoredLocationId(normalized)
+    set({ selectedLocationId: normalized })
   },
 
   clearSelectedLocation: () => {

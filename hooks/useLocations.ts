@@ -4,7 +4,7 @@ import { db, isFirebaseConfigured } from '../lib/firebase'
 import { handleFirestoreListenerError } from '../lib/firestoreErrors'
 import { STATIC_LOCATIONS } from '../constants/staticLocations'
 import { Location } from '../types/location'
-import { isLocationActive, mergePickableLocations } from '../lib/locationUtils'
+import { isLocationActive, mergePickableLocations, mergeAllLocations } from '../lib/locationUtils'
 
 export function useLocations() {
   const [locations, setLocations] = useState<Location[]>(STATIC_LOCATIONS)
@@ -59,10 +59,8 @@ export function useAllLocations() {
         if (snap.empty) {
           setLocations(STATIC_LOCATIONS)
         } else {
-          const docs = snap.docs
-            .map((d) => ({ id: d.id, ...d.data() } as Location))
-            .sort((a, b) => a.name.localeCompare(b.name))
-          setLocations(docs)
+          const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Location))
+          setLocations(mergeAllLocations(docs))
         }
         setLoading(false)
       },

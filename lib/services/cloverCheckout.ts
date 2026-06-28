@@ -1,4 +1,5 @@
-import { auth } from '../firebase'
+import { getFunctions, httpsCallable } from 'firebase/functions'
+import app, { auth } from '../firebase'
 import { getApiUrl } from '../../constants/api'
 import { SubmitOrderInput } from './orderService'
 
@@ -115,4 +116,16 @@ export function clearCheckoutContext() {
   } catch {
     // ignore
   }
+}
+
+export async function confirmCloverOrderAfterRedirect(
+  orderId: string,
+  checkoutSessionId: string,
+): Promise<void> {
+  const user = auth.currentUser
+  if (!user) return
+
+  const functions = getFunctions(app, 'us-central1')
+  const confirm = httpsCallable(functions, 'confirmCloverOrder')
+  await confirm({ orderId, checkoutSessionId })
 }
