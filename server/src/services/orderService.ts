@@ -4,8 +4,16 @@ import { calculateEarnedPoints, loyaltyDiscountCents, validateRedemption } from 
 import { db } from '../lib/firebase'
 import { CloverLineItem } from './cloverClient'
 import { trySendStaffOrderNotification } from './orderNotification'
+import { hasOrderPayment, resolveCloverPaymentId } from '../lib/orderPayment'
 
-const POST_PAYMENT_STATUSES = new Set(['placed', 'confirmed', 'preparing', 'ready'])
+const POST_PAYMENT_STATUSES = new Set([
+  'placed',
+  'confirmed',
+  'preparing',
+  'ready',
+  'picked_up',
+  'delivered',
+])
 
 export interface OrderItemInput {
   menuItemId: string
@@ -276,6 +284,10 @@ export async function markOrderPaidByCheckoutSession(
   const doc = snapshot.docs[0]
   const orderData = doc.data()
   const currentStatus = orderData.status as string
+  const resolvedPaymentId = resolveCloverPaymentId(paymentId, checkoutSessionId)
+  const needsPaymentBackfill =
+    !String(orderData.cloverPaymentId ?? '').trim() && !!resolvedPaymentId
+
   if (currentStatus === 'cancelled') {
     console.warn('[orderService] Ignoring payment for cancelled order', {
       orderId: doc.id,
@@ -283,14 +295,23 @@ export async function markOrderPaidByCheckoutSession(
     })
     return null
   }
+
   if (POST_PAYMENT_STATUSES.has(currentStatus)) {
-    void trySendStaffOrderNotification(db, doc.id)
+    if (needsPaymentBackfill) {
+      await doc.ref.update({
+        cloverPaymentId: resolvedPaymentId,
+        updatedAt: FieldValue.serverTimestamp(),
+      })
+    }
+    if (orderData.staffNotified !== true && (needsPaymentBackfill || hasOrderPayment(orderData))) {
+      void trySendStaffOrderNotification(db, doc.id)
+    }
     return doc.id
   }
 
   await doc.ref.update({
     status: 'placed',
-    cloverPaymentId: paymentId,
+    cloverPaymentId: resolvedPaymentId,
     updatedAt: FieldValue.serverTimestamp(),
   })
 

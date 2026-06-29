@@ -11,6 +11,10 @@ import { usePathname, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { signOutAdmin } from '../../lib/adminAuth'
 import { useRevenueAccessStore } from '../../store/revenueAccessStore'
+import { useAdminLocationStore } from '../../store/adminLocationStore'
+import { useAdminOrders } from '../../hooks/useAdminOrders'
+import { AdminOrderAlerts } from './AdminOrderAlerts'
+import { AdminBuffetRefillAlerts } from './AdminBuffetRefillAlerts'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 const NAV_ITEMS = [
@@ -36,10 +40,17 @@ export function AdminShell({ children }: AdminShellProps) {
   const hydrateRevenueAccess = useRevenueAccessStore((s) => s.hydrate)
   const revenueUnlocked = useRevenueAccessStore((s) => s.unlocked)
   const lockRevenue = useRevenueAccessStore((s) => s.lock)
+  const hydrateLocationFilter = useAdminLocationStore((s) => s.hydrate)
+  const filterLocationId = useAdminLocationStore((s) => s.filterLocationId)
+  const { orders, customerProfiles, loading } = useAdminOrders(150, filterLocationId ?? undefined)
 
   useEffect(() => {
     hydrateRevenueAccess()
   }, [hydrateRevenueAccess])
+
+  useEffect(() => {
+    hydrateLocationFilter()
+  }, [hydrateLocationFilter])
 
   const handleSignOut = async () => {
     lockRevenue()
@@ -98,7 +109,15 @@ export function AdminShell({ children }: AdminShellProps) {
   return (
     <View style={[styles.root, wide && styles.rootWide]}>
       {nav}
-      <View style={styles.content}>{children}</View>
+      <View style={styles.content}>
+        <AdminOrderAlerts
+          orders={orders}
+          loading={loading}
+          customerProfiles={customerProfiles}
+        />
+        <AdminBuffetRefillAlerts />
+        {children}
+      </View>
     </View>
   )
 }

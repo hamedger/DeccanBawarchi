@@ -1,7 +1,13 @@
+import { format, parse } from 'date-fns'
 import { Linking, Platform } from 'react-native'
-import { DEFAULT_PICKUP_PREP_BUFFER_MINUTES } from '../constants/config'
+import {
+  DEFAULT_LOCATION_ID,
+  DEFAULT_PICKUP_PREP_BUFFER_MINUTES,
+  LOCATION_DINE_IN_HOURS,
+  LOCATION_ORDER_FULFILLMENT_HOURS,
+} from '../constants/config'
 import { STATIC_LOCATIONS } from '../constants/staticLocations'
-import { Location, LocationAddress } from '../types/location'
+import { Location, LocationAddress, LocationHours, OrderFulfillmentHours } from '../types/location'
 
 /** Minutes before earliest same-day pickup slot for a store. */
 export function getPickupPrepBufferMinutes(location: Location | null | undefined): number {
@@ -10,6 +16,46 @@ export function getPickupPrepBufferMinutes(location: Location | null | undefined
     return Math.round(minutes)
   }
   return DEFAULT_PICKUP_PREP_BUFFER_MINUTES
+}
+
+function formatHourMinuteLabel(hhmm: string): string {
+  const parsed = parse(hhmm, 'HH:mm', new Date())
+  return format(parsed, 'h:mm a')
+}
+
+export function formatDineInHoursLabel(hours: LocationHours): string {
+  return `Open Daily · ${formatHourMinuteLabel(hours.open)} – ${formatHourMinuteLabel(hours.close)}`
+}
+
+/** Dine-in hours for a store. */
+export function getLocationDineInHours(
+  location: Location | null | undefined,
+): LocationHours {
+  const representative = location?.hours?.[1] ?? location?.hours?.[0]
+  if (representative?.open && representative?.close) {
+    return representative
+  }
+
+  const locationId = location?.id ? normalizeLocationId(location.id) : DEFAULT_LOCATION_ID
+  const hours = LOCATION_DINE_IN_HOURS[locationId]
+  if (hours) return { ...hours }
+
+  return { ...LOCATION_DINE_IN_HOURS[DEFAULT_LOCATION_ID] }
+}
+
+/** Pickup/delivery scheduling window for a store. */
+export function getOrderFulfillmentHours(
+  location: Location | null | undefined,
+): OrderFulfillmentHours {
+  if (location?.fulfillmentHours?.open && location?.fulfillmentHours?.close) {
+    return location.fulfillmentHours
+  }
+
+  const locationId = location?.id ? normalizeLocationId(location.id) : DEFAULT_LOCATION_ID
+  const hours = LOCATION_ORDER_FULFILLMENT_HOURS[locationId]
+  if (hours) return { ...hours }
+
+  return { ...LOCATION_ORDER_FULFILLMENT_HOURS[DEFAULT_LOCATION_ID] }
 }
 
 /** Firestore doc ids that should merge into canonical static location ids. */

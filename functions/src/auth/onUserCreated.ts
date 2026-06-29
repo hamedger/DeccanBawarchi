@@ -1,13 +1,10 @@
 import * as functions from 'firebase-functions/v1'
-import * as admin from 'firebase-admin'
+import { db, Timestamp } from '../db'
 import { WELCOME_BONUS_POINTS } from '../constants/loyalty'
-
-if (!admin.apps.length) admin.initializeApp()
-const db = admin.firestore()
 
 export const onUserCreated = functions.auth.user().onCreate(async (user) => {
   const isGuest = user.providerData.length === 0
-  const now = admin.firestore.Timestamp.now()
+  const now = Timestamp.now()
 
   await db.collection('users').doc(user.uid).set(
     {

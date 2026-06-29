@@ -9,29 +9,32 @@ import {
 } from 'react-native'
 import { MenuItem } from '../../types/menu'
 import { AdminBuffetRow } from '../../lib/buffetLayout'
-import { isBuffetDishServing } from '../../lib/services/buffetService'
+import { isBuffetDishNeedsRefill, isBuffetDishServing } from '../../lib/services/buffetService'
 import { colors, spacing, fonts } from '../../constants/theme'
 
-const BUFFET_ON = colors.green
-const BUFFET_OFF = colors.error
+const REFILL_OK = colors.green
+const NEEDS_REFILL = colors.error
 
 interface AdminBuffetItemRowProps {
   row: AdminBuffetRow
-  buffetBusy: boolean
+  refillBusy: boolean
   servingBusy: boolean
-  onToggleBuffet: (item: MenuItem) => void
+  onToggleRefill: (item: MenuItem) => void
+  onRemoveFromBuffet: (item: MenuItem) => void
   onToggleServing: (menuItemId: string, next: boolean) => void
 }
 
 export function AdminBuffetItemRow({
   row,
-  buffetBusy,
+  refillBusy,
   servingBusy,
-  onToggleBuffet,
+  onToggleRefill,
+  onRemoveFromBuffet,
   onToggleServing,
 }: AdminBuffetItemRowProps) {
   const { menuItem, buffetDish, displayName } = row
   const onBuffet = !!buffetDish
+  const needsRefill = buffetDish ? isBuffetDishNeedsRefill(buffetDish) : false
   const isServing = buffetDish ? isBuffetDishServing(buffetDish) : false
   const disabled = !menuItem
 
@@ -39,35 +42,42 @@ export function AdminBuffetItemRow({
     <View
       style={[
         styles.itemRow,
-        onBuffet && styles.itemRowOn,
+        onBuffet && !needsRefill && styles.itemRowOk,
+        onBuffet && needsRefill && styles.itemRowNeedsRefill,
         onBuffet && !isServing && styles.itemRowPaused,
         disabled && styles.itemRowMissing,
       ]}
     >
       {disabled ? (
         <View style={[styles.statusBtn, styles.statusDot, styles.statusMissing]} />
-      ) : buffetBusy ? (
+      ) : refillBusy ? (
         <ActivityIndicator size="small" color={colors.gold} style={styles.statusBtn} />
       ) : (
         <TouchableOpacity
-          onPress={() => menuItem && onToggleBuffet(menuItem)}
+          onPress={() => menuItem && onToggleRefill(menuItem)}
+          onLongPress={() => menuItem && onBuffet && onRemoveFromBuffet(menuItem)}
+          delayLongPress={450}
           style={[
             styles.statusBtn,
             styles.statusDot,
-            { backgroundColor: onBuffet ? BUFFET_ON : BUFFET_OFF },
+            onBuffet
+              ? { backgroundColor: needsRefill ? NEEDS_REFILL : REFILL_OK }
+              : styles.statusOffLine,
           ]}
           accessibilityRole="button"
           accessibilityLabel={
             onBuffet
-              ? `${displayName}, on buffet. Tap to remove.`
-              : `${displayName}, not on buffet. Tap to add.`
+              ? needsRefill
+                ? `${displayName}, needs refill. Tap when restocked. Long press to remove from line.`
+                : `${displayName}, stocked. Tap to request refill. Long press to remove from line.`
+              : `${displayName}, not on today's line. Tap to add as stocked.`
           }
         />
       )}
 
       <View style={styles.itemBody}>
         <Text
-          style={[styles.itemName, !onBuffet && styles.itemNameOff, disabled && styles.itemNameMissing]}
+          style={[styles.itemName, needsRefill && styles.itemNameNeedsRefill, disabled && styles.itemNameMissing]}
           numberOfLines={2}
         >
           {displayName}
@@ -76,7 +86,13 @@ export function AdminBuffetItemRow({
           {disabled
             ? 'Not in menu catalog yet'
             : menuItem.category.replace(/-/g, ' ')}
-          {onBuffet ? (isServing ? ' · serving now' : ' · paused') : ''}
+          {onBuffet
+            ? needsRefill
+              ? ' · needs refill · hold dot to remove'
+              : isServing
+                ? ' · serving now · hold dot to remove'
+                : ' · hidden from customers · hold dot to remove'
+            : ' · tap dot to add to today'}
         </Text>
       </View>
 
@@ -86,7 +102,7 @@ export function AdminBuffetItemRow({
         ) : (
           <View style={styles.servingCol}>
             <Text style={[styles.servingLabel, !isServing && styles.servingLabelOff]}>
-              {isServing ? 'Serving' : 'Paused'}
+              {isServing ? 'Serving' : 'Off'}
             </Text>
             <Switch
               value={isServing}
@@ -111,11 +127,14 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.sm,
   },
-  itemRowOn: {
+  itemRowOk: {
     backgroundColor: 'rgba(67, 160, 71, 0.06)',
   },
+  itemRowNeedsRefill: {
+    backgroundColor: 'rgba(239, 83, 80, 0.08)',
+  },
   itemRowPaused: {
-    backgroundColor: 'rgba(239, 83, 80, 0.05)',
+    opacity: 0.85,
   },
   itemRowMissing: {
     opacity: 0.55,
@@ -134,14 +153,17 @@ const styles = StyleSheet.create({
   statusMissing: {
     backgroundColor: colors.border,
   },
+  statusOffLine: {
+    backgroundColor: colors.borderStrong,
+  },
   itemBody: { flex: 1, minWidth: 0 },
   itemName: {
     fontFamily: fonts.sansMedium,
     color: colors.white,
     fontSize: 14,
   },
-  itemNameOff: {
-    color: colors.whiteMuted,
+  itemNameNeedsRefill: {
+    color: colors.error,
   },
   itemNameMissing: {
     color: colors.whiteMuted,
@@ -166,6 +188,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   servingLabelOff: {
-    color: colors.error,
+    color: colors.whiteMuted,
   },
 })

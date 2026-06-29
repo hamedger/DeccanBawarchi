@@ -11,6 +11,9 @@ export interface LocationHours {
   close: string
 }
 
+/** Pickup/delivery scheduling window. */
+export type OrderFulfillmentHours = LocationHours
+
 export interface Location {
   id: string
   name: string
@@ -18,6 +21,8 @@ export interface Location {
   phone: string
   website?: string
   hours: Record<number, LocationHours>
+  /** Pickup/delivery order window (per location). */
+  fulfillmentHours?: OrderFulfillmentHours
   isActive: boolean
   acceptsDelivery: boolean
   acceptsPickup: boolean

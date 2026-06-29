@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
   },
   chipActive: {
     borderColor: colors.gold,
-    backgroundColor: 'rgba(212,175,55,0.14)',
+    backgroundColor: colors.gold,
   },
   chipLabel: {
     fontFamily: fonts.sansMedium,
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   chipLabelActive: {
-    color: colors.gold,
+    color: colors.background,
   },
   badge: {
     minWidth: 22,
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   badgeActive: {
-    backgroundColor: colors.gold,
+    backgroundColor: colors.background,
   },
   badgeText: {
     fontFamily: fonts.sansBold,
@@ -102,6 +102,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   badgeTextActive: {
-    color: colors.background,
+    color: colors.gold,
   },
 })

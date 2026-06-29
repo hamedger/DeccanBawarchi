@@ -1,8 +1,6 @@
-import * as admin from 'firebase-admin'
+import { FieldValue } from '../db'
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore'
 import { dispatchOrderToDoorDash } from './doordashDispatch'
-
-if (!admin.apps.length) admin.initializeApp()
 
 export const onOrderConfirmedDispatch = onDocumentUpdated('orders/{orderId}', async (event) => {
   const before = event.data?.before.data()
@@ -23,7 +21,7 @@ export const onOrderConfirmedDispatch = onDocumentUpdated('orders/{orderId}', as
     await event.data?.after.ref.update({
       doordashDispatchError:
         error instanceof Error ? error.message : 'Unknown dispatch error',
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
   }
 })

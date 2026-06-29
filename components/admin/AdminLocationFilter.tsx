@@ -69,7 +69,7 @@ const styles = StyleSheet.create({
   },
   chipActive: {
     borderColor: colors.gold,
-    backgroundColor: 'rgba(212,175,55,0.18)',
+    backgroundColor: colors.gold,
   },
   chipText: {
     fontFamily: fonts.sansMedium,
@@ -78,6 +78,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.15,
   },
   chipTextActive: {
-    color: colors.goldBright,
+    color: colors.background,
   },
 })

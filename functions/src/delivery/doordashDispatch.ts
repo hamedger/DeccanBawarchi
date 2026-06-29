@@ -1,11 +1,7 @@
 import * as functions from 'firebase-functions/v2'
-import * as admin from 'firebase-admin'
+import { db, FieldValue } from '../db'
 import fetch from 'node-fetch'
 import { buildDoorDashJwt } from './doordashJwt'
-
-if (!admin.apps.length) admin.initializeApp()
-
-const db = admin.firestore()
 const DOORDASH_BASE = 'https://openapi.doordash.com'
 const RESTAURANT_ADDRESS = '17933 Haggerty Rd, Northville Township, MI 48168'
 const RESTAURANT_PHONE = '+12489857209'
@@ -53,7 +49,7 @@ export async function dispatchOrderToDoorDash(orderId: string) {
   await db.collection('orders').doc(orderId).update({
     doordashDeliveryId: result.external_delivery_id,
     doordashTrackingUrl: result.tracking_url ?? '',
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   })
 
   return { success: true, trackingUrl: result.tracking_url }

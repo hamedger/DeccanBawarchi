@@ -1,7 +1,7 @@
 import { BUFFET_SECTIONS, BuffetSectionId, getBuffetDisplayName, getBuffetSectionId } from '../constants/buffetLayout'
 import { BuffetDish } from '../types/buffet'
 import { MenuItem } from '../types/menu'
-import { isBuffetDishServing } from './services/buffetService'
+import { isBuffetDishNeedsRefill, isBuffetDishServing } from './services/buffetService'
 
 export interface BuffetSectionGroup {
   id: BuffetSectionId
@@ -94,8 +94,22 @@ function matchesSearch(row: AdminBuffetRow, query: string): boolean {
 
 function matchesStatusFilter(row: AdminBuffetRow, filter: AdminBuffetStatusFilter): boolean {
   if (filter === 'all') return true
-  const onBuffet = !!row.buffetDish
-  return filter === 'green' ? onBuffet : !onBuffet
+  if (!row.buffetDish) return false
+  const needsRefill = isBuffetDishNeedsRefill(row.buffetDish)
+  return filter === 'red' ? needsRefill : !needsRefill
+}
+
+export function countAdminBuffetRefillStatus(rows: AdminBuffetRow[]): {
+  all: number
+  green: number
+  red: number
+} {
+  const onBuffet = rows.filter((r) => r.buffetDish)
+  return {
+    all: onBuffet.length,
+    green: onBuffet.filter((r) => r.buffetDish && !isBuffetDishNeedsRefill(r.buffetDish)).length,
+    red: onBuffet.filter((r) => r.buffetDish && isBuffetDishNeedsRefill(r.buffetDish)).length,
+  }
 }
 
 /** Build grouped admin rows — layout order, includes items not yet on buffet. */
@@ -147,6 +161,7 @@ export function buffetDishFromMenuItem(item: MenuItem, sortOrder: number): Buffe
     isNew: false,
     sortOrder,
     isServing: true,
+    needsRefill: false,
     buffetCategory: getBuffetSectionId(item.id),
   }
 }
@@ -170,6 +185,7 @@ export function createDefaultBuffetDishes(
         isNew: false,
         sortOrder: sortOrder++,
         isServing: true,
+        needsRefill: false,
         buffetCategory: section.id,
       })
     }

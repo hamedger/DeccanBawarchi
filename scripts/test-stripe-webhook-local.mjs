@@ -126,14 +126,14 @@ console.log('doordashTrackingUrl:', updated.doordashTrackingUrl || '(empty)')
 console.log('doordashDispatchError:', updated.doordashDispatchError || '(none)')
 
 const ok =
-  updated.status === 'confirmed' &&
+  updated.status === 'placed' &&
   typeof updated.stripePaymentIntentId === 'string' &&
   updated.stripePaymentIntentId.length > 0 &&
   typeof updated.doordashDeliveryId === 'string' &&
   updated.doordashDeliveryId.length > 0
 
 if (!ok) {
-  throw new Error('E2E check failed: expected confirmed + stripePaymentIntentId + doordashDeliveryId')
+  throw new Error('E2E check failed: expected placed + stripePaymentIntentId + doordashDeliveryId')
 }
 
 console.log('\nStripe -> DoorDash dispatch local e2e passed.\n')

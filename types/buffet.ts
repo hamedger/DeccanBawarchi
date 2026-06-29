@@ -9,6 +9,8 @@ export interface BuffetDish {
   sortOrder: number
   /** When false, shown as out of stock on the customer buffet page. Defaults to true. */
   isServing?: boolean
+  /** When true, floor staff flagged the station for a kitchen refill. Defaults to false. */
+  needsRefill?: boolean
   /** Display section on the buffet board. */
   buffetCategory?: BuffetSectionId
 }

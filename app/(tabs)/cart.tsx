@@ -26,7 +26,7 @@ import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { LocationConfirmCard } from '../../components/location/LocationConfirmCard'
 import { PickupScheduler } from '../../components/checkout/PickupScheduler'
 import { formatPickupSchedule } from '../../lib/services/pickupScheduling'
-import { formatLocationAddress, getPickupPrepBufferMinutes } from '../../lib/locationUtils'
+import { formatLocationAddress, getOrderFulfillmentHours, getPickupPrepBufferMinutes } from '../../lib/locationUtils'
 
 function CartRow({
   item,
@@ -123,8 +123,9 @@ export default function CartScreen() {
   const showLoyalty = !!firebaseUser && !userProfile?.isGuest
   const loyaltyDiscount = loyaltyDiscountCents(cart.loyaltyPointsToRedeem)
   const { location, locationId, locations, loading: locationsLoading } = useSelectedLocation()
-  const isPickup = !DELIVERY_ENABLED || cart.fulfillmentType === 'pickup'
+  const isDelivery = DELIVERY_ENABLED && cart.fulfillmentType === 'delivery'
   const prepBufferMinutes = getPickupPrepBufferMinutes(location)
+  const fulfillmentHours = getOrderFulfillmentHours(location)
   const pickupSchedule = formatPickupSchedule(cart.pickupDate, cart.pickupTime)
 
   if (cart.items.length === 0) {
@@ -183,19 +184,25 @@ export default function CartScreen() {
             value={cart.fulfillmentType}
             onChange={cart.setFulfillmentType}
             pickupAddress={location ? formatLocationAddress(location.address) : undefined}
-            pickupSchedule={isPickup ? pickupSchedule : undefined}
+            pickupSchedule={pickupSchedule}
           />
 
-          {isPickup ? (
-            <PickupScheduler
-              date={cart.pickupDate}
-              time={cart.pickupTime}
-              pickupAddress={location ? formatLocationAddress(location.address) : ''}
-              locationName={location?.name}
-              prepBufferMinutes={prepBufferMinutes}
-              onDateChange={cart.setPickupDate}
-              onTimeChange={cart.setPickupTime}
-            />
+          <PickupScheduler
+            date={cart.pickupDate}
+            time={cart.pickupTime}
+            pickupAddress={location ? formatLocationAddress(location.address) : ''}
+            locationName={location?.name}
+            prepBufferMinutes={prepBufferMinutes}
+            fulfillmentHours={fulfillmentHours}
+            fulfillmentType={cart.fulfillmentType}
+            onDateChange={cart.setPickupDate}
+            onTimeChange={cart.setPickupTime}
+          />
+
+          {isDelivery ? (
+            <Text style={styles.deliveryHint}>
+              Delivery fee and ETA are quoted at checkout after you enter your address.
+            </Text>
           ) : null}
 
           <View style={styles.summaryCard}>
@@ -230,13 +237,17 @@ export default function CartScreen() {
 
             <SummaryRow label="Subtotal" value={cart.subtotal()} />
             <SummaryRow label={TAXES_AND_FEES_LABEL} value={cart.tax + cart.serviceFee} />
-            {DELIVERY_ENABLED && cart.fulfillmentType === 'delivery' && (
-              <SummaryRow
-                label="DoorDash Delivery"
-                value={cart.deliveryFee}
-                muted
-              />
-            )}
+            {DELIVERY_ENABLED && cart.fulfillmentType === 'delivery' &&
+              (cart.deliveryQuoteReady ? (
+                <SummaryRow label="DoorDash Delivery" value={cart.deliveryFee} muted />
+              ) : (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>DoorDash Delivery</Text>
+                  <Text style={[styles.summaryValue, { color: colors.whiteMuted }]}>
+                    Quoted at checkout
+                  </Text>
+                </View>
+              ))}
             {cart.promoDiscount > 0 && (
               <SummaryRow label="Promo Discount" value={-cart.promoDiscount} gold />
             )}
@@ -395,6 +406,13 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansBold,
     color: colors.background,
     fontSize: 13,
+  },
+  deliveryHint: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: -spacing.xs,
   },
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
   summaryLabel: {

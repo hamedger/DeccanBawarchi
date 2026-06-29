@@ -1,5 +1,11 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
-import { getAuth, initializeAuth, browserLocalPersistence, Auth } from 'firebase/auth'
+import {
+  connectAuthEmulator,
+  getAuth,
+  initializeAuth,
+  browserLocalPersistence,
+  Auth,
+} from 'firebase/auth'
 import { getFirestore, initializeFirestore, Firestore } from 'firebase/firestore'
 import { getStorage, FirebaseStorage } from 'firebase/storage'
 import { Platform } from 'react-native'
@@ -53,6 +59,17 @@ function createFirestore(firebaseApp: FirebaseApp): Firestore {
 }
 
 export const auth: Auth = createAuth(app)
+
+if (process.env.EXPO_PUBLIC_USE_AUTH_EMULATOR === 'true' && isFirebaseConfigured) {
+  const host = process.env.EXPO_PUBLIC_FUNCTIONS_EMULATOR_HOST ?? '127.0.0.1'
+  const port = Number(process.env.EXPO_PUBLIC_AUTH_EMULATOR_PORT ?? 9099)
+  try {
+    connectAuthEmulator(auth, `http://${host}:${port}`, { disableWarnings: true })
+  } catch {
+    // emulator already connected (hot reload)
+  }
+}
+
 export const db: Firestore = createFirestore(app)
 export const storage: FirebaseStorage = getStorage(app)
 

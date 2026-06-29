@@ -1,9 +1,5 @@
 import * as functions from 'firebase-functions/v2'
-import * as admin from 'firebase-admin'
-
-if (!admin.apps.length) admin.initializeApp()
-
-const db = admin.firestore()
+import { db, FieldValue, GeoPoint } from '../db'
 
 const DD_STATUS_MAP: Record<string, string> = {
   dasher_confirmed: 'confirmed',
@@ -27,11 +23,11 @@ export const doordashWebhook = functions.https.onRequest(async (req, res) => {
 
   const newStatus = DD_STATUS_MAP[ddStatus]
   const update: Record<string, any> = {
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   }
 
   if (newStatus) update.status = newStatus
-  if (lat && lng) update.driverLocation = new admin.firestore.GeoPoint(lat, lng)
+  if (lat && lng) update.driverLocation = new GeoPoint(lat, lng)
 
   await db.collection('orders').doc(orderId).update(update)
   res.sendStatus(200)

@@ -29,14 +29,22 @@ services:
       - key: CLOVER_API_BASE_URL
         value: https://api.clover.com
       - key: CORS_ALLOWED_ORIGINS
-        value: https://deccanbawarchi.com,https://www.deccanbawarchi.com
+        value: https://deccanbawarchi.com,https://www.deccanbawarchi.com,http://localhost:8081,http://localhost:8082,http://127.0.0.1:8081
+      - key: CLOVER_SITE_URL
+        value: https://www.deccanbawarchi.com
       - key: CLOVER_SUCCESS_URL
-        value: https://deccanbawarchi.com/checkout/success
+        value: https://www.deccanbawarchi.com/
       - key: CLOVER_FAILURE_URL
-        value: https://deccanbawarchi.com/checkout
+        value: https://www.deccanbawarchi.com/checkout
       - key: CLOVER_LOCATIONS_JSON
         sync: false
       - key: FIREBASE_SERVICE_ACCOUNT_JSON
         sync: false
       - key: CLOVER_TIPS_ENABLED
         value: "false"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        value: orders@deccanbawarchi.com
+      - key: ORDERS_NOTIFICATION_EMAIL
+        sync: false

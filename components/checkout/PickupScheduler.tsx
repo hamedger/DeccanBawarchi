@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { MOCK_PICKUP_ETA_MINUTES } from '../../constants/checkout'
+import { DEFAULT_LOCATION_ID, LOCATION_ORDER_FULFILLMENT_HOURS } from '../../constants/config'
 import {
+  formatFulfillmentHoursLabel,
   getCustomPickupTimeInputBounds,
   getPickupDateOptions,
   getPickupTimeSlotsForDate,
@@ -12,6 +13,8 @@ import {
   pickupTimeToInputValue,
   PICKUP_ASAP,
 } from '../../lib/services/pickupScheduling'
+import { FulfillmentType } from '../../types/order'
+import { OrderFulfillmentHours } from '../../types/location'
 import { Input } from '../ui/Input'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
@@ -21,6 +24,8 @@ interface PickupSchedulerProps {
   pickupAddress: string
   locationName?: string
   prepBufferMinutes?: number
+  fulfillmentHours?: OrderFulfillmentHours
+  fulfillmentType?: FulfillmentType
   onDateChange: (date: string) => void
   onTimeChange: (time: string) => void
 }
@@ -31,40 +36,49 @@ export function PickupScheduler({
   pickupAddress,
   locationName,
   prepBufferMinutes,
+  fulfillmentHours,
+  fulfillmentType = 'pickup',
   onDateChange,
   onTimeChange,
 }: PickupSchedulerProps) {
   const bufferMinutes = prepBufferMinutes ?? 30
+  const isDelivery = fulfillmentType === 'delivery'
+  const scheduleNoun = isDelivery ? 'Delivery' : 'Pickup'
+  const hoursLabel = formatFulfillmentHoursLabel(
+    fulfillmentHours ?? LOCATION_ORDER_FULFILLMENT_HOURS[DEFAULT_LOCATION_ID],
+  )
   const dateOptions = useMemo(() => getPickupDateOptions(), [])
   const timeSlots = useMemo(
-    () => getPickupTimeSlotsForDate(date, bufferMinutes),
-    [date, bufferMinutes],
+    () => getPickupTimeSlotsForDate(date, bufferMinutes, fulfillmentHours),
+    [date, bufferMinutes, fulfillmentHours],
   )
   const inputBounds = useMemo(
-    () => getCustomPickupTimeInputBounds(date, bufferMinutes),
-    [date, bufferMinutes],
+    () => getCustomPickupTimeInputBounds(date, bufferMinutes, fulfillmentHours),
+    [date, bufferMinutes, fulfillmentHours],
   )
   const [customMode, setCustomMode] = useState(
-    () => Boolean(time) && !isPresetPickupTime(time),
+    () => Boolean(time) && !isPresetPickupTime(time, fulfillmentHours),
   )
 
   const customSelected = customMode
   const customTimeInvalid =
-    customMode && Boolean(time) && !isCustomPickupTimeValid(date, time, bufferMinutes)
+    customMode &&
+    Boolean(time) &&
+    !isCustomPickupTimeValid(date, time, bufferMinutes, fulfillmentHours)
 
   useEffect(() => {
-    if (time && !isPresetPickupTime(time)) {
+    if (time && !isPresetPickupTime(time, fulfillmentHours)) {
       setCustomMode(true)
     }
-  }, [time])
+  }, [time, fulfillmentHours])
 
   useEffect(() => {
-    if (!time || !isPresetPickupTime(time)) return
+    if (!time || !isPresetPickupTime(time, fulfillmentHours)) return
     if (!timeSlots.includes(time as (typeof timeSlots)[number])) {
       onTimeChange(timeSlots[0] ?? '')
       setCustomMode(false)
     }
-  }, [date, time, timeSlots, onTimeChange])
+  }, [date, time, timeSlots, onTimeChange, fulfillmentHours])
 
   const handleCustomPress = () => {
     setCustomMode(true)
@@ -89,13 +103,19 @@ export function PickupScheduler({
         <Ionicons name="location-outline" size={20} color={colors.gold} />
         <View style={styles.locationBody}>
           <Text style={styles.locationTitle}>
-            {locationName ? `Pickup at ${locationName}` : 'Pickup at restaurant'}
+            {isDelivery
+              ? locationName
+                ? `Delivery from ${locationName}`
+                : 'Delivery from restaurant'
+              : locationName
+                ? `Pickup at ${locationName}`
+                : 'Pickup at restaurant'}
           </Text>
           <Text style={styles.locationAddress}>{pickupAddress}</Text>
         </View>
       </View>
 
-      <Text style={styles.fieldLabel}>Pickup date</Text>
+      <Text style={styles.fieldLabel}>{scheduleNoun} date</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -122,7 +142,7 @@ export function PickupScheduler({
         })}
       </ScrollView>
 
-      <Text style={styles.fieldLabel}>Pickup time</Text>
+      <Text style={styles.fieldLabel}>{scheduleNoun} time</Text>
       <View style={styles.timeGrid}>
         {timeSlots.map((slot) => {
           const selected = !customMode && time === slot
@@ -186,14 +206,14 @@ export function PickupScheduler({
               autoCapitalize="none"
               error={
                 customTimeInvalid
-                  ? `Choose a time at least ${bufferMinutes} min from now, between 11:30 AM and 11:00 PM.`
+                  ? `Choose a time at least ${bufferMinutes} min from now, between ${hoursLabel}.`
                   : undefined
               }
             />
           )}
           {Platform.OS === 'web' && customTimeInvalid ? (
             <Text style={styles.customError}>
-              Choose a time at least {bufferMinutes} min from now, between 11:30 AM and 11:00 PM.
+              Choose a time at least {bufferMinutes} min from now, between {hoursLabel}.
             </Text>
           ) : null}
           {!customTimeInvalid && customMode ? (

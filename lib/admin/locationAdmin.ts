@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, serverTimestamp, setDoc, updateDoc, writeBatch } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '../firebase'
-import { BUSINESS_HOURS, DEFAULT_PICKUP_PREP_BUFFER_MINUTES } from '../../constants/config'
+import { buildWeeklyLocationHours, DEFAULT_LOCATION_ID, DEFAULT_PICKUP_PREP_BUFFER_MINUTES, LOCATION_DINE_IN_HOURS } from '../../constants/config'
 import { Location, LocationInput } from '../../types/location'
 import { slugifyLocationId } from '../locationUtils'
 
@@ -17,7 +17,12 @@ function defaultLocationPayload(id: string, input: Partial<LocationInput>): Loca
     },
     phone: input.phone?.trim() ?? '',
     website: input.website?.trim() ?? '',
-    hours: input.hours ?? { ...BUSINESS_HOURS },
+    hours:
+      input.hours ??
+      buildWeeklyLocationHours(
+        LOCATION_DINE_IN_HOURS[DEFAULT_LOCATION_ID].open,
+        LOCATION_DINE_IN_HOURS[DEFAULT_LOCATION_ID].close,
+      ),
     isActive: input.isActive ?? true,
     acceptsDelivery: input.acceptsDelivery ?? true,
     acceptsPickup: input.acceptsPickup ?? true,

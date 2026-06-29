@@ -28,6 +28,9 @@ const ADMIN_AUTH_MESSAGES: Partial<typeof AUTH_MESSAGES> = {
 
 export function getAuthErrorMessage(error: unknown, options?: { admin?: boolean }): string {
   if (error instanceof FirebaseError) {
+    if (error.code.startsWith('auth/requests-from-referer-')) {
+      return 'Firebase blocked this page URL. For local dev use http://localhost:8081, or add your URL under Google Cloud → Credentials → API key → HTTP referrers. With the functions emulator on, auth uses the local Auth emulator instead.'
+    }
     const messages = options?.admin ? { ...AUTH_MESSAGES, ...ADMIN_AUTH_MESSAGES } : AUTH_MESSAGES
     if (messages[error.code as keyof typeof messages]) {
       return messages[error.code as keyof typeof messages]!

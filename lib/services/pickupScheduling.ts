@@ -1,26 +1,22 @@
-import { addDays, format, isToday, parse } from 'date-fns'
+import { addDays, format, isToday, parse, setHours, setMinutes } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
 import { MOCK_PICKUP_ETA_MINUTES } from '../../constants/checkout'
-import { DEFAULT_PICKUP_PREP_BUFFER_MINUTES } from '../../constants/config'
-import { TIMEZONE } from '../../constants/config'
+import {
+  DEFAULT_LOCATION_ID,
+  DEFAULT_PICKUP_PREP_BUFFER_MINUTES,
+  LOCATION_ORDER_FULFILLMENT_HOURS,
+  TIMEZONE,
+} from '../../constants/config'
+import { OrderFulfillmentHours } from '../../types/location'
 
 export const PICKUP_ASAP = 'asap'
-export const PICKUP_ADVANCE_DAYS = 7
+/** Today + tomorrow only. */
+export const PICKUP_ADVANCE_DAYS = 2
 export const PICKUP_PREP_BUFFER_MINUTES = DEFAULT_PICKUP_PREP_BUFFER_MINUTES
 
-export const PICKUP_TIME_SLOTS = [
-  '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM',
-  '2:30 PM', '3:00 PM', '3:30 PM', '4:00 PM', '4:30 PM', '5:00 PM',
-  '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM',
-  '8:30 PM', '9:00 PM', '9:30 PM', '10:00 PM', '10:30 PM', '11:00 PM',
-] as const
+const SLOT_INTERVAL_MINUTES = 30
 
-export type PickupTimeSlot = typeof PICKUP_TIME_SLOTS[number] | typeof PICKUP_ASAP
-
-const PICKUP_OPEN_MINUTES = parseTimeSlotMinutes(PICKUP_TIME_SLOTS[0])
-const PICKUP_CLOSE_MINUTES = parseTimeSlotMinutes(
-  PICKUP_TIME_SLOTS[PICKUP_TIME_SLOTS.length - 1],
-)
+export type PickupTimeSlot = string | typeof PICKUP_ASAP
 
 export interface PickupDateOption {
   value: string
@@ -32,9 +28,21 @@ function detroitNow(): Date {
   return toZonedTime(new Date(), TIMEZONE)
 }
 
+function parseHHmmToMinutes(hhmm: string): number {
+  const [hours, minutes] = hhmm.split(':').map(Number)
+  return hours * 60 + minutes
+}
+
 function parseTimeSlotMinutes(slot: string): number {
   const parsed = parse(slot, 'h:mm a', detroitNow())
   return parsed.getHours() * 60 + parsed.getMinutes()
+}
+
+function minutesToTimeSlot(minutes: number): string {
+  const hours = Math.floor(minutes / 60)
+  const mins = minutes % 60
+  const date = setMinutes(setHours(detroitNow(), hours), mins)
+  return format(date, 'h:mm a')
 }
 
 function minutesToInputValue(minutes: number): string {
@@ -43,20 +51,61 @@ function minutesToInputValue(minutes: number): string {
   return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`
 }
 
+export function formatFulfillmentHoursLabel(hours: OrderFulfillmentHours): string {
+  return `${minutesToTimeSlot(parseHHmmToMinutes(hours.open))} and ${minutesToTimeSlot(parseHHmmToMinutes(hours.close))}`
+}
+
+export function buildPickupTimeSlots(hours: OrderFulfillmentHours): string[] {
+  const openMinutes = parseHHmmToMinutes(hours.open)
+  const closeMinutes = parseHHmmToMinutes(hours.close)
+  const slots: string[] = []
+
+  for (let minutes = openMinutes; minutes <= closeMinutes; minutes += SLOT_INTERVAL_MINUTES) {
+    slots.push(minutesToTimeSlot(minutes))
+  }
+
+  return slots
+}
+
+export const PICKUP_TIME_SLOTS = buildPickupTimeSlots(
+  LOCATION_ORDER_FULFILLMENT_HOURS['farmington-hills-mi'],
+)
+
+function resolveFulfillmentHours(
+  fulfillmentHours?: OrderFulfillmentHours,
+): OrderFulfillmentHours {
+  if (fulfillmentHours) return fulfillmentHours
+  return { ...LOCATION_ORDER_FULFILLMENT_HOURS[DEFAULT_LOCATION_ID] }
+}
+
+function getOpenMinutes(fulfillmentHours?: OrderFulfillmentHours): number {
+  return parseHHmmToMinutes(resolveFulfillmentHours(fulfillmentHours).open)
+}
+
+function getCloseMinutes(fulfillmentHours?: OrderFulfillmentHours): number {
+  return parseHHmmToMinutes(resolveFulfillmentHours(fulfillmentHours).close)
+}
+
 function getMinPickupMinutesForDate(
   dateValue: string,
   prepBufferMinutes: number,
+  fulfillmentHours?: OrderFulfillmentHours,
 ): number {
   const date = parse(dateValue, 'yyyy-MM-dd', detroitNow())
+  const openMinutes = getOpenMinutes(fulfillmentHours)
   if (isToday(date)) {
-    return Math.max(PICKUP_OPEN_MINUTES, detroitMinutesNow() + prepBufferMinutes)
+    return Math.max(openMinutes, detroitMinutesNow() + prepBufferMinutes)
   }
-  return PICKUP_OPEN_MINUTES
+  return openMinutes
 }
 
-export function isPresetPickupTime(timeValue: string): boolean {
+export function isPresetPickupTime(
+  timeValue: string,
+  fulfillmentHours?: OrderFulfillmentHours,
+): boolean {
   if (!timeValue || timeValue === PICKUP_ASAP) return timeValue === PICKUP_ASAP
-  return (PICKUP_TIME_SLOTS as readonly string[]).includes(timeValue)
+  const slots = buildPickupTimeSlots(resolveFulfillmentHours(fulfillmentHours))
+  return slots.includes(timeValue)
 }
 
 export function normalizePickupTimeValue(timeValue: string): string | null {
@@ -87,21 +136,27 @@ export function isCustomPickupTimeValid(
   dateValue: string,
   timeValue: string,
   prepBufferMinutes: number = PICKUP_PREP_BUFFER_MINUTES,
+  fulfillmentHours?: OrderFulfillmentHours,
 ): boolean {
   const minutes = getPickupTimeMinutes(timeValue)
   if (minutes === null) return false
-  if (minutes < getMinPickupMinutesForDate(dateValue, prepBufferMinutes)) return false
-  if (minutes > PICKUP_CLOSE_MINUTES) return false
+  if (minutes < getMinPickupMinutesForDate(dateValue, prepBufferMinutes, fulfillmentHours)) {
+    return false
+  }
+  if (minutes > getCloseMinutes(fulfillmentHours)) return false
   return true
 }
 
 export function getCustomPickupTimeInputBounds(
   dateValue: string,
   prepBufferMinutes: number = PICKUP_PREP_BUFFER_MINUTES,
+  fulfillmentHours?: OrderFulfillmentHours,
 ): { min: string; max: string } {
   return {
-    min: minutesToInputValue(getMinPickupMinutesForDate(dateValue, prepBufferMinutes)),
-    max: minutesToInputValue(PICKUP_CLOSE_MINUTES),
+    min: minutesToInputValue(
+      getMinPickupMinutesForDate(dateValue, prepBufferMinutes, fulfillmentHours),
+    ),
+    max: minutesToInputValue(getCloseMinutes(fulfillmentHours)),
   }
 }
 
@@ -138,9 +193,12 @@ export function getPickupDateOptions(): PickupDateOption[] {
 export function getPickupTimeSlotsForDate(
   dateValue: string,
   prepBufferMinutes: number = PICKUP_PREP_BUFFER_MINUTES,
+  fulfillmentHours?: OrderFulfillmentHours,
 ): PickupTimeSlot[] {
   const date = parse(dateValue, 'yyyy-MM-dd', detroitNow())
   const slots: PickupTimeSlot[] = []
+  const resolvedHours = resolveFulfillmentHours(fulfillmentHours)
+  const closeMinutes = getCloseMinutes(resolvedHours)
 
   if (isToday(date)) {
     slots.push(PICKUP_ASAP)
@@ -148,10 +206,11 @@ export function getPickupTimeSlotsForDate(
 
   const minMinutes = isToday(date)
     ? detroitMinutesNow() + prepBufferMinutes
-    : 0
+    : getOpenMinutes(resolvedHours)
 
-  for (const slot of PICKUP_TIME_SLOTS) {
-    if (parseTimeSlotMinutes(slot) >= minMinutes) {
+  for (const slot of buildPickupTimeSlots(resolvedHours)) {
+    const slotMinutes = parseTimeSlotMinutes(slot)
+    if (slotMinutes >= minMinutes && slotMinutes <= closeMinutes) {
       slots.push(slot)
     }
   }
@@ -175,15 +234,20 @@ export function isPickupScheduleValid(
   dateValue: string,
   timeValue: string,
   prepBufferMinutes: number = PICKUP_PREP_BUFFER_MINUTES,
+  fulfillmentHours?: OrderFulfillmentHours,
 ): boolean {
   if (!dateValue || !timeValue) return false
+
+  const allowedDates = new Set(getPickupDateOptions().map((option) => option.value))
+  if (!allowedDates.has(dateValue)) return false
+
   if (timeValue === PICKUP_ASAP) {
     const date = parse(dateValue, 'yyyy-MM-dd', detroitNow())
     return isToday(date)
   }
-  if (isPresetPickupTime(timeValue)) {
-    const available = getPickupTimeSlotsForDate(dateValue, prepBufferMinutes)
+  if (isPresetPickupTime(timeValue, fulfillmentHours)) {
+    const available = getPickupTimeSlotsForDate(dateValue, prepBufferMinutes, fulfillmentHours)
     return available.includes(timeValue as PickupTimeSlot)
   }
-  return isCustomPickupTimeValid(dateValue, timeValue, prepBufferMinutes)
+  return isCustomPickupTimeValid(dateValue, timeValue, prepBufferMinutes, fulfillmentHours)
 }

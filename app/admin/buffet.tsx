@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   View,
   Text,
@@ -17,40 +17,80 @@ import { MenuItem } from '../../types/menu'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { AdminBuffetItemRow } from '../../components/admin/AdminBuffetItemRow'
+import { AdminLocationFilter } from '../../components/admin/AdminLocationFilter'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { DEFAULT_LOCATION_ID } from '../../constants/config'
 import { useAdminMenu } from '../../hooks/useAdminMenu'
-import { isBuffetDishServing } from '../../lib/services/buffetService'
+import { isBuffetDishNeedsRefill, isBuffetDishServing } from '../../lib/services/buffetService'
 import {
   AdminBuffetStatusFilter,
   buildAdminBuffetSections,
   buffetDishFromMenuItem,
+  countAdminBuffetRefillStatus,
 } from '../../lib/buffetLayout'
+import { ensureBuffetConfig, resolveBuffetDocId } from '../../lib/admin/buffetAdmin'
+import { useAdminLocationStore } from '../../store/adminLocationStore'
 
 export default function AdminBuffetScreen() {
   const [config, setConfig] = useState<BuffetConfig | null>(null)
+  const [buffetDocId, setBuffetDocId] = useState(DEFAULT_LOCATION_ID)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [specialNote, setSpecialNote] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<AdminBuffetStatusFilter>('all')
   const [servingBusyId, setServingBusyId] = useState<string | null>(null)
-  const [buffetBusyId, setBuffetBusyId] = useState<string | null>(null)
+  const [refillBusyId, setRefillBusyId] = useState<string | null>(null)
 
-  const { data: menuItems = [] } = useAdminMenu()
-  const locationId = DEFAULT_LOCATION_ID
+  const hydrate = useAdminLocationStore((s) => s.hydrate)
+  const filterLocationId = useAdminLocationStore((s) => s.filterLocationId)
+  const setFilterLocationId = useAdminLocationStore((s) => s.setFilterLocationId)
+  const locationId = filterLocationId ?? DEFAULT_LOCATION_ID
+
+  const { data: menuItems = [] } = useAdminMenu(locationId)
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'buffet', locationId), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data() as BuffetConfig
-        setConfig(data)
-        setSpecialNote(data.specialNote ?? '')
-      }
-      setLoading(false)
+    hydrate()
+  }, [hydrate])
+
+  useEffect(() => {
+    if (!filterLocationId) {
+      setFilterLocationId(DEFAULT_LOCATION_ID)
+    }
+  }, [filterLocationId, setFilterLocationId])
+
+  useEffect(() => {
+    let cancelled = false
+    let unsub: (() => void) | undefined
+
+    setLoading(true)
+    void resolveBuffetDocId(locationId).then((docId) => {
+      if (cancelled) return
+      setBuffetDocId(docId)
+      unsub = onSnapshot(doc(db, 'buffet', docId), (snap) => {
+        if (snap.exists()) {
+          const data = snap.data() as BuffetConfig
+          setConfig(data)
+          setSpecialNote(data.specialNote ?? '')
+        } else {
+          setConfig(null)
+          setSpecialNote('')
+        }
+        setLoading(false)
+      })
     })
-    return unsub
+
+    return () => {
+      cancelled = true
+      unsub?.()
+    }
   }, [locationId])
+
+  const buffetRef = useMemo(() => doc(db, 'buffet', buffetDocId), [buffetDocId])
+
+  const getConfig = useCallback(async (): Promise<BuffetConfig> => {
+    return ensureBuffetConfig(buffetDocId, locationId, menuItems, config)
+  }, [buffetDocId, locationId, menuItems, config])
 
   const { sections, extraRows, statusCounts } = useMemo(() => {
     const filtered = buildAdminBuffetSections(
@@ -63,11 +103,7 @@ export default function AdminBuffetScreen() {
     const allRows = [...all.sections.flatMap((s) => s.rows), ...all.extraRows]
     return {
       ...filtered,
-      statusCounts: {
-        all: allRows.length,
-        green: allRows.filter((r) => r.buffetDish).length,
-        red: allRows.filter((r) => !r.buffetDish).length,
-      },
+      statusCounts: countAdminBuffetRefillStatus(allRows),
     }
   }, [menuItems, config?.todaysDishes, search, statusFilter])
 
@@ -75,56 +111,101 @@ export default function AdminBuffetScreen() {
     return <ActivityIndicator color={colors.gold} style={{ flex: 1, marginTop: 80 }} />
   }
 
-  const ref = doc(db, 'buffet', locationId)
-
   const toggleLunch = async (val: boolean) => {
-    await updateDoc(ref, { isLunchActive: val })
-  }
-
-  const toggleDinner = async (val: boolean) => {
-    await updateDoc(ref, { isDinnerActive: val })
-  }
-
-  const addDish = async (item: MenuItem) => {
-    if (!config) return
-    if (config.todaysDishes.find((d) => d.menuItemId === item.id)) return
-    const newDish = buffetDishFromMenuItem(item, config.todaysDishes.length)
-    await updateDoc(ref, {
-      todaysDishes: [...config.todaysDishes, newDish],
-      updatedAt: serverTimestamp(),
-    })
-  }
-
-  const removeDish = async (menuItemId: string) => {
-    if (!config) return
-    await updateDoc(ref, {
-      todaysDishes: config.todaysDishes.filter((d) => d.menuItemId !== menuItemId),
-      updatedAt: serverTimestamp(),
-    })
-  }
-
-  const toggleBuffetItem = async (item: MenuItem) => {
-    const onBuffet = config?.todaysDishes.some((d) => d.menuItemId === item.id)
-    setBuffetBusyId(item.id)
     try {
-      if (onBuffet) {
-        await removeDish(item.id)
-      } else {
-        await addDish(item)
-      }
+      const cfg = await getConfig()
+      await updateDoc(buffetRef, { isLunchActive: val, updatedAt: serverTimestamp() })
+      if (!config) setConfig(cfg)
     } catch (e) {
-      Alert.alert('Update failed', e instanceof Error ? e.message : 'Could not update buffet')
-    } finally {
-      setBuffetBusyId(null)
+      Alert.alert('Update failed', e instanceof Error ? e.message : 'Could not update lunch session')
     }
   }
 
+  const toggleDinner = async (val: boolean) => {
+    try {
+      const cfg = await getConfig()
+      await updateDoc(buffetRef, { isDinnerActive: val, updatedAt: serverTimestamp() })
+      if (!config) setConfig(cfg)
+    } catch (e) {
+      Alert.alert('Update failed', e instanceof Error ? e.message : 'Could not update dinner session')
+    }
+  }
+
+  const addDish = async (item: MenuItem, needsRefill: boolean, cfg: BuffetConfig) => {
+    if (cfg.todaysDishes.find((d) => d.menuItemId === item.id)) return
+    const newDish = { ...buffetDishFromMenuItem(item, cfg.todaysDishes.length), needsRefill }
+    await updateDoc(buffetRef, {
+      todaysDishes: [...cfg.todaysDishes, newDish],
+      updatedAt: serverTimestamp(),
+    })
+  }
+
+  const toggleRefill = async (item: MenuItem) => {
+    setRefillBusyId(item.id)
+    try {
+      const cfg = await getConfig()
+      const existing = cfg.todaysDishes.find((d) => d.menuItemId === item.id)
+      if (!existing) {
+        await addDish(item, false, cfg)
+        return
+      }
+
+      await updateDoc(buffetRef, {
+        todaysDishes: cfg.todaysDishes.map((d) =>
+          d.menuItemId === item.id ? { ...d, needsRefill: !isBuffetDishNeedsRefill(d) } : d,
+        ),
+        updatedAt: serverTimestamp(),
+      })
+    } catch (e) {
+      Alert.alert('Update failed', e instanceof Error ? e.message : 'Could not update refill status')
+    } finally {
+      setRefillBusyId(null)
+    }
+  }
+
+  const removeFromBuffet = async (item: MenuItem) => {
+    const cfg = await getConfig()
+    const existing = cfg.todaysDishes.find((d) => d.menuItemId === item.id)
+    if (!existing) return
+
+    Alert.alert(
+      'Remove from today\'s line?',
+      `${item.name} will disappear from the buffet board until you add it again.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setRefillBusyId(item.id)
+              try {
+                const latest = await getConfig()
+                await updateDoc(buffetRef, {
+                  todaysDishes: latest.todaysDishes.filter((d) => d.menuItemId !== item.id),
+                  updatedAt: serverTimestamp(),
+                })
+              } catch (e) {
+                Alert.alert(
+                  'Update failed',
+                  e instanceof Error ? e.message : 'Could not remove item from buffet',
+                )
+              } finally {
+                setRefillBusyId(null)
+              }
+            })()
+          },
+        },
+      ],
+    )
+  }
+
   const toggleServing = async (menuItemId: string, next: boolean) => {
-    if (!config) return
     setServingBusyId(menuItemId)
     try {
-      await updateDoc(ref, {
-        todaysDishes: config.todaysDishes.map((d) =>
+      const cfg = await getConfig()
+      await updateDoc(buffetRef, {
+        todaysDishes: cfg.todaysDishes.map((d) =>
           d.menuItemId === menuItemId ? { ...d, isServing: next } : d,
         ),
         updatedAt: serverTimestamp(),
@@ -138,14 +219,22 @@ export default function AdminBuffetScreen() {
 
   const saveNote = async () => {
     setSaving(true)
-    await updateDoc(ref, { specialNote, updatedAt: serverTimestamp() })
-    setSaving(false)
-    Alert.alert('Saved', 'Buffet note updated')
+    try {
+      await getConfig()
+      await updateDoc(buffetRef, { specialNote, updatedAt: serverTimestamp() })
+      Alert.alert('Saved', 'Buffet note updated')
+    } catch (e) {
+      Alert.alert('Save failed', e instanceof Error ? e.message : 'Could not save buffet note')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const onBuffetCount = config?.todaysDishes.length ?? 0
   const servingCount =
     config?.todaysDishes.filter((d) => isBuffetDishServing(d)).length ?? 0
+  const refillCount =
+    config?.todaysDishes.filter((d) => isBuffetDishNeedsRefill(d)).length ?? 0
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -170,18 +259,44 @@ export default function AdminBuffetScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>
-            Today&apos;s buffet ({servingCount} serving · {onBuffetCount} on menu)
+            Buffet stations ({servingCount} serving · {onBuffetCount} on line)
           </Text>
           <Text style={styles.legendHint}>
-            Green circle = on today&apos;s menu · Serving switch = visible on the customer buffet page
+            Green dot = stocked · Red dot = needs refill · Gray dot = not on today&apos;s line · Tap
+            dot to add or toggle stocked/refill · Hold dot to remove from line · Serving switch =
+            shown on customer buffet page
           </Text>
         </View>
+
+        {!config ? (
+          <View style={styles.setupBanner}>
+            <Text style={styles.setupBannerText}>
+              No buffet line saved for this location yet. Tap any item&apos;s dot to set up
+              today&apos;s line — all standard buffet items will be added automatically.
+            </Text>
+          </View>
+        ) : null}
+
+        <AdminLocationFilter showAll={false} />
+
+        {refillCount > 0 ? (
+          <TouchableOpacity
+            style={styles.refillBanner}
+            onPress={() => setStatusFilter('red')}
+            accessibilityRole="button"
+          >
+            <Text style={styles.refillBannerText}>
+              {refillCount} item{refillCount === 1 ? '' : 's'} need refill — tap to view
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+
         <View style={styles.filterRow}>
           {(
             [
-              { key: 'all', label: 'All' },
-              { key: 'red', label: 'Red', dot: colors.error },
-              { key: 'green', label: 'Green', dot: colors.green },
+              { key: 'all', label: 'All on line' },
+              { key: 'red', label: 'Needs refill', dot: colors.error },
+              { key: 'green', label: 'Stocked', dot: colors.green },
             ] as const
           ).map(({ key, label, dot }) => {
             const active = statusFilter === key
@@ -232,9 +347,10 @@ export default function AdminBuffetScreen() {
                   <AdminBuffetItemRow
                     key={row.menuItemId}
                     row={row}
-                    buffetBusy={buffetBusyId === row.menuItemId}
+                    refillBusy={refillBusyId === row.menuItemId}
                     servingBusy={servingBusyId === row.menuItemId}
-                    onToggleBuffet={toggleBuffetItem}
+                    onToggleRefill={toggleRefill}
+                    onRemoveFromBuffet={removeFromBuffet}
                     onToggleServing={toggleServing}
                   />
                 ))
@@ -251,9 +367,10 @@ export default function AdminBuffetScreen() {
                 <AdminBuffetItemRow
                   key={row.menuItemId}
                   row={row}
-                  buffetBusy={buffetBusyId === row.menuItemId}
+                  refillBusy={refillBusyId === row.menuItemId}
                   servingBusy={servingBusyId === row.menuItemId}
-                  onToggleBuffet={toggleBuffetItem}
+                  onToggleRefill={toggleRefill}
+                  onRemoveFromBuffet={removeFromBuffet}
                   onToggleServing={toggleServing}
                 />
               ))}
@@ -329,6 +446,34 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 16,
   },
+  setupBanner: {
+    marginBottom: spacing.md,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    backgroundColor: 'rgba(212,175,55,0.08)',
+  },
+  setupBannerText: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  refillBanner: {
+    marginBottom: spacing.md,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.error,
+    backgroundColor: 'rgba(239, 83, 80, 0.12)',
+  },
+  refillBannerText: {
+    fontFamily: fonts.sansMedium,
+    color: colors.error,
+    fontSize: 13,
+    textAlign: 'center',
+  },
   categorySection: {
     marginBottom: spacing.md,
   },
@@ -372,7 +517,7 @@ const styles = StyleSheet.create({
   },
   filterChipActive: {
     borderColor: colors.gold,
-    backgroundColor: 'rgba(212,175,55,0.18)',
+    backgroundColor: colors.gold,
   },
   filterDot: {
     width: 10,
@@ -387,7 +532,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   filterChipLabelActive: {
-    color: colors.goldBright,
+    color: colors.background,
   },
   filterBadge: {
     minWidth: 22,
@@ -400,8 +545,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   filterBadgeActive: {
-    backgroundColor: colors.gold,
-    borderColor: colors.gold,
+    backgroundColor: colors.background,
+    borderColor: colors.background,
   },
   filterBadgeText: {
     fontFamily: fonts.sansBold,
@@ -409,7 +554,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   filterBadgeTextActive: {
-    color: colors.background,
+    color: colors.gold,
   },
   search: {
     fontFamily: fonts.sans,

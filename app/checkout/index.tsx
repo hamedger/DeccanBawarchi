@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { View, Text, ScrollView, StyleSheet } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useCart } from '../../hooks/useCart'
+import { useCartStore } from '../../store/cartStore'
 import { useAuth } from '../../hooks/useAuth'
 import { FulfillmentSelector } from '../../components/cart/FulfillmentSelector'
 import { PickupScheduler } from '../../components/checkout/PickupScheduler'
@@ -22,12 +23,20 @@ import { isApiConfigured } from '../../constants/api'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { LocationConfirmCard } from '../../components/location/LocationConfirmCard'
-import { formatLocationAddress, getPickupPrepBufferMinutes } from '../../lib/locationUtils'
+import { formatLocationAddress, getOrderFulfillmentHours, getPickupPrepBufferMinutes } from '../../lib/locationUtils'
 import { confirmOrderLocation } from '../../lib/confirmOrderLocation'
 import { User as FirebaseUser } from 'firebase/auth'
 import { User } from '../../types/user'
-import { TAXES_AND_FEES_LABEL } from '../../lib/services/cartService'
+import {
+  TAXES_AND_FEES_LABEL,
+  calculateOrderTotal,
+  calculateTax,
+  calculateServiceFee,
+  calculateTipFromPercent,
+} from '../../lib/services/cartService'
 import { CHECKOUT_RETURN_PATH } from '../../lib/authReturnTo'
+import { useLiveDeliveryQuote } from '../../hooks/useLiveDeliveryQuote'
+import { DeliveryQuote } from '../../types/delivery'
 
 function hasCheckoutAuth(firebaseUser: FirebaseUser | null, userProfile: User | null) {
   const email = userProfile?.email?.trim() || firebaseUser?.email?.trim()
@@ -55,14 +64,52 @@ export default function CheckoutIndex() {
   const [error, setError] = useState<string | null>(null)
   const autoPayStarted = useRef(false)
   const prepBufferMinutes = getPickupPrepBufferMinutes(location)
+  const fulfillmentHours = getOrderFulfillmentHours(location)
 
   const isDelivery = DELIVERY_ENABLED && cart.fulfillmentType === 'delivery'
+  const dropoffAddress = useMemo(
+    () => (street.trim() && city.trim() && zip.trim() ? `${street.trim()}, ${city.trim()}, MI ${zip.trim()}` : ''),
+    [street, city, zip],
+  )
+
+  const setDeliveryQuote = useCartStore((s) => s.setDeliveryQuote)
+  const clearDeliveryQuote = useCartStore((s) => s.clearDeliveryQuote)
+  const cartSubtotal = cart.subtotal()
+
+  const handleQuote = useCallback(
+    (quote: DeliveryQuote) => {
+      setDeliveryQuote({
+        fee: quote.fee,
+        etaMinutes: quote.etaMinutes,
+        externalDeliveryId: quote.externalDeliveryId,
+      })
+    },
+    [setDeliveryQuote],
+  )
+
+  const handleClearQuote = useCallback(() => {
+    clearDeliveryQuote()
+  }, [clearDeliveryQuote])
+
   const isAuthed = hasCheckoutAuth(firebaseUser, userProfile)
+
+  const {
+    loading: quoteLoading,
+    error: quoteError,
+    refreshQuote,
+  } = useLiveDeliveryQuote({
+    enabled: isDelivery && isAuthed,
+    dropoffAddress,
+    orderValue: cartSubtotal,
+    onQuote: handleQuote,
+    onClear: handleClearQuote,
+  })
   const canPlace =
     hasSelection &&
+    isPickupScheduleValid(cart.pickupDate, cart.pickupTime, prepBufferMinutes, fulfillmentHours) &&
     (isDelivery
-      ? Boolean(street.trim() && city.trim() && zip.trim())
-      : isPickupScheduleValid(cart.pickupDate, cart.pickupTime, prepBufferMinutes))
+      ? Boolean(dropoffAddress && cart.deliveryQuoteReady && !quoteLoading && !quoteError)
+      : true)
   const canContinue = isAuthed ? canPlace : true
 
   const processPayment = useCallback(
@@ -89,28 +136,53 @@ export default function CheckoutIndex() {
         if (!confirmed) return
       }
 
+      if (isDelivery) {
+        await refreshQuote()
+        const latest = useCartStore.getState()
+        if (!latest.deliveryQuoteReady) {
+          setError(quoteError ?? 'Could not get a delivery quote for this address.')
+          return
+        }
+      }
+
       setLoading(true)
+      const latestCart = useCartStore.getState()
+      const subtotal = latestCart.subtotal()
+      const tax = calculateTax(subtotal)
+      const serviceFee = calculateServiceFee(subtotal)
+      const deliveryFee = isDelivery ? latestCart.deliveryFee : 0
+      const tip =
+        latestCart.tipPercent != null
+          ? calculateTipFromPercent(subtotal, latestCart.tipPercent)
+          : latestCart.tip
+      const total =
+        calculateOrderTotal({
+          subtotal,
+          tip,
+          promoDiscount: latestCart.promoDiscount,
+          loyaltyPointsToRedeem: latestCart.loyaltyPointsToRedeem,
+          giftCardAmount: latestCart.giftCardAmount,
+        }) + deliveryFee
+
       const fulfillment = cart.fulfillmentType
       const pickupAddress = formatLocationAddress(location.address)
       const address = isDelivery ? `${street}, ${city}, MI ${zip}` : pickupAddress
-      const pickupSchedule = isDelivery
-        ? ''
-        : formatPickupSchedule(cart.pickupDate, cart.pickupTime)
+      const pickupSchedule = formatPickupSchedule(cart.pickupDate, cart.pickupTime)
 
       try {
         const customerEmail = userProfile?.email?.trim() || firebaseUser?.email?.trim() || ''
         const { href } = await startCloverCheckout({
-          items: cart.items,
-          subtotal: cart.subtotal(),
-          tax: cart.tax,
-          serviceFee: cart.serviceFee,
-          deliveryFee: cart.deliveryFee,
-          tip: cart.tip,
-          total: cart.total,
-          promoCode: cart.promoCode,
-          promoDiscount: cart.promoDiscount,
-          loyaltyPointsToRedeem: cart.loyaltyPointsToRedeem,
-          giftCardAmount: cart.giftCardAmount,
+          items: latestCart.items,
+          subtotal,
+          tax,
+          serviceFee,
+          deliveryFee,
+          tip,
+          total,
+          promoCode: latestCart.promoCode,
+          promoDiscount: latestCart.promoDiscount,
+          loyaltyPointsToRedeem: latestCart.loyaltyPointsToRedeem,
+          giftCardAmount: latestCart.giftCardAmount,
           fulfillmentType: fulfillment,
           deliveryAddress: isDelivery
             ? {
@@ -123,20 +195,20 @@ export default function CheckoutIndex() {
                 country: 'US',
               }
             : null,
-          notes: cart.notes,
+          notes: latestCart.notes,
           locationId,
           customerName: userProfile?.displayName ?? firebaseUser?.displayName ?? '',
           customerPhone: userProfile?.phone ?? '',
           customerEmail,
-          pickupDate: isDelivery ? undefined : cart.pickupDate,
-          pickupTime: isDelivery ? undefined : cart.pickupTime,
+          pickupDate: latestCart.pickupDate,
+          pickupTime: latestCart.pickupTime,
         })
 
         saveCheckoutContext({
           fulfillment,
           address,
           pickupSchedule,
-          total: String(cart.total),
+          total: String(total),
         })
 
         redirectToCloverCheckout(href)
@@ -160,7 +232,8 @@ export default function CheckoutIndex() {
       street,
       city,
       zip,
-      router,
+      quoteError,
+      refreshQuote,
     ],
   )
 
@@ -224,9 +297,7 @@ export default function CheckoutIndex() {
           value={cart.fulfillmentType}
           onChange={cart.setFulfillmentType}
           pickupAddress={location ? formatLocationAddress(location.address) : undefined}
-          pickupSchedule={
-            !isDelivery ? formatPickupSchedule(cart.pickupDate, cart.pickupTime) : undefined
-          }
+          pickupSchedule={formatPickupSchedule(cart.pickupDate, cart.pickupTime)}
         />
 
         {isDelivery ? (
@@ -251,22 +322,34 @@ export default function CheckoutIndex() {
                 <Ionicons name="bicycle" size={18} color="#FF3008" />
                 <Text style={styles.quoteLabel}>DoorDash Drive quote</Text>
               </View>
-              <Text style={styles.quoteValue}>
-                ${(cart.deliveryFee / 100).toFixed(2)} · ~{cart.deliveryEtaMinutes} min
-              </Text>
+              {!isAuthed && !authLoading ? (
+                <Text style={styles.quotePending}>Sign in to get a live delivery quote</Text>
+              ) : quoteLoading ? (
+                <Text style={styles.quotePending}>Getting live delivery quote…</Text>
+              ) : quoteError ? (
+                <Text style={styles.quoteError}>{quoteError}</Text>
+              ) : cart.deliveryQuoteReady ? (
+                <Text style={styles.quoteValue}>
+                  ${(cart.deliveryFee / 100).toFixed(2)} · ~{cart.deliveryEtaMinutes} min
+                </Text>
+              ) : (
+                <Text style={styles.quotePending}>Enter your address for a live quote</Text>
+              )}
             </View>
           </View>
-        ) : (
-          <PickupScheduler
-            date={cart.pickupDate}
-            time={cart.pickupTime}
-            pickupAddress={location ? formatLocationAddress(location.address) : ''}
-            locationName={location?.name}
-            prepBufferMinutes={prepBufferMinutes}
-            onDateChange={cart.setPickupDate}
-            onTimeChange={cart.setPickupTime}
-          />
-        )}
+        ) : null}
+
+        <PickupScheduler
+          date={cart.pickupDate}
+          time={cart.pickupTime}
+          pickupAddress={location ? formatLocationAddress(location.address) : ''}
+          locationName={location?.name}
+          prepBufferMinutes={prepBufferMinutes}
+          fulfillmentHours={fulfillmentHours}
+          fulfillmentType={cart.fulfillmentType}
+          onDateChange={cart.setPickupDate}
+          onTimeChange={cart.setPickupTime}
+        />
 
         <View style={styles.section}>
           <TipSelector
@@ -295,7 +378,15 @@ export default function CheckoutIndex() {
             <View style={styles.divider} />
             <SummaryLine label="Subtotal" value={cart.subtotal()} />
             <SummaryLine label={TAXES_AND_FEES_LABEL} value={cart.tax + cart.serviceFee} />
-            {isDelivery && <SummaryLine label="DoorDash Delivery" value={cart.deliveryFee} />}
+            {isDelivery &&
+              (cart.deliveryQuoteReady ? (
+                <SummaryLine label="DoorDash Delivery" value={cart.deliveryFee} />
+              ) : (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.label}>DoorDash Delivery</Text>
+                  <Text style={[styles.value, { color: colors.whiteMuted }]}>Pending quote</Text>
+                </View>
+              ))}
             {cart.loyaltyPointsToRedeem > 0 && (
               <SummaryLine
                 label="Loyalty Discount"
@@ -322,7 +413,15 @@ export default function CheckoutIndex() {
           <Text style={styles.helperText}>
             {!hasSelection
               ? 'Select a restaurant location to continue.'
-              : 'Choose a pickup date and time to continue.'}
+              : isDelivery
+                ? quoteError
+                  ? 'Fix the delivery address or try again.'
+                  : quoteLoading
+                    ? 'Waiting for DoorDash delivery quote…'
+                    : !cart.deliveryQuoteReady
+                      ? 'Enter your delivery address for a live quote.'
+                      : ''
+                : 'Choose a pickup date and time to continue.'}
           </Text>
         ) : null}
       </View>
@@ -415,6 +514,17 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansBold,
     color: colors.gold,
     fontSize: 18,
+  },
+  quotePending: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 14,
+  },
+  quoteError: {
+    fontFamily: fonts.sans,
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 18,
   },
   summaryCard: {
     backgroundColor: colors.backgroundCard,

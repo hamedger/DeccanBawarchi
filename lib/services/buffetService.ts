@@ -122,3 +122,7 @@ export function computeBuffetStatus({
 export function isBuffetDishServing(dish: BuffetDish): boolean {
   return dish.isServing !== false
 }
+
+export function isBuffetDishNeedsRefill(dish: BuffetDish): boolean {
+  return dish.needsRefill === true
+}

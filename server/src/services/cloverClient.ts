@@ -31,8 +31,9 @@ export async function createCheckoutSession(
   input: CreateCheckoutSessionInput,
 ): Promise<CloverCheckoutSession> {
   const { merchantId, privateKey, pageConfigUuid } = input.clover
-  const successBase = config.clover.successUrl
-  const failureBase = config.clover.failureUrl
+  const siteBase = config.clover.siteUrl.replace(/\/$/, '')
+  const successBase = config.clover.successUrl ?? `${siteBase}/`
+  const failureBase = config.clover.failureUrl ?? `${siteBase}/checkout`
 
   const body: Record<string, unknown> = {
     customer: {
@@ -61,6 +62,7 @@ export async function createCheckoutSession(
             success: appendQuery(successBase, {
               orderId: input.orderId,
               session_id: '{CHECKOUT_SESSION_ID}',
+              payment: 'success',
             }),
           }
         : {}),

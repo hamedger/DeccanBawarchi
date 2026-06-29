@@ -119,13 +119,17 @@ export function clearCheckoutContext() {
 }
 
 export async function confirmCloverOrderAfterRedirect(
-  orderId: string,
   checkoutSessionId: string,
-): Promise<void> {
+  orderId?: string,
+): Promise<{ orderId: string; status: string } | null> {
   const user = auth.currentUser
-  if (!user) return
+  if (!user) return null
 
   const functions = getFunctions(app, 'us-central1')
   const confirm = httpsCallable(functions, 'confirmCloverOrder')
-  await confirm({ orderId, checkoutSessionId })
+  const result = await confirm({
+    checkoutSessionId,
+    ...(orderId?.trim() ? { orderId: orderId.trim() } : {}),
+  })
+  return result.data as { orderId: string; status: string }
 }

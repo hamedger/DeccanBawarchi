@@ -28,14 +28,13 @@ export default function CheckoutSuccessScreen() {
   }, [clearCart])
 
   useEffect(() => {
-    const orderId = params.orderId?.trim()
     const checkoutSessionId = params.session_id?.trim()
-    if (!orderId || !checkoutSessionId) return
+    if (!checkoutSessionId) return
 
-    void confirmCloverOrderAfterRedirect(orderId, checkoutSessionId).catch(() => {
-      // Webhook may have already confirmed the order; ignore transient errors on success page.
+    void confirmCloverOrderAfterRedirect(checkoutSessionId, params.orderId?.trim()).finally(() => {
+      router.replace('/(tabs)/' as never)
     })
-  }, [params.orderId, params.session_id])
+  }, [params.orderId, params.session_id, router])
 
   const saved = readCheckoutContext()
   const isDelivery = (params.fulfillment ?? saved?.fulfillment) === 'delivery'

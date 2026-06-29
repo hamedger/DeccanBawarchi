@@ -6,6 +6,7 @@ import {
   formatLocationAddress,
   formatLocationShort,
   formatPhoneDisplay,
+  getLocationDineInHours,
   openDirections,
   openPhone,
 } from '../../lib/locationUtils'
@@ -52,11 +53,13 @@ export function LocationsSection() {
                 <Ionicons name="navigate-outline" size={14} color={colors.background} />
                 <Text style={styles.directionsBtnText}>Get Directions</Text>
               </TouchableOpacity>
+              <Text style={styles.hours}>
+                {formatBusinessHours(getLocationDineInHours(location))}
+              </Text>
             </View>
           )
         })}
       </View>
-      <Text style={styles.hours}>{formatBusinessHours()}</Text>
     </View>
   )
 }
@@ -140,9 +143,8 @@ const styles = StyleSheet.create({
   },
   hours: {
     fontFamily: fonts.sansMedium,
-    color: colors.white,
-    fontSize: 13,
-    marginTop: spacing.md,
-    textAlign: 'center',
+    color: colors.whiteMuted,
+    fontSize: 12,
+    marginTop: spacing.sm,
   },
 })

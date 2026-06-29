@@ -1,5 +1,8 @@
-export function formatBusinessHours(): string {
-  return 'Open Daily · 11:30 AM – 1:00 AM'
+import { formatDineInHoursLabel } from '../lib/locationUtils'
+import { LocationHours } from '../types/location'
+
+export function formatBusinessHours(hours: LocationHours): string {
+  return formatDineInHoursLabel(hours)
 }
 
 export const RESTAURANT_STATS = [

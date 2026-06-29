@@ -15,6 +15,7 @@ import { blurActiveElementOnWeb } from '../lib/a11y'
 import { isAdminUser } from '../lib/adminAuth'
 import { normalizeUserProfile } from '../lib/finishAuthSession'
 import { HomeButton } from '../components/navigation/HomeButton'
+import { CloverReturnHandler } from '../components/checkout/CloverReturnHandler'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -124,6 +125,7 @@ export default function RootLayout() {
       <View style={{ flex: 1 }} onLayout={onLayoutReady}>
         <StatusBar style="light" />
         <AuthReadyGate>
+        <CloverReturnHandler />
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: colors.background },

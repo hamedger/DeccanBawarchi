@@ -1,4 +1,5 @@
 import type { Firestore } from 'firebase-admin/firestore'
+import { hasOrderPayment } from '../lib/orderPayment'
 
 const LOCATION_LABELS: Record<string, string> = {
   'northville-mi': 'Northville',
@@ -62,13 +63,6 @@ function buildBody(input: StaffOrderNotificationInput): string {
   }
 
   return lines.join('\n')
-}
-
-function hasOrderPayment(order: Record<string, unknown>): boolean {
-  return (
-    String(order.cloverPaymentId ?? '').trim().length > 0 ||
-    String(order.stripePaymentIntentId ?? '').trim().length > 0
-  )
 }
 
 /** Claim staffNotified in Firestore so webhook + Cloud Function do not double-send. */

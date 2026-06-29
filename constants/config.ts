@@ -8,21 +8,45 @@ export const ORDERS_EMAIL = 'orders@deccanbawarchi.com'
 /** Staff inbox for new paid order alerts (Cloud Functions). */
 export const ORDERS_NOTIFICATION_EMAIL = 'mjalaluddin63@gmail.com'
 
-export const BUSINESS_HOURS = {
-  // 0=Sun, 1=Mon ... 6=Sat — Open 7 days 11:30 AM – 1:00 AM
-  0: { open: '11:30', close: '01:00' },
-  1: { open: '11:30', close: '01:00' },
-  2: { open: '11:30', close: '01:00' },
-  3: { open: '11:30', close: '01:00' },
-  4: { open: '11:30', close: '01:00' },
-  5: { open: '11:30', close: '01:00' },
-  6: { open: '11:30', close: '01:00' },
-} as const
+export const DEFAULT_LOCATION_ID = 'northville-mi'
+
+type HourRange = { open: string; close: string }
+
+/** Per-location dine-in hours (24h HH:mm), open daily. */
+export const LOCATION_DINE_IN_HOURS: Record<string, HourRange> = {
+  'northville-mi': { open: '11:30', close: '22:00' },
+  'farmington-hills-mi': { open: '11:30', close: '23:30' },
+}
+
+/** Build a 7-day hours map with the same open/close every day. */
+export function buildWeeklyLocationHours(
+  open: string,
+  close: string,
+): Record<number, HourRange> {
+  return Object.fromEntries(
+    Array.from({ length: 7 }, (_, day) => [day, { open, close }]),
+  ) as Record<number, HourRange>
+}
+
+/** @deprecated Use per-location dine-in hours via `buildWeeklyLocationHours`. */
+export const BUSINESS_HOURS = buildWeeklyLocationHours(
+  LOCATION_DINE_IN_HOURS[DEFAULT_LOCATION_ID].open,
+  LOCATION_DINE_IN_HOURS[DEFAULT_LOCATION_ID].close,
+)
+
+/** Per-location pickup/delivery hours (24h HH:mm). */
+export const LOCATION_ORDER_FULFILLMENT_HOURS: Record<string, HourRange> = {
+  'northville-mi': { open: '11:30', close: '22:00' },
+  'farmington-hills-mi': { open: '11:30', close: '23:30' },
+}
 
 export const DELIVERY_RADIUS_MILES = 10
 
-/** DoorDash Drive delivery — disabled until Drive API production access is approved. */
-export const DELIVERY_ENABLED = false
+/**
+ * DoorDash Drive delivery UI + checkout flow.
+ * Off by default in production; set EXPO_PUBLIC_DELIVERY_ENABLED=true in .env for local/staging tests.
+ */
+export const DELIVERY_ENABLED = process.env.EXPO_PUBLIC_DELIVERY_ENABLED === 'true'
 
 export const LOYALTY = {
   pointsPerDollar: 1,
@@ -41,8 +65,6 @@ export const LOYALTY = {
     platinum: { min: 3000, max: Infinity },
   },
 }
-
-export const DEFAULT_LOCATION_ID = 'northville-mi'
 
 export const DEFAULT_PICKUP_PREP_BUFFER_MINUTES = 30
 

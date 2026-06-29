@@ -3,11 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { FulfillmentType } from '../../types/order'
 import { DELIVERY_ENABLED, DELIVERY_RADIUS_MILES, RESTAURANT_ADDRESS } from '../../constants/config'
-import {
-  MOCK_DELIVERY_FEE_CENTS,
-  MOCK_DELIVERY_ETA_MINUTES,
-  MOCK_PICKUP_ETA_MINUTES,
-} from '../../constants/checkout'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 interface FulfillmentSelectorProps {
@@ -15,10 +10,6 @@ interface FulfillmentSelectorProps {
   onChange: (type: FulfillmentType) => void
   pickupAddress?: string
   pickupSchedule?: string
-}
-
-function formatFee(cents: number) {
-  return cents === 0 ? 'Free' : `$${(cents / 100).toFixed(2)}`
 }
 
 export function FulfillmentSelector({
@@ -64,7 +55,7 @@ export function FulfillmentSelector({
         {DELIVERY_ENABLED ? (
           <>
             <Text style={styles.cardMeta}>
-              {formatFee(MOCK_DELIVERY_FEE_CENTS)} delivery fee · Est. {MOCK_DELIVERY_ETA_MINUTES} min
+              {pickupSchedule ? pickupSchedule : 'Schedule date and time below'}
             </Text>
             <Text style={styles.cardHint}>
               Delivered hot to your door within {DELIVERY_RADIUS_MILES} miles
@@ -97,9 +88,7 @@ export function FulfillmentSelector({
           )}
         </View>
         <Text style={styles.cardMeta}>
-          {value === 'pickup' && pickupSchedule
-            ? pickupSchedule
-            : 'Schedule date and time below'}
+          {pickupSchedule ? pickupSchedule : 'Schedule date and time below'}
         </Text>
         <Text style={styles.cardHint} numberOfLines={2}>
           {pickupAddress ?? RESTAURANT_ADDRESS}

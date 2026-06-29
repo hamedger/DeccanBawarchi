@@ -1,17 +1,21 @@
 import * as functions from 'firebase-functions/v2'
-import * as admin from 'firebase-admin'
+import { db, FieldValue } from '../db'
 import { sendOrderNotificationEmail } from '../email/orderNotification'
 import {
   enrichCustomerContactFromUser,
   orderNotificationInputFromDoc,
 } from '../email/orderNotificationInput'
 import { getResendMailConfig, resendApiKey } from '../email/resendConfig'
-import { hasOrderPayment } from './orderPayment'
+import { hasOrderPayment, resolveCloverPaymentId } from './orderPayment'
 
-if (!admin.apps.length) admin.initializeApp()
-const db = admin.firestore()
-
-const POST_PAYMENT_STATUSES = new Set(['placed', 'confirmed', 'preparing', 'ready'])
+const POST_PAYMENT_STATUSES = new Set([
+  'placed',
+  'confirmed',
+  'preparing',
+  'ready',
+  'picked_up',
+  'delivered',
+])
 
 async function notifyStaffForPaidOrder(orderId: string) {
   const orderRef = db.collection('orders').doc(orderId)
@@ -23,7 +27,7 @@ async function notifyStaffForPaidOrder(orderId: string) {
     if (current.status === 'cancelled') return null
     tx.update(orderRef, {
       staffNotified: true,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
     return current
   })
@@ -39,7 +43,7 @@ async function notifyStaffForPaidOrder(orderId: string) {
   } catch (err) {
     await orderRef.update({
       staffNotified: false,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
     throw err
   }
@@ -53,16 +57,33 @@ export const confirmCloverOrder = functions.https.onCall(
       throw new functions.https.HttpsError('unauthenticated', 'Must be signed in')
     }
 
-    const orderId = String(data?.orderId ?? '').trim()
+    const orderIdInput = String(data?.orderId ?? '').trim()
     const checkoutSessionId = String(data?.checkoutSessionId ?? '').trim()
 
-    if (!orderId || !checkoutSessionId) {
-      throw new functions.https.HttpsError('invalid-argument', 'orderId and checkoutSessionId are required')
+    if (!checkoutSessionId) {
+      throw new functions.https.HttpsError('invalid-argument', 'checkoutSessionId is required')
+    }
+
+    let orderId = orderIdInput
+    if (!orderId) {
+      const sessionSnap = await db
+        .collection('orders')
+        .where('cloverCheckoutSessionId', '==', checkoutSessionId)
+        .limit(1)
+        .get()
+      if (sessionSnap.empty) {
+        throw new functions.https.HttpsError('not-found', 'Order not found for checkout session')
+      }
+      const sessionOrder = sessionSnap.docs[0]
+      if (sessionOrder.data().userId !== auth.uid) {
+        throw new functions.https.HttpsError('permission-denied', 'Not your order')
+      }
+      orderId = sessionSnap.docs[0].id
     }
 
     const orderRef = db.collection('orders').doc(orderId)
 
-    const placedOrderId = await db.runTransaction(async (tx) => {
+    const confirmResult = await db.runTransaction(async (tx) => {
       const snap = await tx.get(orderRef)
       if (!snap.exists) {
         throw new functions.https.HttpsError('not-found', 'Order not found')
@@ -79,37 +100,55 @@ export const confirmCloverOrder = functions.https.onCall(
       }
 
       const status = String(order.status ?? '')
+      const paymentId = resolveCloverPaymentId(order.cloverPaymentId, checkoutSessionId)
+      const needsPaymentBackfill = !String(order.cloverPaymentId ?? '').trim() && !!paymentId
+      const needsStaffNotify = order.staffNotified !== true
+
+      if (status === 'pending') {
+        tx.update(orderRef, {
+          status: 'placed',
+          cloverPaymentId: paymentId,
+          updatedAt: FieldValue.serverTimestamp(),
+        })
+        return { orderId, status: 'placed' as const, needsStaffNotify: true }
+      }
+
       if (POST_PAYMENT_STATUSES.has(status)) {
-        return orderId
-      }
-      if (status !== 'pending') {
-        throw new functions.https.HttpsError('failed-precondition', `Order is ${status}`)
+        if (needsPaymentBackfill) {
+          tx.update(orderRef, {
+            cloverPaymentId: paymentId,
+            updatedAt: FieldValue.serverTimestamp(),
+          })
+        }
+        return {
+          orderId,
+          status,
+          needsStaffNotify: needsStaffNotify && (needsPaymentBackfill || hasOrderPayment(order)),
+        }
       }
 
-      tx.update(orderRef, {
-        status: 'placed',
-        cloverPaymentId: String(order.cloverPaymentId ?? '').trim() || `clover_${checkoutSessionId}`,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      })
-
-      return orderId
+      throw new functions.https.HttpsError('failed-precondition', `Order is ${status}`)
     })
 
     functions.logger.info('Clover order placed after checkout redirect', {
-      orderId: placedOrderId,
+      orderId: confirmResult.orderId,
       checkoutSessionId,
       uid: auth.uid,
+      status: confirmResult.status,
+      needsStaffNotify: confirmResult.needsStaffNotify,
     })
 
-    try {
-      await notifyStaffForPaidOrder(placedOrderId)
-    } catch (err) {
-      functions.logger.error('Staff notification failed after Clover checkout redirect', {
-        orderId: placedOrderId,
-        err,
-      })
+    if (confirmResult.needsStaffNotify) {
+      try {
+        await notifyStaffForPaidOrder(confirmResult.orderId)
+      } catch (err) {
+        functions.logger.error('Staff notification failed after Clover checkout redirect', {
+          orderId: confirmResult.orderId,
+          err,
+        })
+      }
     }
 
-    return { orderId: placedOrderId, status: 'placed' }
+    return { orderId: confirmResult.orderId, status: confirmResult.status }
   },
 )

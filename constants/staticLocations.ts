@@ -1,4 +1,9 @@
-import { BUSINESS_HOURS, DEFAULT_PICKUP_PREP_BUFFER_MINUTES } from './config'
+import {
+  buildWeeklyLocationHours,
+  DEFAULT_PICKUP_PREP_BUFFER_MINUTES,
+  LOCATION_DINE_IN_HOURS,
+  LOCATION_ORDER_FULFILLMENT_HOURS,
+} from './config'
 import { Location } from '../types/location'
 
 export const STATIC_LOCATIONS: Location[] = [
@@ -14,7 +19,11 @@ export const STATIC_LOCATIONS: Location[] = [
     },
     phone: '+12489857209',
     website: 'https://deccanbawarchi.com',
-    hours: { ...BUSINESS_HOURS },
+    hours: buildWeeklyLocationHours(
+      LOCATION_DINE_IN_HOURS['northville-mi'].open,
+      LOCATION_DINE_IN_HOURS['northville-mi'].close,
+    ),
+    fulfillmentHours: { ...LOCATION_ORDER_FULFILLMENT_HOURS['northville-mi'] },
     isActive: true,
     acceptsDelivery: true,
     acceptsPickup: true,
@@ -36,7 +45,11 @@ export const STATIC_LOCATIONS: Location[] = [
     },
     phone: '+19472868794',
     website: 'https://deccanbawarchi.com',
-    hours: { ...BUSINESS_HOURS },
+    hours: buildWeeklyLocationHours(
+      LOCATION_DINE_IN_HOURS['farmington-hills-mi'].open,
+      LOCATION_DINE_IN_HOURS['farmington-hills-mi'].close,
+    ),
+    fulfillmentHours: { ...LOCATION_ORDER_FULFILLMENT_HOURS['farmington-hills-mi'] },
     isActive: true,
     acceptsDelivery: true,
     acceptsPickup: true,
