@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { DEFAULT_LOCATION_ID, LOCATION_ORDER_FULFILLMENT_HOURS } from '../../constants/config'
+import { MOCK_PICKUP_ETA_MINUTES } from '../../constants/checkout'
 import {
   formatFulfillmentHoursLabel,
   getCustomPickupTimeInputBounds,

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { Platform } from 'react-native'
 import { FulfillmentType, Order, OrderItem } from '../types/order'
 import { DELIVERY_ENABLED } from '../constants/config'
 import {
@@ -197,3 +198,38 @@ export const useCartStore = create<CartState>((set, get) => ({
   subtotal: () => get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
   itemCount: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
 }))
+
+if (Platform.OS === 'web' && process.env.EXPO_PUBLIC_SCREENSHOT_HELPERS === 'true') {
+  const SCREENSHOT_CART_KEY = 'deccan_screenshot_cart'
+
+  const applyScreenshotCart = (items: OrderItem[]) => {
+    const store = useCartStore.getState()
+    store.clearCart()
+    for (const item of items) {
+      store.addItem(item)
+      if (item.quantity > 1) store.updateQuantity(item.menuItemId, item.quantity)
+    }
+    store.setFulfillmentType('delivery')
+  }
+
+  const hydrateScreenshotCart = () => {
+    try {
+      const raw = sessionStorage.getItem(SCREENSHOT_CART_KEY)
+      if (!raw) return
+      applyScreenshotCart(JSON.parse(raw) as OrderItem[])
+    } catch {
+      // ignore invalid seed payload
+    }
+  }
+
+  const seedCart = (items: OrderItem[]) => {
+    sessionStorage.setItem(SCREENSHOT_CART_KEY, JSON.stringify(items))
+    applyScreenshotCart(items)
+  }
+
+  hydrateScreenshotCart()
+  ;(globalThis as typeof globalThis & { __seedCart?: typeof seedCart; __cartItemCount?: () => number })
+    .__seedCart = seedCart
+  ;(globalThis as typeof globalThis & { __cartItemCount?: () => number }).__cartItemCount = () =>
+    useCartStore.getState().itemCount()
+}

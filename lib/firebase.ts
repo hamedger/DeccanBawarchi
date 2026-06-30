@@ -6,7 +6,12 @@ import {
   browserLocalPersistence,
   Auth,
 } from 'firebase/auth'
-import { getFirestore, initializeFirestore, Firestore } from 'firebase/firestore'
+import {
+  connectFirestoreEmulator,
+  getFirestore,
+  initializeFirestore,
+  Firestore,
+} from 'firebase/firestore'
 import { getStorage, FirebaseStorage } from 'firebase/storage'
 import { Platform } from 'react-native'
 
@@ -71,6 +76,17 @@ if (process.env.EXPO_PUBLIC_USE_AUTH_EMULATOR === 'true' && isFirebaseConfigured
 }
 
 export const db: Firestore = createFirestore(app)
+
+if (process.env.EXPO_PUBLIC_USE_FIRESTORE_EMULATOR === 'true' && isFirebaseConfigured) {
+  const host = process.env.EXPO_PUBLIC_FUNCTIONS_EMULATOR_HOST ?? '127.0.0.1'
+  const port = Number(process.env.EXPO_PUBLIC_FIRESTORE_EMULATOR_PORT ?? 8080)
+  try {
+    connectFirestoreEmulator(db, host, port)
+  } catch {
+    // emulator already connected (hot reload)
+  }
+}
+
 export const storage: FirebaseStorage = getStorage(app)
 
 // Offline persistence (native only)

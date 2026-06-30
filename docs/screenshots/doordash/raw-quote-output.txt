@@ -1,0 +1,22 @@
+
+> deccanbawarchi@1.0.0 test:doordash-local
+> node scripts/test-doordash-local.mjs
+
+◇ injected env (21) from .env // tip: ⌘ enable debugging { debug: true }
+
+DoorDash local test → emulator 127.0.0.1:5001
+
+1) doordashQuote (callable, requires auth)
+   Using auth emulator 127.0.0.1:9099 as test@deccan.local
+   Quote OK: {
+  fee: 975,
+  etaMinutes: 44,
+  externalDeliveryId: 'quote_1782812458312',
+  currency: 'USD'
+}
+
+2) doordashWebhook (HTTP)
+   Webhook responded 200 — OK (200 expected; ignores non-order_* ids)
+
+Local DoorDash function checks finished.
+

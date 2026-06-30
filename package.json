@@ -77,6 +77,7 @@
     "functions:serve:doordash:lite": "cd functions && npm run serve:doordash:lite",
     "test:doordash-local": "node scripts/test-doordash-local.mjs",
     "test:doordash-dispatch-e2e": "node scripts/test-doordash-dispatch-e2e.mjs",
+    "screenshot:doordash-ui": "node scripts/screenshot-doordash-ui.mjs",
     "test:stripe-webhook-local": "node scripts/test-stripe-webhook-local.mjs",
     "test:order-email": "node scripts/test-order-email.mjs",
     "test:order-notification-e2e": "node scripts/test-order-notification-e2e.mjs",

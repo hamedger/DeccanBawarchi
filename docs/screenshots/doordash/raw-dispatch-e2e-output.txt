@@ -1,0 +1,30 @@
+
+> deccanbawarchi@1.0.0 test:doordash-dispatch-e2e
+> node scripts/test-doordash-dispatch-e2e.mjs
+
+◇ injected env (21) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (11) from functions/.env // tip: ◈ encrypted .env [www.dotenvx.com]
+
+DoorDash dispatch e2e → emulators (functions 127.0.0.1:5001, firestore 127.0.0.1:8080)
+
+1) Auth emulator sign-in
+   Signed in as dispatch.e2e@deccan.local (6ja7n2amqTVIDwAa9Sf7PDoYRCHQ)
+
+2) Seed pending delivery order in Firestore emulator
+   Order dd_e2e_1782812463019 · total $27.64 · delivery $9.75
+
+3) confirmCloverOrder (simulates Clover success redirect)
+   Confirm OK: { orderId: 'dd_e2e_1782812463019', status: 'placed' }
+
+4) Wait for onOrderConfirmedDispatch -> DoorDash sandbox dispatch
+   Dispatch OK on poll 1: {
+  status: 'placed',
+  doordashDeliveryId: 'order_dd_e2e_1782812463019',
+  doordashTrackingUrl: 'https://www.doordash.com/orders/drive?urlCode=ee7f8ae6-ca6f-4501-a8e5-b1ff156bf601'
+}
+
+5) doordashWebhook (dasher_confirmed -> order status confirmed)
+   Webhook responded 200 — OK
+
+DoorDash Clover dispatch e2e passed.
+
