@@ -26,10 +26,32 @@ const ADMIN_AUTH_MESSAGES: Partial<typeof AUTH_MESSAGES> = {
     'No account found with this email. Add the user under Firebase Console → Authentication → Users, or register in the app.',
 }
 
+function getReferrerBlockedMessage(error: FirebaseError): string {
+  const match = error.code.match(/^auth\/requests-from-referer-(.+)-are-blocked$/)
+  const blocked = match?.[1]?.replace(/-/g, '/') ?? null
+  const blockedLine = blocked ? `\n\nBlocked URL: ${blocked}` : ''
+  const referrers = [
+    'https://www.bawarchi.io/*',
+    'https://bawarchi.io/*',
+    'https://deccanbawarchi-d04cc.web.app/*',
+    'https://deccanbawarchi-d04cc.firebaseapp.com/*',
+    'http://localhost:8081/*',
+    'http://127.0.0.1:8081/*',
+  ].join('\n  ')
+
+  return (
+    'Firebase blocked this page URL (API key HTTP referrer restriction).' +
+    blockedLine +
+    '\n\nAdd these under Google Cloud Console → APIs & Services → Credentials → Browser key → Application restrictions → HTTP referrers:\n  ' +
+    referrers +
+    '\n\nLocal dev: use http://localhost:8081 (not 127.0.0.1). Changes can take a few minutes to apply.'
+  )
+}
+
 export function getAuthErrorMessage(error: unknown, options?: { admin?: boolean }): string {
   if (error instanceof FirebaseError) {
     if (error.code.startsWith('auth/requests-from-referer-')) {
-      return 'Firebase blocked this page URL. For local dev use http://localhost:8081, or add your URL under Google Cloud → Credentials → API key → HTTP referrers. With the functions emulator on, auth uses the local Auth emulator instead.'
+      return getReferrerBlockedMessage(error)
     }
     const messages = options?.admin ? { ...AUTH_MESSAGES, ...ADMIN_AUTH_MESSAGES } : AUTH_MESSAGES
     if (messages[error.code as keyof typeof messages]) {

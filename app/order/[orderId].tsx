@@ -10,6 +10,7 @@ import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { Button } from '../../components/ui/Button'
 import { reorderToCart } from '../../lib/reorder'
 import { canUserCancelOrder, cancelUserOrder } from '../../lib/services/orderService'
+import { RESTAURANT_PHONE } from '../../constants/config'
 
 const STEPS: { status: OrderStatus; label: string; icon: string }[] = [
   { status: 'placed', label: 'Order Placed', icon: 'receipt' },
@@ -76,6 +77,16 @@ export default function OrderTrackingScreen() {
     order.status === 'pending' ? 'placed' : order.status
   const currentIndex = STATUS_ORDER.indexOf(effectiveStatus as OrderStatus)
   const showCancel = canUserCancelOrder(order.status)
+  const dropoffEta = order.estimatedDeliveryTime?.toDate?.()
+  const dropoffEtaLabel = dropoffEta
+    ? dropoffEta.toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : null
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -88,6 +99,11 @@ export default function OrderTrackingScreen() {
         {order.status === 'cancelled' && (
           <Text style={styles.cancelledBadge}>Order cancelled</Text>
         )}
+        {order.fulfillmentType === 'delivery' && order.doordashDispatchError ? (
+          <Text style={styles.dispatchError}>
+            Delivery setup issue — please call {RESTAURANT_PHONE} for help.
+          </Text>
+        ) : null}
         {locationName ? (
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={14} color={colors.goldLight} />
@@ -133,6 +149,49 @@ export default function OrderTrackingScreen() {
           </View>
         ))}
       </View>
+
+      {/* DoorDash delivery details */}
+      {order.fulfillmentType === 'delivery' ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>DoorDash Delivery</Text>
+          {order.doordashSupportId || order.doordashDeliveryId ? (
+            <Text style={styles.deliveryMeta}>
+              Delivery ID: {order.doordashSupportId || order.doordashDeliveryId}
+            </Text>
+          ) : null}
+          {order.doordashPickupTime ? (
+            <Text style={styles.deliveryMeta}>
+              Scheduled pickup: {new Date(order.doordashPickupTime).toLocaleString('en-US', {
+                timeZone: 'America/Detroit',
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })}
+            </Text>
+          ) : order.scheduledFor && order.pickupTime ? (
+            <Text style={styles.deliveryMeta}>
+              Requested: {order.scheduledFor} {String(order.pickupTime)}
+            </Text>
+          ) : null}
+          {order.doordashDispatchError ? (
+            <Text style={styles.dispatchError}>
+              Dispatch issue: {order.doordashDispatchError}. The restaurant has been notified.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {/* DoorDash delivery details */}
+      {order.fulfillmentType === 'delivery' ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Delivery Details</Text>
+          {dropoffEtaLabel ? (
+            <Text style={styles.deliveryMeta}>Estimated dropoff: {dropoffEtaLabel}</Text>
+          ) : null}
+          <TouchableOpacity onPress={() => Linking.openURL(`tel:${RESTAURANT_PHONE}`)}>
+            <Text style={styles.deliveryMeta}>Restaurant: {RESTAURANT_PHONE}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
 
       {/* DoorDash Link */}
       {order.doordashTrackingUrl ? (
@@ -194,6 +253,13 @@ const styles = StyleSheet.create({
   orderId: { color: colors.white, fontSize: 22, fontWeight: '800', fontFamily: fonts.serif },
   deliveredBadge: { color: colors.greenLight, fontSize: 14, fontWeight: '700', marginTop: 4 },
   cancelledBadge: { color: colors.error, fontSize: 14, fontWeight: '700', marginTop: 4 },
+  dispatchError: {
+    fontFamily: fonts.sans,
+    color: colors.error,
+    fontSize: 13,
+    marginTop: spacing.sm,
+    lineHeight: 18,
+  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -229,10 +295,31 @@ const styles = StyleSheet.create({
   stepPending: { color: colors.whiteMuted },
   section: { marginBottom: spacing.lg },
   sectionTitle: { color: colors.gold, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: spacing.sm },
+  deliveryMeta: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
   itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
   itemQty: { color: colors.gold, fontWeight: '700', marginRight: 8, width: 24 },
   itemName: { flex: 1, color: colors.white, fontSize: 14 },
   itemPrice: { color: colors.whiteMuted, fontSize: 14 },
+  deliveryMeta: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  dispatchError: {
+    fontFamily: fonts.sans,
+    color: colors.error,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+  },
   trackBtn: {
     backgroundColor: 'rgba(212,175,55,0.1)',
     borderWidth: 1,

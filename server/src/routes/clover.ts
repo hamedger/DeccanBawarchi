@@ -45,6 +45,7 @@ cloverRouter.post('/checkout', requireAuth, async (req: AuthedRequest, res) => {
       customerEmail: bodyEmail = '',
       pickupDate = '',
       pickupTime = '',
+      doordashQuoteId = '',
     } = req.body ?? {}
 
     const customerEmail = (bodyEmail || req.userEmail)?.trim()
@@ -52,6 +53,18 @@ cloverRouter.post('/checkout', requireAuth, async (req: AuthedRequest, res) => {
     if (!locationId || typeof locationId !== 'string') {
       res.status(400).json({ error: 'locationId is required' })
       return
+    }
+
+    if (fulfillmentType === 'delivery') {
+      const phoneDigits = String(customerPhone ?? '').replace(/\D/g, '')
+      if (phoneDigits.length < 10) {
+        res.status(400).json({ error: 'Valid phone number is required for delivery orders' })
+        return
+      }
+      if (!deliveryAddress?.street?.trim() || !deliveryAddress?.city?.trim()) {
+        res.status(400).json({ error: 'Complete delivery address is required' })
+        return
+      }
     }
 
     const normalizedLocationId = normalizeLocationId(locationId)
@@ -85,6 +98,7 @@ cloverRouter.post('/checkout', requireAuth, async (req: AuthedRequest, res) => {
       notes,
       pickupDate,
       pickupTime,
+      doordashQuoteId,
     })
 
     let session

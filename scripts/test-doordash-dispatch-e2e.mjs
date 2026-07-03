@@ -117,7 +117,9 @@ async function createPendingDeliveryOrder(uid) {
     cloverCheckoutSessionId: checkoutSessionId,
     cloverPaymentId: '',
     stripePaymentIntentId: '',
+    doordashQuoteId: `quote_e2e_${Date.now()}`,
     doordashDeliveryId: '',
+    doordashSupportId: '',
     doordashTrackingUrl: '',
     driverLocation: null,
     estimatedDeliveryTime: null,
@@ -183,14 +185,14 @@ async function ensureFirestoreEmulator() {
   }
 }
 
-async function postWebhook(orderId) {
+async function postWebhook(externalDeliveryId) {
   const url = `http://${functionsHost}:${functionsPort}/${projectId}/us-central1/doordashWebhook`
   const resp = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      external_delivery_id: `order_${orderId}`,
-      event_name: 'dasher_confirmed',
+      external_delivery_id: externalDeliveryId,
+      event_name: 'DASHER_CONFIRMED',
       dasher_location: { lat: 42.431, lng: -83.483 },
     }),
   })
@@ -228,8 +230,11 @@ try {
     }
   }
 
-  console.log('\n5) doordashWebhook (dasher_confirmed -> order status confirmed)')
-  await postWebhook(orderId)
+  console.log('\n5) doordashWebhook (DASHER_CONFIRMED -> order status confirmed)')
+  const externalId =
+    String(dispatched.doordashDeliveryId ?? '').trim() ||
+    String(dispatched.doordashQuoteId ?? '').trim()
+  await postWebhook(externalId)
 
   const finalSnap = await db.collection('orders').doc(orderId).get()
   const final = finalSnap.data()

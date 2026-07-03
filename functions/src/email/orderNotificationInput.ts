@@ -33,6 +33,9 @@ export function orderNotificationInputFromDoc(
     notes: String(order.notes ?? ''),
     customerEmail: customerEmail || undefined,
     customerPhone: customerPhone || undefined,
+    doordashSupportId: String(order.doordashSupportId ?? '').trim() || undefined,
+    doordashDeliveryId: String(order.doordashDeliveryId ?? '').trim() || undefined,
+    doordashTrackingUrl: String(order.doordashTrackingUrl ?? '').trim() || undefined,
   }
 }
 

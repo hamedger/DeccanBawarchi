@@ -37,6 +37,12 @@ import {
 import { CHECKOUT_RETURN_PATH } from '../../lib/authReturnTo'
 import { useLiveDeliveryQuote } from '../../hooks/useLiveDeliveryQuote'
 import { DeliveryQuote } from '../../types/delivery'
+import {
+  DropoffAddressInput,
+  extractFirstName,
+  isValidUSPhone,
+  toPickupTimeIso,
+} from '../../lib/deliveryUtils'
 
 function hasCheckoutAuth(firebaseUser: FirebaseUser | null, userProfile: User | null) {
   const email = userProfile?.email?.trim() || firebaseUser?.email?.trim()
@@ -58,8 +64,11 @@ export default function CheckoutIndex() {
   const { location, locationId, locations, loading: locationsLoading, hasSelection } =
     useSelectedLocation()
   const [street, setStreet] = useState('123 Main St')
+  const [unit, setUnit] = useState('')
   const [city, setCity] = useState('Northville')
   const [zip, setZip] = useState('48167')
+  const [deliveryPhone, setDeliveryPhone] = useState('')
+  const [deliveryInstructions, setDeliveryInstructions] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const autoPayStarted = useRef(false)
@@ -67,10 +76,29 @@ export default function CheckoutIndex() {
   const fulfillmentHours = getOrderFulfillmentHours(location)
 
   const isDelivery = DELIVERY_ENABLED && cart.fulfillmentType === 'delivery'
-  const dropoffAddress = useMemo(
-    () => (street.trim() && city.trim() && zip.trim() ? `${street.trim()}, ${city.trim()}, MI ${zip.trim()}` : ''),
-    [street, city, zip],
-  )
+  const dropoffAddress = useMemo<DropoffAddressInput | null>(() => {
+    if (!street.trim() || !city.trim() || !zip.trim()) return null
+    return {
+      street: street.trim(),
+      city: city.trim(),
+      state: 'MI',
+      zip: zip.trim(),
+      country: 'US',
+      unit: unit.trim() || undefined,
+      instructions: deliveryInstructions.trim() || undefined,
+    }
+  }, [street, city, zip, unit, deliveryInstructions])
+
+  const customerDisplayName =
+    userProfile?.displayName?.trim() || firebaseUser?.displayName?.trim() || ''
+  const dropoffContactGivenName = extractFirstName(customerDisplayName)
+  const deliveryPhoneValid = isValidUSPhone(deliveryPhone)
+
+  useEffect(() => {
+    if (userProfile?.phone?.trim() && !deliveryPhone.trim()) {
+      setDeliveryPhone(userProfile.phone.trim())
+    }
+  }, [userProfile?.phone, deliveryPhone])
 
   const setDeliveryQuote = useCartStore((s) => s.setDeliveryQuote)
   const clearDeliveryQuote = useCartStore((s) => s.clearDeliveryQuote)
@@ -93,14 +121,26 @@ export default function CheckoutIndex() {
 
   const isAuthed = hasCheckoutAuth(firebaseUser, userProfile)
 
+  const pickupTimeIso = useMemo(
+    () =>
+      isDelivery
+        ? toPickupTimeIso(cart.pickupDate, cart.pickupTime, prepBufferMinutes)
+        : undefined,
+    [isDelivery, cart.pickupDate, cart.pickupTime, prepBufferMinutes],
+  )
+
   const {
     loading: quoteLoading,
     error: quoteError,
     refreshQuote,
   } = useLiveDeliveryQuote({
-    enabled: isDelivery && isAuthed,
+    enabled: isDelivery && isAuthed && deliveryPhoneValid,
     dropoffAddress,
     orderValue: cartSubtotal,
+    items: cart.items,
+    dropoffPhoneNumber: deliveryPhone,
+    dropoffContactGivenName,
+    pickupTimeIso,
     onQuote: handleQuote,
     onClear: handleClearQuote,
   })
@@ -108,7 +148,14 @@ export default function CheckoutIndex() {
     hasSelection &&
     isPickupScheduleValid(cart.pickupDate, cart.pickupTime, prepBufferMinutes, fulfillmentHours) &&
     (isDelivery
-      ? Boolean(dropoffAddress && cart.deliveryQuoteReady && !quoteLoading && !quoteError)
+      ? Boolean(
+          dropoffAddress &&
+            deliveryPhoneValid &&
+            cart.deliveryQuoteReady &&
+            cart.externalDeliveryId &&
+            !quoteLoading &&
+            !quoteError,
+        )
       : true)
   const canContinue = isAuthed ? canPlace : true
 
@@ -137,6 +184,10 @@ export default function CheckoutIndex() {
       }
 
       if (isDelivery) {
+        if (!deliveryPhoneValid) {
+          setError('A valid US phone number is required for delivery.')
+          return
+        }
         await refreshQuote()
         const latest = useCartStore.getState()
         if (!latest.deliveryQuoteReady) {
@@ -166,7 +217,9 @@ export default function CheckoutIndex() {
 
       const fulfillment = cart.fulfillmentType
       const pickupAddress = formatLocationAddress(location.address)
-      const address = isDelivery ? `${street}, ${city}, MI ${zip}` : pickupAddress
+      const address = isDelivery && dropoffAddress
+        ? `${dropoffAddress.street}, ${dropoffAddress.city}, MI ${dropoffAddress.zip}`
+        : pickupAddress
       const pickupSchedule = formatPickupSchedule(cart.pickupDate, cart.pickupTime)
 
       try {
@@ -184,24 +237,27 @@ export default function CheckoutIndex() {
           loyaltyPointsToRedeem: latestCart.loyaltyPointsToRedeem,
           giftCardAmount: latestCart.giftCardAmount,
           fulfillmentType: fulfillment,
-          deliveryAddress: isDelivery
+          deliveryAddress: isDelivery && dropoffAddress
             ? {
                 id: '',
                 label: 'Delivery',
-                street: street.trim(),
-                city: city.trim(),
-                state: 'MI',
-                zip: zip.trim(),
-                country: 'US',
+                street: dropoffAddress.street,
+                city: dropoffAddress.city,
+                state: dropoffAddress.state,
+                zip: dropoffAddress.zip,
+                country: dropoffAddress.country,
+                unit: dropoffAddress.unit,
+                instructions: dropoffAddress.instructions,
               }
             : null,
           notes: latestCart.notes,
           locationId,
-          customerName: userProfile?.displayName ?? firebaseUser?.displayName ?? '',
-          customerPhone: userProfile?.phone ?? '',
+          customerName: customerDisplayName,
+          customerPhone: deliveryPhone.trim() || userProfile?.phone?.trim() || '',
           customerEmail,
           pickupDate: latestCart.pickupDate,
           pickupTime: latestCart.pickupTime,
+          doordashQuoteId: isDelivery ? latestCart.externalDeliveryId ?? '' : undefined,
         })
 
         saveCheckoutContext({
@@ -229,11 +285,12 @@ export default function CheckoutIndex() {
       location,
       locationId,
       isDelivery,
-      street,
-      city,
-      zip,
+      dropoffAddress,
+      deliveryPhone,
+      deliveryPhoneValid,
       quoteError,
       refreshQuote,
+      customerDisplayName,
     ],
   )
 
@@ -309,6 +366,12 @@ export default function CheckoutIndex() {
               onChangeText={setStreet}
               placeholder="123 Main St"
             />
+            <Input
+              label="Apt / Unit (optional)"
+              value={unit}
+              onChangeText={setUnit}
+              placeholder="Apt 4B"
+            />
             <Input label="City" value={city} onChangeText={setCity} placeholder="Northville" />
             <Input
               label="ZIP"
@@ -316,6 +379,19 @@ export default function CheckoutIndex() {
               onChangeText={setZip}
               keyboardType="number-pad"
               placeholder="48167"
+            />
+            <Input
+              label="Phone *"
+              value={deliveryPhone}
+              onChangeText={setDeliveryPhone}
+              keyboardType="phone-pad"
+              placeholder="(248) 555-0100"
+            />
+            <Input
+              label="Delivery instructions (optional)"
+              value={deliveryInstructions}
+              onChangeText={setDeliveryInstructions}
+              placeholder="Buzz #1234, leave at door"
             />
             <View style={styles.quoteCard}>
               <View style={styles.quoteRow}>
@@ -414,13 +490,15 @@ export default function CheckoutIndex() {
             {!hasSelection
               ? 'Select a restaurant location to continue.'
               : isDelivery
-                ? quoteError
-                  ? 'Fix the delivery address or try again.'
-                  : quoteLoading
-                    ? 'Waiting for DoorDash delivery quote…'
-                    : !cart.deliveryQuoteReady
-                      ? 'Enter your delivery address for a live quote.'
-                      : ''
+                ? !deliveryPhoneValid
+                  ? 'Enter a valid US phone number for delivery.'
+                  : quoteError
+                    ? 'Fix the delivery address or try again.'
+                    : quoteLoading
+                      ? 'Waiting for DoorDash delivery quote…'
+                      : !cart.deliveryQuoteReady
+                        ? 'Enter your delivery address for a live quote.'
+                        : ''
                 : 'Choose a pickup date and time to continue.'}
           </Text>
         ) : null}

@@ -110,11 +110,45 @@ function OrderCard({
         {order.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}
       </Text>
 
+      {order.fulfillmentType === 'delivery' && (order.doordashSupportId || order.doordashDeliveryId) ? (
+        <Text style={styles.deliveryId}>
+          DoorDash ID: {order.doordashSupportId || order.doordashDeliveryId}
+        </Text>
+      ) : null}
+      {order.fulfillmentType === 'delivery' && order.doordashPickupTime ? (
+        <Text style={styles.deliveryId}>
+          Pickup: {new Date(order.doordashPickupTime).toLocaleString('en-US', {
+            timeZone: 'America/Detroit',
+            dateStyle: 'short',
+            timeStyle: 'short',
+          })}
+        </Text>
+      ) : null}
+      {order.doordashDispatchError ? (
+        <Text style={styles.dispatchError}>Dispatch error: {order.doordashDispatchError}</Text>
+      ) : null}
+
       {order.items.map((item, idx) => (
         <Text key={`${item.menuItemId}-${idx}`} style={styles.itemLine}>
           {item.quantity}× {item.name}
         </Text>
       ))}
+
+      {order.fulfillmentType === 'delivery' ? (
+        <View style={styles.deliveryMetaBlock}>
+          {order.doordashSupportId ? (
+            <Text style={styles.deliveryMeta}>DoorDash ID: {order.doordashSupportId}</Text>
+          ) : null}
+          {order.doordashDeliveryId ? (
+            <Text style={styles.deliveryMeta}>Ref: {order.doordashDeliveryId}</Text>
+          ) : null}
+          {order.doordashTrackingUrl ? (
+            <Text style={styles.deliveryMeta} numberOfLines={1}>
+              Track: {order.doordashTrackingUrl}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
 
       <View style={styles.cardFooter}>
         <Text style={styles.total}>{formatCents(order.total)}</Text>
@@ -302,10 +336,29 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 13,
   },
+  deliveryId: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 12,
+  },
+  dispatchError: {
+    fontFamily: fonts.sans,
+    color: colors.error,
+    fontSize: 12,
+  },
   itemLine: {
     fontFamily: fonts.sans,
     color: colors.whiteMuted,
     fontSize: 13,
+  },
+  deliveryMetaBlock: {
+    marginTop: spacing.xs,
+    gap: 2,
+  },
+  deliveryMeta: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 11,
   },
   cardFooter: {
     flexDirection: 'row',

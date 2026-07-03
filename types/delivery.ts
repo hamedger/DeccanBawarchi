@@ -5,14 +5,26 @@ export interface DeliveryQuote {
   externalDeliveryId: string
 }
 
-export interface DeliveryDispatchRequest {
-  orderId: string
-  pickupAddress: string
-  dropoffAddress: string
-  pickupPhoneNumber: string
-  dropoffPhoneNumber: string
-  dropoffContactGivenName: string
+export interface DeliveryQuoteItem {
+  name: string
+  quantity: number
+  price: number
+}
+
+export interface DeliveryQuoteRequest {
+  /** @deprecated Legacy single-line address; prefer structured dropoff* fields */
+  dropoffAddress?: string
+  dropoffStreet: string
+  dropoffCity: string
+  dropoffState?: string
+  dropoffZip: string
+  dropoffCountry?: string
+  dropoffUnit?: string
   orderValue: number
+  dropoffPhoneNumber?: string
+  dropoffContactGivenName?: string
+  pickupTime?: string
+  items?: DeliveryQuoteItem[]
 }
 
 export interface DriverLocation {

@@ -8,6 +8,7 @@ export interface Address {
   state: string
   zip: string
   country: string
+  unit?: string
   instructions?: string
 }
 

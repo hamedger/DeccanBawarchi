@@ -51,10 +51,14 @@ export interface Order {
   cloverMerchantId?: string
   cloverCheckoutSessionId?: string
   cloverPaymentId?: string
+  doordashQuoteId: string
   doordashDeliveryId: string
+  doordashSupportId: string
   doordashTrackingUrl: string
+  doordashPickupTime?: string
+  doordashDispatchError?: string
   driverLocation: GeoPoint | null
-  estimatedDeliveryTime: Timestamp
+  estimatedDeliveryTime: Timestamp | null
   notes: string
   createdAt: Timestamp
   updatedAt: Timestamp

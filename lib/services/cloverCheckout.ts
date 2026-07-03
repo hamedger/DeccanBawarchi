@@ -9,6 +9,7 @@ export interface CloverCheckoutInput extends SubmitOrderInput {
   customerEmail?: string
   pickupDate?: string
   pickupTime?: string
+  doordashQuoteId?: string
 }
 
 export interface CloverCheckoutResult {
@@ -54,6 +55,7 @@ export async function startCloverCheckout(
       customerEmail: input.customerEmail,
       pickupDate: input.pickupDate,
       pickupTime: input.pickupTime,
+      doordashQuoteId: input.doordashQuoteId,
     }),
   })
 

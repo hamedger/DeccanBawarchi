@@ -30,6 +30,8 @@ export interface DeliveryAddressInput {
   zip: string
   country?: string
   label?: string
+  unit?: string
+  instructions?: string
 }
 
 export interface CreatePendingOrderInput {
@@ -55,6 +57,7 @@ export interface CreatePendingOrderInput {
   notes?: string
   pickupDate?: string
   pickupTime?: string
+  doordashQuoteId?: string
 }
 
 export interface CreatePendingOrderResult {
@@ -122,8 +125,21 @@ export async function cancelUnpaidPendingOrder(orderId: string, uid: string): Pr
 export async function createPendingOrder(
   input: CreatePendingOrderInput,
 ): Promise<CreatePendingOrderResult> {
-  if (!input.items.length) {
+    if (!input.items.length) {
     throw new Error('Cart is empty')
+  }
+
+  if (input.fulfillmentType === 'delivery') {
+    const phoneDigits = (input.customerPhone ?? '').replace(/\D/g, '')
+    if (phoneDigits.length < 10) {
+      throw new Error('Valid phone number is required for delivery orders')
+    }
+    if (!input.deliveryAddress?.street?.trim() || !input.deliveryAddress?.city?.trim()) {
+      throw new Error('Complete delivery address is required')
+    }
+    if (!String(input.doordashQuoteId ?? '').trim()) {
+      throw new Error('A live DoorDash delivery quote is required before checkout')
+    }
   }
 
   const tax = calculateTax(input.subtotal)
@@ -235,8 +251,11 @@ export async function createPendingOrder(
       cloverMerchantId: input.cloverMerchantId ?? '',
       cloverCheckoutSessionId: '',
       cloverPaymentId: '',
+      doordashQuoteId: String(input.doordashQuoteId ?? '').trim(),
       doordashDeliveryId: '',
+      doordashSupportId: '',
       doordashTrackingUrl: '',
+      doordashPickupTime: '',
       driverLocation: null,
       estimatedDeliveryTime: null,
       notes: input.notes ?? '',

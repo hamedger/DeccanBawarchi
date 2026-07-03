@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/Button'
 import { HomeButton } from '../../components/navigation/HomeButton'
 import { clearCheckoutContext, confirmCloverOrderAfterRedirect, readCheckoutContext } from '../../lib/services/cloverCheckout'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
+import { RESTAURANT_PHONE } from '../../constants/config'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 export default function CheckoutSuccessScreen() {
@@ -83,7 +84,8 @@ export default function CheckoutSuccessScreen() {
 
         {isDelivery ? (
           <Text style={styles.hint}>
-            A DoorDash driver will be dispatched when delivery launches.
+            Your DoorDash driver will be dispatched shortly. Track your order for live updates.
+            {'\n'}Questions? Call {RESTAURANT_PHONE}.
           </Text>
         ) : (
           <Text style={styles.hint}>

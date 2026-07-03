@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, ScrollView, StyleSheet } from 'react-native'
 import { useRouter } from 'expo-router'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { useDeliveryQuote } from '../../hooks/useDeliveryQuote'
 import { useCart } from '../../hooks/useCart'
+import { formatDropoffAddress } from '../../lib/deliveryUtils'
 import { colors, spacing } from '../../constants/theme'
 
 export default function DeliveryScreen() {
@@ -12,12 +13,33 @@ export default function DeliveryScreen() {
   const [street, setStreet] = useState('')
   const [city, setCity] = useState('')
   const [zip, setZip] = useState('')
+  const [phone, setPhone] = useState('')
   const { quote, loading, error, fetchQuote } = useDeliveryQuote()
   const cart = useCart()
 
   const handleGetQuote = () => {
     if (!street || !city || !zip) return
-    fetchQuote(`${street}, ${city}, MI ${zip}`, cart.subtotal())
+    void fetchQuote({
+      dropoffAddress: formatDropoffAddress({
+        street,
+        city,
+        state: 'MI',
+        zip,
+        country: 'US',
+      }),
+      dropoffStreet: street,
+      dropoffCity: city,
+      dropoffState: 'MI',
+      dropoffZip: zip,
+      orderValue: cart.subtotal(),
+      dropoffPhoneNumber: phone,
+      dropoffContactGivenName: 'Guest',
+      items: cart.items.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    })
   }
 
   return (
@@ -26,8 +48,9 @@ export default function DeliveryScreen() {
       <Input label="Street Address" value={street} onChangeText={setStreet} placeholder="123 Main St" />
       <Input label="City" value={city} onChangeText={setCity} placeholder="Northville" />
       <Input label="ZIP Code" value={zip} onChangeText={setZip} keyboardType="number-pad" placeholder="48167" />
+      <Input label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="(248) 555-0100" />
 
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error ? <Text style={styles.error}>{error}</Text> : null}
 
       {quote ? (
         <View style={styles.quoteCard}>
@@ -39,15 +62,15 @@ export default function DeliveryScreen() {
         <Button label="Get Delivery Quote" onPress={handleGetQuote} loading={loading} fullWidth />
       )}
 
-      {quote && (
+      {quote ? (
         <Button
           label="Continue to Payment"
-          onPress={() => router.push('/checkout/payment' as any)}
+          onPress={() => router.push('/checkout/payment' as never)}
           fullWidth
           size="lg"
           style={{ marginTop: spacing.md }}
         />
-      )}
+      ) : null}
     </ScrollView>
   )
 }

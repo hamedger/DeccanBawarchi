@@ -65,7 +65,11 @@ function createFirestore(firebaseApp: FirebaseApp): Firestore {
 
 export const auth: Auth = createAuth(app)
 
-if (process.env.EXPO_PUBLIC_USE_AUTH_EMULATOR === 'true' && isFirebaseConfigured) {
+const useAuthEmulator =
+  process.env.EXPO_PUBLIC_USE_AUTH_EMULATOR === 'true' ||
+  process.env.EXPO_PUBLIC_USE_FUNCTIONS_EMULATOR === 'true'
+
+if (useAuthEmulator && isFirebaseConfigured) {
   const host = process.env.EXPO_PUBLIC_FUNCTIONS_EMULATOR_HOST ?? '127.0.0.1'
   const port = Number(process.env.EXPO_PUBLIC_AUTH_EMULATOR_PORT ?? 9099)
   try {

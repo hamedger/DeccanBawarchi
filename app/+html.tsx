@@ -26,15 +26,15 @@ export default function Root({ children }: PropsWithChildren) {
         {/* Open Graph */}
         <meta property="og:title" content="Deccan Bawarchi — Authentic Hyderabadi Cuisine" />
         <meta property="og:description" content="Order Dum Biryani, Haleem & Marag online. Daily Buffet. 100% Zabiha Halal. Northville, MI." />
-        <meta property="og:image" content="https://deccanbawarchi.com/assets/og-image.png" />
-        <meta property="og:url" content="https://deccanbawarchi.com" />
+        <meta property="og:image" content="https://www.bawarchi.io/assets/og-image.png" />
+        <meta property="og:url" content="https://www.bawarchi.io" />
         <meta property="og:type" content="website" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Deccan Bawarchi — Authentic Hyderabadi Cuisine" />
         <meta name="twitter:description" content="Order Dum Biryani, Haleem & Marag online. Daily Buffet. 100% Zabiha Halal. Northville, MI." />
-        <meta name="twitter:image" content="https://deccanbawarchi.com/assets/og-image.png" />
+        <meta name="twitter:image" content="https://www.bawarchi.io/assets/og-image.png" />
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />

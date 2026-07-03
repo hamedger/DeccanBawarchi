@@ -3,6 +3,7 @@ import {
   DEFAULT_PICKUP_PREP_BUFFER_MINUTES,
   LOCATION_DINE_IN_HOURS,
   LOCATION_ORDER_FULFILLMENT_HOURS,
+  RESTAURANT_WEBSITE,
 } from './config'
 import { Location } from '../types/location'
 
@@ -18,7 +19,7 @@ export const STATIC_LOCATIONS: Location[] = [
       country: 'US',
     },
     phone: '+12489857209',
-    website: 'https://deccanbawarchi.com',
+    website: RESTAURANT_WEBSITE,
     hours: buildWeeklyLocationHours(
       LOCATION_DINE_IN_HOURS['northville-mi'].open,
       LOCATION_DINE_IN_HOURS['northville-mi'].close,
@@ -44,7 +45,7 @@ export const STATIC_LOCATIONS: Location[] = [
       country: 'US',
     },
     phone: '+19472868794',
-    website: 'https://deccanbawarchi.com',
+    website: RESTAURANT_WEBSITE,
     hours: buildWeeklyLocationHours(
       LOCATION_DINE_IN_HOURS['farmington-hills-mi'].open,
       LOCATION_DINE_IN_HOURS['farmington-hills-mi'].close,

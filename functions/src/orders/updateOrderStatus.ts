@@ -57,6 +57,7 @@ export const updateOrderStatus = functions.https.onCall(async (request) => {
     status?: string
     fulfillmentType?: string
     doordashDeliveryId?: string
+    doordashQuoteId?: string
   }
 
   if (!isAdmin) {
@@ -74,7 +75,8 @@ export const updateOrderStatus = functions.https.onCall(async (request) => {
     }
   }
   if (status === 'cancelled' && order.fulfillmentType === 'delivery') {
-    const externalDeliveryId = order.doordashDeliveryId?.trim()
+    const externalDeliveryId =
+      order.doordashDeliveryId?.trim() || order.doordashQuoteId?.trim()
     if (externalDeliveryId) {
       try {
         await cancelDoorDashDelivery(externalDeliveryId)

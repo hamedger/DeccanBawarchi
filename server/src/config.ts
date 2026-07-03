@@ -21,7 +21,7 @@ export const config = {
     siteUrl:
       optional('CLOVER_SITE_URL') ??
       optional('CLOVER_SUCCESS_URL')?.replace(/\/checkout\/success\/?$/, '') ??
-      'https://www.deccanbawarchi.com',
+      'https://www.bawarchi.io',
     successUrl: optional('CLOVER_SUCCESS_URL'),
     failureUrl: optional('CLOVER_FAILURE_URL'),
   },
