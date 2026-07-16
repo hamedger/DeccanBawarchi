@@ -81,12 +81,13 @@ export default function AdminMenuEditScreen() {
 
     setSaving(true)
     try {
-      await saveMenuItem(item.id, {
+      const patch = {
         price,
         imageURL: imageURL.trim(),
         description: description.trim(),
-      }, item)
-      await setMenuAvailability(item.id, isAvailable, stockLocationId, item)
+      }
+      await saveMenuItem(item.id, patch, item)
+      await setMenuAvailability(item.id, isAvailable, stockLocationId, { ...item, ...patch })
       invalidate()
       Alert.alert('Saved', 'Menu item updated.', [{ text: 'OK', onPress: () => router.back() }])
     } catch (e) {
