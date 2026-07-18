@@ -24,12 +24,12 @@ interface OrderFilterBarProps {
 }
 
 function countForFilter(orders: Order[], filter: OrderFilter): number {
-  const paid = orders.filter(isPaidOrder)
-  if (filter === 'all') return paid.length
+  if (filter === 'all') return orders.filter(isPaidOrder).length
   if (filter === 'active') {
-    return paid.filter((o) => !['delivered', 'cancelled'].includes(o.status)).length
+    return orders.filter((o) => isPaidOrder(o) && !['delivered', 'cancelled'].includes(o.status))
+      .length
   }
-  return paid.filter((o) => o.status === filter).length
+  return orders.filter((o) => o.status === filter).length
 }
 
 export function OrderFilterBar({ orders, filter, onChange }: OrderFilterBarProps) {

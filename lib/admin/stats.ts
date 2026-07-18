@@ -48,11 +48,12 @@ export function computeAdminStats(orders: Order[]): AdminStats {
 
   for (const order of orders) {
     if (order.status === 'cancelled') continue
+    if (!isPaidOrder(order)) continue
 
     const created = toDate(order.createdAt)
     if (!created) continue
 
-    if (ACTIVE_STATUSES.has(order.status) && isPaidOrder(order)) activeOrders += 1
+    if (ACTIVE_STATUSES.has(order.status)) activeOrders += 1
 
     if (created >= weekStart) {
       revenueWeekCents += order.total

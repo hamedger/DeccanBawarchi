@@ -210,7 +210,7 @@ export default function AdminOrdersScreen() {
         (o) => isPaidOrder(o) && !['delivered', 'cancelled'].includes(o.status),
       )
     }
-    return orders.filter((o) => o.status === filter && isPaidOrder(o))
+    return orders.filter((o) => o.status === filter)
   }, [orders, filter])
 
   return (
