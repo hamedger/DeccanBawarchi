@@ -20,12 +20,14 @@ export default function AdminDashboardScreen() {
   const router = useRouter()
   const hydrate = useAdminLocationStore((s) => s.hydrate)
   const filterLocationId = useAdminLocationStore((s) => s.filterLocationId)
+  const hasHydrated = useAdminLocationStore((s) => s.hasHydrated)
 
   useEffect(() => {
     hydrate()
   }, [hydrate])
 
-  const { orders, loading } = useAdminOrders(150, filterLocationId ?? undefined)
+  const { orders, loading: ordersLoading } = useAdminOrders(150, filterLocationId ?? undefined)
+  const loading = ordersLoading || !hasHydrated
 
   const stats = useMemo(() => computeAdminStats(orders), [orders])
   const liveOrders = orders

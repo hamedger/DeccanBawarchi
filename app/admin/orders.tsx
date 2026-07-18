@@ -183,6 +183,7 @@ export default function AdminOrdersScreen() {
   const hydrate = useAdminLocationStore((s) => s.hydrate)
   const filterLocationId = useAdminLocationStore((s) => s.filterLocationId)
   const setFilterLocationId = useAdminLocationStore((s) => s.setFilterLocationId)
+  const hasHydrated = useAdminLocationStore((s) => s.hasHydrated)
   const { locations } = useAllLocations()
 
   useEffect(() => {
@@ -196,7 +197,8 @@ export default function AdminOrdersScreen() {
   }, [locationParam, setFilterLocationId])
 
   const activeLocationId = filterLocationId ?? undefined
-  const { orders, customerProfiles, loading } = useAdminOrders(150, activeLocationId)
+  const { orders, customerProfiles, loading: ordersLoading } = useAdminOrders(150, activeLocationId)
+  const loading = ordersLoading || !hasHydrated
   const [filter, setFilter] = useState<OrderFilter>('active')
 
   const showAllLocations = filterLocationId === null
