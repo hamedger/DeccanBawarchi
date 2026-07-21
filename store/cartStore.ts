@@ -14,8 +14,8 @@ interface CartState {
   fulfillmentType: FulfillmentType
   deliveryFee: number
   deliveryEtaMinutes: number
+  deliveryDistanceMiles: number | null
   deliveryQuoteReady: boolean
-  externalDeliveryId: string | null
   pickupDate: string
   pickupTime: string
   promoCode: string
@@ -39,7 +39,7 @@ interface CartState {
   setTipPercent: (percent: number | null) => void
   setNotes: (notes: string) => void
   setFulfillmentType: (type: FulfillmentType) => void
-  setDeliveryQuote: (quote: { fee: number; etaMinutes: number; externalDeliveryId: string }) => void
+  setDeliveryQuote: (quote: { fee: number; etaMinutes: number; distanceMiles: number }) => void
   clearDeliveryQuote: () => void
   setPickupDate: (date: string) => void
   setPickupTime: (time: string) => void
@@ -55,8 +55,8 @@ export const useCartStore = create<CartState>((set, get) => ({
   fulfillmentType: DELIVERY_ENABLED ? 'delivery' : 'pickup',
   deliveryFee: 0,
   deliveryEtaMinutes: DELIVERY_ENABLED ? MOCK_DELIVERY_ETA_MINUTES : MOCK_PICKUP_ETA_MINUTES,
+  deliveryDistanceMiles: null,
   deliveryQuoteReady: false,
-  externalDeliveryId: null,
   pickupDate: getDefaultPickupDate(),
   pickupTime: PICKUP_ASAP,
   promoCode: '',
@@ -124,8 +124,8 @@ export const useCartStore = create<CartState>((set, get) => ({
       fulfillmentType: type,
       deliveryFee: 0,
       deliveryEtaMinutes: type === 'delivery' ? MOCK_DELIVERY_ETA_MINUTES : MOCK_PICKUP_ETA_MINUTES,
+      deliveryDistanceMiles: null,
       deliveryQuoteReady: false,
-      externalDeliveryId: null,
       pickupDate: getDefaultPickupDate(),
       pickupTime: PICKUP_ASAP,
     })
@@ -135,15 +135,15 @@ export const useCartStore = create<CartState>((set, get) => ({
     set({
       deliveryFee: quote.fee,
       deliveryEtaMinutes: quote.etaMinutes,
+      deliveryDistanceMiles: quote.distanceMiles,
       deliveryQuoteReady: true,
-      externalDeliveryId: quote.externalDeliveryId,
     }),
 
   clearDeliveryQuote: () =>
     set({
       deliveryFee: 0,
+      deliveryDistanceMiles: null,
       deliveryQuoteReady: false,
-      externalDeliveryId: null,
     }),
 
   setPickupDate: (date) => set({ pickupDate: date }),
@@ -155,8 +155,8 @@ export const useCartStore = create<CartState>((set, get) => ({
       fulfillmentType: DELIVERY_ENABLED ? 'delivery' : 'pickup',
       deliveryFee: 0,
       deliveryEtaMinutes: DELIVERY_ENABLED ? MOCK_DELIVERY_ETA_MINUTES : MOCK_PICKUP_ETA_MINUTES,
+      deliveryDistanceMiles: null,
       deliveryQuoteReady: false,
-      externalDeliveryId: null,
       pickupDate: getDefaultPickupDate(),
       pickupTime: PICKUP_ASAP,
       promoCode: '',
@@ -180,8 +180,9 @@ export const useCartStore = create<CartState>((set, get) => ({
         fulfillmentType === 'delivery'
           ? MOCK_DELIVERY_ETA_MINUTES
           : MOCK_PICKUP_ETA_MINUTES,
+      deliveryDistanceMiles:
+        fulfillmentType === 'delivery' ? order.deliveryDistanceMiles ?? null : null,
       deliveryQuoteReady: fulfillmentType === 'delivery' && order.deliveryFee > 0,
-      externalDeliveryId: null,
       pickupDate: getDefaultPickupDate(),
       pickupTime: PICKUP_ASAP,
       promoCode: '',

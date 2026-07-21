@@ -40,10 +40,17 @@ export const LOCATION_ORDER_FULFILLMENT_HOURS: Record<string, HourRange> = {
   'farmington-hills-mi': { open: '11:30', close: '23:30' },
 }
 
-export const DELIVERY_RADIUS_MILES = 10
+/** Max distance self-delivery drivers will travel; beyond this, delivery is declined. */
+export const MAX_DELIVERY_RADIUS_MILES = 10
+/** Delivery is free up to this distance from the ordering location. */
+export const FREE_DELIVERY_RADIUS_MILES = 1
+export const DELIVERY_RATE_CENTS_PER_MILE = 100
+export const DELIVERY_MINIMUM_SUBTOTAL_CENTS = 2000
+/** Fixed daily delivery window (self-delivery drivers), same at every location. */
+export const DELIVERY_FULFILLMENT_HOURS = { open: '17:00', close: '23:30' }
 
 /**
- * DoorDash Drive delivery UI + checkout flow.
+ * Self-delivery UI + checkout flow.
  * Off by default in production; set EXPO_PUBLIC_DELIVERY_ENABLED=true in .env for local/staging tests.
  */
 export const DELIVERY_ENABLED = process.env.EXPO_PUBLIC_DELIVERY_ENABLED === 'true'

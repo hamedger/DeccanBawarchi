@@ -4,6 +4,7 @@ import { db, isFirebaseConfigured } from '../lib/firebase'
 import { handleFirestoreListenerError } from '../lib/firestoreErrors'
 import { useAuthStore } from '../store/authStore'
 import { useOrderStore } from '../store/orderStore'
+import { isOrderActive } from '../lib/admin/orderAdmin'
 import { Order } from '../types/order'
 
 export function useOrders() {
@@ -22,9 +23,7 @@ export function useOrders() {
       (snap) => {
         const orders = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Order))
         setOrderHistory(orders)
-        const active = orders.find((o) =>
-          !['delivered', 'cancelled'].includes(o.status),
-        )
+        const active = orders.find((o) => isOrderActive(o))
         setActiveOrder(active ?? null)
       },
       (error) => {

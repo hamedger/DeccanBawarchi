@@ -13,5 +13,4 @@ if (process.env.EXPO_PUBLIC_USE_FUNCTIONS_EMULATOR === 'true') {
   }
 }
 
-export const getDeliveryQuote = httpsCallable(functions, 'doordashQuote')
-export const dispatchDelivery = httpsCallable(functions, 'doordashDispatch')
+export const getDeliveryQuote = httpsCallable(functions, 'deliveryQuote')

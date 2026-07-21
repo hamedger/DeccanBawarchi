@@ -1,5 +1,6 @@
 import * as functions from 'firebase-functions/v2'
 import * as admin from 'firebase-admin'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { calculateEarnedPoints, validateRedemption } from '../constants/loyalty'
 
 if (!admin.apps.length) admin.initializeApp()
@@ -20,7 +21,7 @@ export const createOrder = functions.https.onCall(async (request) => {
 
   const uid = auth.uid
 
-  const oneHourAgo = admin.firestore.Timestamp.fromDate(
+  const oneHourAgo = Timestamp.fromDate(
     new Date(Date.now() - 60 * 60 * 1000),
   )
   const recentOrders = await db.collection('orders')
@@ -71,24 +72,17 @@ export const createOrder = functions.https.onCall(async (request) => {
         deliveryAddress: deliveryAddress ?? null,
         status: 'pending',
         stripePaymentIntentId: '',
-        doordashQuoteId: '',
-        doordashDeliveryId: '',
-        doordashSupportId: '',
-        doordashTrackingUrl: '',
-        doordashPickupTime: '',
-        driverLocation: null,
-        estimatedDeliveryTime: null,
         notes: notes ?? '',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       }
 
       tx.set(orderRef, order)
 
       if (loyaltyPointsUsed > 0) {
         tx.update(userRef, {
-          loyaltyPoints: admin.firestore.FieldValue.increment(-loyaltyPointsUsed),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          loyaltyPoints: FieldValue.increment(-loyaltyPointsUsed),
+          updatedAt: FieldValue.serverTimestamp(),
         })
       }
     })

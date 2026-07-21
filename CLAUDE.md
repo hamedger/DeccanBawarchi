@@ -11,15 +11,16 @@ Full-stack restaurant ordering website for Deccan Bawarchi, an authentic Hyderab
 - **Zustand** for cart/auth/order/notification state
 - **TanStack Query** for server state & caching
 - **Stripe** payments (via Firebase Extension)
-- **DoorDash Drive** white-label delivery
+- **Self-delivery** — in-house drivers, distance-based fee (free ≤1mi, $1/mi after), free US Census geocoding
 - **NativeWind** (Tailwind) + custom theme (`constants/theme.ts`)
 - **Design**: Midnight Gold — `#0b0905` bg, `#d4af37` gold, Playfair Display / Cinzel fonts
 
 ## Key Invariants
 - All money stored as **integers in cents** in Firestore; displayed as formatted dollars in UI
-- Loyalty points awarded **server-side only** in Cloud Function on `status === 'delivered'`
+- Loyalty points awarded **server-side only** in Cloud Function when an order reaches its terminal status: `'delivered'` for delivery orders, `'picked_up'` for pickup orders (pickup has no separate delivery event)
 - All Firestore writes involving money use **transactions**
-- Stripe and DoorDash secrets **never** in client code — Cloud Functions only
+- Stripe secrets **never** in client code — Cloud Functions only
+- Delivery fee is **recomputed server-side** at order creation (never trusted from the client); delivery-only $20 minimum order and fixed 5:00pm–11:30pm window
 - Buffet timing computed in **America/Detroit** timezone using `date-fns-tz`
 - `isWeekend` = Saturday only (Sunday is closed); Saturday buffet = $24.99, Mon–Fri = $17.99
 - Auth prompt appears only at checkout, never blocks browsing or cart

@@ -45,7 +45,6 @@ cloverRouter.post('/checkout', requireAuth, async (req: AuthedRequest, res) => {
       customerEmail: bodyEmail = '',
       pickupDate = '',
       pickupTime = '',
-      doordashQuoteId = '',
     } = req.body ?? {}
 
     const customerEmail = (bodyEmail || req.userEmail)?.trim()
@@ -98,7 +97,6 @@ cloverRouter.post('/checkout', requireAuth, async (req: AuthedRequest, res) => {
       notes,
       pickupDate,
       pickupTime,
-      doordashQuoteId,
     })
 
     let session

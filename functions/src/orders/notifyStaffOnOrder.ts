@@ -1,5 +1,6 @@
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore'
 import * as admin from 'firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
 import * as functions from 'firebase-functions/v2'
 import { sendOrderNotificationEmail } from '../email/orderNotification'
 import {
@@ -42,7 +43,7 @@ export const notifyStaffOnOrder = onDocumentUpdated(
       if (current.status === 'cancelled') return null
       tx.update(orderRef, {
         staffNotified: true,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       })
       return current
     })
@@ -62,7 +63,7 @@ export const notifyStaffOnOrder = onDocumentUpdated(
       })
       await orderRef.update({
         staffNotified: false,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       })
     }
   },

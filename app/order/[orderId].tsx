@@ -12,7 +12,9 @@ import { reorderToCart } from '../../lib/reorder'
 import { canUserCancelOrder, cancelUserOrder } from '../../lib/services/orderService'
 import { RESTAURANT_PHONE } from '../../constants/config'
 
-const STEPS: { status: OrderStatus; label: string; icon: string }[] = [
+type Step = { status: OrderStatus; label: string; icon: string }
+
+const DELIVERY_STEPS: Step[] = [
   { status: 'placed', label: 'Order Placed', icon: 'receipt' },
   { status: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle' },
   { status: 'preparing', label: 'Preparing', icon: 'restaurant' },
@@ -21,7 +23,13 @@ const STEPS: { status: OrderStatus; label: string; icon: string }[] = [
   { status: 'delivered', label: 'Delivered', icon: 'home' },
 ]
 
-const STATUS_ORDER: OrderStatus[] = ['placed', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered']
+const PICKUP_STEPS: Step[] = [
+  { status: 'placed', label: 'Order Placed', icon: 'receipt' },
+  { status: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle' },
+  { status: 'preparing', label: 'Preparing', icon: 'restaurant' },
+  { status: 'ready', label: 'Ready for Pickup', icon: 'bag-check' },
+  { status: 'picked_up', label: 'Picked Up', icon: 'checkmark-done' },
+]
 
 export default function OrderTrackingScreen() {
   const router = useRouter()
@@ -73,37 +81,26 @@ export default function OrderTrackingScreen() {
     )
   }
 
+  const isPickup = order.fulfillmentType !== 'delivery'
+  const steps = isPickup ? PICKUP_STEPS : DELIVERY_STEPS
+  const statusOrder = steps.map((s) => s.status)
+  const isComplete = isPickup ? order.status === 'picked_up' : order.status === 'delivered'
   const effectiveStatus =
     order.status === 'pending' ? 'placed' : order.status
-  const currentIndex = STATUS_ORDER.indexOf(effectiveStatus as OrderStatus)
+  const currentIndex = statusOrder.indexOf(effectiveStatus as OrderStatus)
   const showCancel = canUserCancelOrder(order.status)
-  const dropoffEta = order.estimatedDeliveryTime?.toDate?.()
-  const dropoffEtaLabel = dropoffEta
-    ? dropoffEta.toLocaleString(undefined, {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-      })
-    : null
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.orderId}>Order #{order.id.slice(-6).toUpperCase()}</Text>
-        {order.status === 'delivered' && (
-          <Text style={styles.deliveredBadge}>✓ Delivered</Text>
+        {isComplete && (
+          <Text style={styles.deliveredBadge}>✓ {isPickup ? 'Picked Up' : 'Delivered'}</Text>
         )}
         {order.status === 'cancelled' && (
           <Text style={styles.cancelledBadge}>Order cancelled</Text>
         )}
-        {order.fulfillmentType === 'delivery' && order.doordashDispatchError ? (
-          <Text style={styles.dispatchError}>
-            Delivery setup issue — please call {RESTAURANT_PHONE} for help.
-          </Text>
-        ) : null}
         {locationName ? (
           <View style={styles.locationRow}>
             <Ionicons name="location-outline" size={14} color={colors.goldLight} />
@@ -118,7 +115,7 @@ export default function OrderTrackingScreen() {
       {/* Status Timeline */}
       {order.status !== 'cancelled' ? (
       <View style={styles.timeline}>
-        {STEPS.map((step, idx) => {
+        {steps.map((step, idx) => {
           const done = currentIndex >= idx
           const active = currentIndex === idx
           return (
@@ -127,7 +124,7 @@ export default function OrderTrackingScreen() {
                 <View style={[styles.dot, done ? styles.dotDone : styles.dotPending, active && styles.dotActive]}>
                   <Ionicons name={step.icon as any} size={14} color={done ? colors.background : colors.whiteMuted} />
                 </View>
-                {idx < STEPS.length - 1 && <View style={[styles.line, done && styles.lineDone]} />}
+                {idx < steps.length - 1 && <View style={[styles.line, done && styles.lineDone]} />}
               </View>
               <Text style={[styles.stepLabel, done ? styles.stepDone : styles.stepPending]}>
                 {step.label}
@@ -150,57 +147,27 @@ export default function OrderTrackingScreen() {
         ))}
       </View>
 
-      {/* DoorDash delivery details */}
-      {order.fulfillmentType === 'delivery' ? (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>DoorDash Delivery</Text>
-          {order.doordashSupportId || order.doordashDeliveryId ? (
-            <Text style={styles.deliveryMeta}>
-              Delivery ID: {order.doordashSupportId || order.doordashDeliveryId}
-            </Text>
-          ) : null}
-          {order.doordashPickupTime ? (
-            <Text style={styles.deliveryMeta}>
-              Scheduled pickup: {new Date(order.doordashPickupTime).toLocaleString('en-US', {
-                timeZone: 'America/Detroit',
-                dateStyle: 'medium',
-                timeStyle: 'short',
-              })}
-            </Text>
-          ) : order.scheduledFor && order.pickupTime ? (
-            <Text style={styles.deliveryMeta}>
-              Requested: {order.scheduledFor} {String(order.pickupTime)}
-            </Text>
-          ) : null}
-          {order.doordashDispatchError ? (
-            <Text style={styles.dispatchError}>
-              Dispatch issue: {order.doordashDispatchError}. The restaurant has been notified.
-            </Text>
-          ) : null}
-        </View>
-      ) : null}
-
-      {/* DoorDash delivery details */}
+      {/* Delivery details */}
       {order.fulfillmentType === 'delivery' ? (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Delivery Details</Text>
-          {dropoffEtaLabel ? (
-            <Text style={styles.deliveryMeta}>Estimated dropoff: {dropoffEtaLabel}</Text>
+          {order.deliveryFee > 0 ? (
+            <Text style={styles.deliveryMeta}>
+              Delivery fee: ${(order.deliveryFee / 100).toFixed(2)}
+              {order.deliveryDistanceMiles != null
+                ? ` · ${order.deliveryDistanceMiles.toFixed(1)} mi`
+                : ''}
+            </Text>
+          ) : null}
+          {order.scheduledFor && order.pickupTime ? (
+            <Text style={styles.deliveryMeta}>
+              Requested: {order.scheduledFor} {String(order.pickupTime)}
+            </Text>
           ) : null}
           <TouchableOpacity onPress={() => Linking.openURL(`tel:${RESTAURANT_PHONE}`)}>
             <Text style={styles.deliveryMeta}>Restaurant: {RESTAURANT_PHONE}</Text>
           </TouchableOpacity>
         </View>
-      ) : null}
-
-      {/* DoorDash Link */}
-      {order.doordashTrackingUrl ? (
-        <TouchableOpacity
-          style={styles.trackBtn}
-          onPress={() => Linking.openURL(order.doordashTrackingUrl)}
-        >
-          <Text style={styles.trackBtnText}>🗺 Track Driver in Real-Time</Text>
-        </TouchableOpacity>
       ) : null}
 
       {/* Totals */}
@@ -253,13 +220,6 @@ const styles = StyleSheet.create({
   orderId: { color: colors.white, fontSize: 22, fontWeight: '800', fontFamily: fonts.serif },
   deliveredBadge: { color: colors.greenLight, fontSize: 14, fontWeight: '700', marginTop: 4 },
   cancelledBadge: { color: colors.error, fontSize: 14, fontWeight: '700', marginTop: 4 },
-  dispatchError: {
-    fontFamily: fonts.sans,
-    color: colors.error,
-    fontSize: 13,
-    marginTop: spacing.sm,
-    lineHeight: 18,
-  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -306,29 +266,5 @@ const styles = StyleSheet.create({
   itemQty: { color: colors.gold, fontWeight: '700', marginRight: 8, width: 24 },
   itemName: { flex: 1, color: colors.white, fontSize: 14 },
   itemPrice: { color: colors.whiteMuted, fontSize: 14 },
-  deliveryMeta: {
-    fontFamily: fonts.sans,
-    color: colors.whiteMuted,
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  dispatchError: {
-    fontFamily: fonts.sans,
-    color: colors.error,
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 4,
-  },
-  trackBtn: {
-    backgroundColor: 'rgba(212,175,55,0.1)',
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  trackBtnText: { color: colors.gold, fontWeight: '700', fontSize: 14 },
   totals: { backgroundColor: colors.backgroundCard, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
 })

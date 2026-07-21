@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getDeliveryQuote } from '../lib/doordash'
+import { getDeliveryQuote } from '../lib/delivery'
 import { DeliveryQuote, DeliveryQuoteRequest } from '../types/delivery'
 
 export function useDeliveryQuote() {

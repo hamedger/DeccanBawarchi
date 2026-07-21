@@ -1,14 +1,25 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { View, Text, StyleSheet } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useCartStore } from '../../store/cartStore'
 import { Button } from '../../components/ui/Button'
 import { HomeButton } from '../../components/navigation/HomeButton'
-import { clearCheckoutContext, confirmCloverOrderAfterRedirect, readCheckoutContext } from '../../lib/services/cloverCheckout'
+import {
+  clearCheckoutContext,
+  confirmCloverOrderAfterRedirect,
+  readCheckoutContext,
+  type ConfirmedCloverOrder,
+} from '../../lib/services/cloverCheckout'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
 import { RESTAURANT_PHONE } from '../../constants/config'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
+
+function formatConfirmedAddress(addr: ConfirmedCloverOrder['deliveryAddress']): string | null {
+  if (!addr) return null
+  const street = addr.unit?.trim() ? `${addr.street}, ${addr.unit}` : addr.street
+  return `${street}, ${addr.city}, ${addr.state} ${addr.zip}`
+}
 
 export default function CheckoutSuccessScreen() {
   const router = useRouter()
@@ -22,6 +33,7 @@ export default function CheckoutSuccessScreen() {
     pickupSchedule?: string
     total?: string
   }>()
+  const [confirmed, setConfirmed] = useState<ConfirmedCloverOrder | null>(null)
 
   useEffect(() => {
     clearCart()
@@ -32,17 +44,30 @@ export default function CheckoutSuccessScreen() {
     const checkoutSessionId = params.session_id?.trim()
     if (!checkoutSessionId) return
 
-    void confirmCloverOrderAfterRedirect(checkoutSessionId, params.orderId?.trim()).finally(() => {
-      router.replace('/(tabs)/' as never)
-    })
-  }, [params.orderId, params.session_id, router])
+    confirmCloverOrderAfterRedirect(checkoutSessionId, params.orderId?.trim())
+      .then((result) => {
+        if (result) setConfirmed(result)
+      })
+      .catch(() => {
+        // Payment already succeeded per Clover's redirect; confirmation is best-effort reconciliation.
+      })
+  }, [params.orderId, params.session_id])
 
   const saved = readCheckoutContext()
-  const isDelivery = (params.fulfillment ?? saved?.fulfillment) === 'delivery'
-  const orderId = params.orderId ?? `DB${Date.now().toString().slice(-6)}`
+  const isDelivery = confirmed
+    ? confirmed.fulfillmentType === 'delivery'
+    : (params.fulfillment ?? saved?.fulfillment) === 'delivery'
+  const orderId = confirmed?.orderId ?? params.orderId ?? `DB${Date.now().toString().slice(-6)}`
   const displayOrderId = orderId.length > 6 ? orderId.slice(-6).toUpperCase() : orderId
-  const total = params.total ? Number(params.total) : saved?.total ? Number(saved.total) : 0
-  const address = params.address ?? saved?.address ?? '—'
+  const total = confirmed
+    ? confirmed.total
+    : params.total
+      ? Number(params.total)
+      : saved?.total
+        ? Number(saved.total)
+        : 0
+  const confirmedAddress = confirmed && isDelivery ? formatConfirmedAddress(confirmed.deliveryAddress) : null
+  const address = confirmedAddress ?? params.address ?? saved?.address ?? '—'
   const pickupSchedule = params.pickupSchedule ?? saved?.pickupSchedule
 
   return (
@@ -61,8 +86,8 @@ export default function CheckoutSuccessScreen() {
         <View style={styles.detailCard}>
           <DetailRow
             icon={isDelivery ? 'bicycle' : 'bag-handle'}
-            iconColor={isDelivery ? '#FF3008' : colors.gold}
-            label={isDelivery ? 'DoorDash Delivery' : 'Restaurant Pickup'}
+            iconColor={colors.gold}
+            label={isDelivery ? 'Delivery' : 'Restaurant Pickup'}
             value={address}
           />
           <DetailRow
@@ -84,7 +109,7 @@ export default function CheckoutSuccessScreen() {
 
         {isDelivery ? (
           <Text style={styles.hint}>
-            Your DoorDash driver will be dispatched shortly. Track your order for live updates.
+            Our driver will be on the way shortly. Track your order for live updates.
             {'\n'}Questions? Call {RESTAURANT_PHONE}.
           </Text>
         ) : (

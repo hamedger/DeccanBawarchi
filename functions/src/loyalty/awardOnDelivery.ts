@@ -1,5 +1,6 @@
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore'
 import * as admin from 'firebase-admin'
+import { FieldValue } from 'firebase-admin/firestore'
 
 if (!admin.apps.length) admin.initializeApp()
 const db = admin.firestore()
@@ -9,7 +10,10 @@ export const awardLoyaltyOnDelivery = onDocumentUpdated('orders/{orderId}', asyn
   const after = event.data?.after.data()
   if (!before || !after) return
 
-  if (before.status === after.status || after.status !== 'delivered') return
+  const isFulfilled =
+    after.status === 'delivered' ||
+    (after.fulfillmentType === 'pickup' && after.status === 'picked_up')
+  if (before.status === after.status || !isFulfilled) return
   if (after.loyaltyAwarded === true) return
   if (!after.userId || after.userId === 'guest') return
 
@@ -26,13 +30,13 @@ export const awardLoyaltyOnDelivery = onDocumentUpdated('orders/{orderId}', asyn
 
     tx.update(orderRef, {
       loyaltyAwarded: true,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     })
     tx.update(userRef, {
-      loyaltyPoints: admin.firestore.FieldValue.increment(earned),
-      totalOrderCount: admin.firestore.FieldValue.increment(1),
-      totalSpend: admin.firestore.FieldValue.increment(order.total ?? 0),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      loyaltyPoints: FieldValue.increment(earned),
+      totalOrderCount: FieldValue.increment(1),
+      totalSpend: FieldValue.increment(order.total ?? 0),
+      updatedAt: FieldValue.serverTimestamp(),
     })
   })
 })

@@ -23,9 +23,8 @@ export interface OrderNotificationInput {
   notes?: string
   customerEmail?: string
   customerPhone?: string
-  doordashSupportId?: string
-  doordashDeliveryId?: string
-  doordashTrackingUrl?: string
+  deliveryFee?: number
+  deliveryDistanceMiles?: number
 }
 
 export function buildOrderNotificationSubject(input: OrderNotificationInput): string {
@@ -51,9 +50,10 @@ export function buildOrderNotificationBody(input: OrderNotificationInput): strin
   }
   if (input.customerEmail) lines.push(`Customer email: ${input.customerEmail}`)
   if (input.customerPhone) lines.push(`Customer phone: ${input.customerPhone}`)
-  if (input.doordashSupportId) lines.push(`DoorDash support ID: ${input.doordashSupportId}`)
-  if (input.doordashDeliveryId) lines.push(`DoorDash ref: ${input.doordashDeliveryId}`)
-  if (input.doordashTrackingUrl) lines.push(`Tracking: ${input.doordashTrackingUrl}`)
+  if (input.deliveryFee) lines.push(`Delivery fee: ${formatCents(input.deliveryFee)}`)
+  if (input.deliveryDistanceMiles != null) {
+    lines.push(`Delivery distance: ${input.deliveryDistanceMiles.toFixed(1)} mi`)
+  }
   if (input.notes?.trim()) lines.push(`Notes: ${input.notes.trim()}`)
 
   lines.push('', 'Items:')

@@ -8,12 +8,14 @@ import {
   Alert,
 } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
+import { Ionicons } from '@expo/vector-icons'
 import { useAdminOrders } from '../../hooks/useAdminOrders'
 import { useAllLocations } from '../../hooks/useLocations'
 import { resolveOrderLocationLabel } from '../../lib/locationUtils'
 import { useAdminLocationStore } from '../../store/adminLocationStore'
 import { AdminLocationFilter } from '../../components/admin/AdminLocationFilter'
 import {
+  isOrderActive,
   nextOrderStatus,
   ORDER_STATUS_LABELS,
   updateAdminOrderStatus,
@@ -61,7 +63,7 @@ function OrderCard({
   customerProfiles: Map<string, OrderCustomerProfile>
 }) {
   const [updating, setUpdating] = useState(false)
-  const next = nextOrderStatus(order.status)
+  const next = nextOrderStatus(order.status, order.fulfillmentType)
   const customer = resolveOrderCustomerInfo(order, customerProfiles)
 
   const advance = async () => {
@@ -94,10 +96,34 @@ function OrderCard({
           <Text style={styles.orderId}>#{order.id.slice(-6).toUpperCase()}</Text>
           <Text style={styles.orderTime}>{formatOrderTime(order.createdAt)}</Text>
         </View>
-        <View style={[styles.statusPill, { borderColor: statusColor(order.status) }]}>
-          <Text style={[styles.statusText, { color: statusColor(order.status) }]}>
-            {ORDER_STATUS_LABELS[order.status]}
-          </Text>
+        <View style={styles.headerBadges}>
+          <View
+            style={[
+              styles.fulfillmentBadge,
+              order.fulfillmentType === 'delivery'
+                ? styles.fulfillmentBadgeDelivery
+                : styles.fulfillmentBadgePickup,
+            ]}
+          >
+            <Ionicons
+              name={order.fulfillmentType === 'delivery' ? 'bicycle' : 'bag-handle'}
+              size={13}
+              color={order.fulfillmentType === 'delivery' ? colors.gold : colors.background}
+            />
+            <Text
+              style={[
+                styles.fulfillmentBadgeText,
+                order.fulfillmentType === 'delivery' && styles.fulfillmentBadgeTextDelivery,
+              ]}
+            >
+              {order.fulfillmentType === 'delivery' ? 'DELIVERY' : 'PICKUP'}
+            </Text>
+          </View>
+          <View style={[styles.statusPill, { borderColor: statusColor(order.status) }]}>
+            <Text style={[styles.statusText, { color: statusColor(order.status) }]}>
+              {ORDER_STATUS_LABELS[order.status]}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -105,28 +131,6 @@ function OrderCard({
 
       {customer.name ? <Text style={styles.customerName}>{customer.name}</Text> : null}
       {customer.phone ? <Text style={styles.customerPhone}>{customer.phone}</Text> : null}
-
-      <Text style={styles.fulfillment}>
-        {order.fulfillmentType === 'delivery' ? 'Delivery' : 'Pickup'}
-      </Text>
-
-      {order.fulfillmentType === 'delivery' && (order.doordashSupportId || order.doordashDeliveryId) ? (
-        <Text style={styles.deliveryId}>
-          DoorDash ID: {order.doordashSupportId || order.doordashDeliveryId}
-        </Text>
-      ) : null}
-      {order.fulfillmentType === 'delivery' && order.doordashPickupTime ? (
-        <Text style={styles.deliveryId}>
-          Pickup: {new Date(order.doordashPickupTime).toLocaleString('en-US', {
-            timeZone: 'America/Detroit',
-            dateStyle: 'short',
-            timeStyle: 'short',
-          })}
-        </Text>
-      ) : null}
-      {order.doordashDispatchError ? (
-        <Text style={styles.dispatchError}>Dispatch error: {order.doordashDispatchError}</Text>
-      ) : null}
 
       {order.items.map((item, idx) => (
         <Text key={`${item.menuItemId}-${idx}`} style={styles.itemLine}>
@@ -136,15 +140,10 @@ function OrderCard({
 
       {order.fulfillmentType === 'delivery' ? (
         <View style={styles.deliveryMetaBlock}>
-          {order.doordashSupportId ? (
-            <Text style={styles.deliveryMeta}>DoorDash ID: {order.doordashSupportId}</Text>
-          ) : null}
-          {order.doordashDeliveryId ? (
-            <Text style={styles.deliveryMeta}>Ref: {order.doordashDeliveryId}</Text>
-          ) : null}
-          {order.doordashTrackingUrl ? (
-            <Text style={styles.deliveryMeta} numberOfLines={1}>
-              Track: {order.doordashTrackingUrl}
+          <Text style={styles.deliveryMeta}>Delivery fee: {formatCents(order.deliveryFee)}</Text>
+          {order.deliveryDistanceMiles != null ? (
+            <Text style={styles.deliveryMeta}>
+              Distance: {order.deliveryDistanceMiles.toFixed(1)} mi
             </Text>
           ) : null}
         </View>
@@ -153,7 +152,7 @@ function OrderCard({
       <View style={styles.cardFooter}>
         <Text style={styles.total}>{formatCents(order.total)}</Text>
         <View style={styles.actions}>
-          {order.status !== 'cancelled' && order.status !== 'delivered' && (
+          {isOrderActive(order) && (
             <>
               {next ? (
                 <Button
@@ -206,9 +205,7 @@ export default function AdminOrdersScreen() {
   const filtered = useMemo(() => {
     if (filter === 'all') return orders.filter(isPaidOrder)
     if (filter === 'active') {
-      return orders.filter(
-        (o) => isPaidOrder(o) && !['delivered', 'cancelled'].includes(o.status),
-      )
+      return orders.filter((o) => isPaidOrder(o) && isOrderActive(o))
     }
     return orders.filter((o) => o.status === filter)
   }, [orders, filter])
@@ -306,6 +303,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
   },
+  headerBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: spacing.xs,
+  },
   statusPill: {
     borderWidth: 1,
     borderRadius: borderRadius.full,
@@ -317,6 +321,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  fulfillmentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  fulfillmentBadgeDelivery: {
+    backgroundColor: 'rgba(212,175,55,0.14)',
+    borderWidth: 1,
+    borderColor: colors.gold,
+  },
+  fulfillmentBadgePickup: {
+    backgroundColor: colors.goldLight,
+  },
+  fulfillmentBadgeText: {
+    fontFamily: fonts.sansBold,
+    fontSize: 11,
+    letterSpacing: 0.5,
+    color: colors.background,
+  },
+  fulfillmentBadgeTextDelivery: {
+    color: colors.gold,
   },
   locationLine: {
     fontFamily: fonts.sansMedium,
@@ -332,21 +361,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sans,
     color: colors.whiteMuted,
     fontSize: 13,
-  },
-  fulfillment: {
-    fontFamily: fonts.sansMedium,
-    color: colors.white,
-    fontSize: 13,
-  },
-  deliveryId: {
-    fontFamily: fonts.sans,
-    color: colors.whiteMuted,
-    fontSize: 12,
-  },
-  dispatchError: {
-    fontFamily: fonts.sans,
-    color: colors.error,
-    fontSize: 12,
   },
   itemLine: {
     fontFamily: fonts.sans,

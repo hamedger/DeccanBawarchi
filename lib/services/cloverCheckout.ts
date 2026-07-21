@@ -9,7 +9,6 @@ export interface CloverCheckoutInput extends SubmitOrderInput {
   customerEmail?: string
   pickupDate?: string
   pickupTime?: string
-  doordashQuoteId?: string
 }
 
 export interface CloverCheckoutResult {
@@ -55,7 +54,6 @@ export async function startCloverCheckout(
       customerEmail: input.customerEmail,
       pickupDate: input.pickupDate,
       pickupTime: input.pickupTime,
-      doordashQuoteId: input.doordashQuoteId,
     }),
   })
 
@@ -120,10 +118,27 @@ export function clearCheckoutContext() {
   }
 }
 
+export interface ConfirmedCloverOrder {
+  orderId: string
+  status: string
+  fulfillmentType: 'delivery' | 'pickup'
+  total: number
+  deliveryFee: number
+  deliveryAddress: {
+    street: string
+    city: string
+    state: string
+    zip: string
+    unit?: string
+  } | null
+  scheduledFor: string | null
+  pickupTime: string | null
+}
+
 export async function confirmCloverOrderAfterRedirect(
   checkoutSessionId: string,
   orderId?: string,
-): Promise<{ orderId: string; status: string } | null> {
+): Promise<ConfirmedCloverOrder | null> {
   const user = auth.currentUser
   if (!user) return null
 
@@ -133,5 +148,5 @@ export async function confirmCloverOrderAfterRedirect(
     checkoutSessionId,
     ...(orderId?.trim() ? { orderId: orderId.trim() } : {}),
   })
-  return result.data as { orderId: string; status: string }
+  return result.data as ConfirmedCloverOrder
 }

@@ -2,8 +2,20 @@ import React from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { FulfillmentType } from '../../types/order'
-import { DELIVERY_ENABLED, DELIVERY_RADIUS_MILES, RESTAURANT_ADDRESS } from '../../constants/config'
+import {
+  DELIVERY_ENABLED,
+  DELIVERY_FULFILLMENT_HOURS,
+  DELIVERY_MINIMUM_SUBTOTAL_CENTS,
+  RESTAURANT_ADDRESS,
+} from '../../constants/config'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
+
+function formatHour12(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number)
+  const period = h >= 12 ? 'pm' : 'am'
+  const hour12 = h % 12 === 0 ? 12 : h % 12
+  return m === 0 ? `${hour12}${period}` : `${hour12}:${String(m).padStart(2, '0')}${period}`
+}
 
 interface FulfillmentSelectorProps {
   value: FulfillmentType
@@ -34,14 +46,14 @@ export function FulfillmentSelector({
       >
         <View style={styles.cardHeader}>
           <View style={[styles.iconWrap, styles.deliveryIcon]}>
-            <Ionicons name="bicycle" size={20} color="#FF3008" />
+            <Ionicons name="bicycle" size={20} color={colors.gold} />
           </View>
           <View style={styles.cardTitles}>
             <Text style={[styles.cardTitle, !DELIVERY_ENABLED && styles.cardTitleMuted]}>
-              DoorDash Delivery
+              Delivery
             </Text>
             {DELIVERY_ENABLED ? (
-              <Text style={styles.cardBadge}>Powered by DoorDash Drive</Text>
+              <Text style={styles.cardBadge}>Free within 1 mile · $1/mile after</Text>
             ) : (
               <Text style={styles.comingSoonBadge}>Coming Soon</Text>
             )}
@@ -58,12 +70,14 @@ export function FulfillmentSelector({
               {pickupSchedule ? pickupSchedule : 'Schedule date and time below'}
             </Text>
             <Text style={styles.cardHint}>
-              Delivered hot to your door within {DELIVERY_RADIUS_MILES} miles
+              ${(DELIVERY_MINIMUM_SUBTOTAL_CENTS / 100).toFixed(0)} minimum order ·{' '}
+              {formatHour12(DELIVERY_FULFILLMENT_HOURS.open)}–{formatHour12(DELIVERY_FULFILLMENT_HOURS.close)}{' '}
+              daily
             </Text>
           </>
         ) : (
           <Text style={styles.cardHint}>
-            DoorDash delivery is coming in a future update. Pickup is available now.
+            Delivery is coming in a future update. Pickup is available now.
           </Text>
         )}
       </TouchableOpacity>
@@ -133,7 +147,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deliveryIcon: { backgroundColor: 'rgba(255,48,8,0.12)' },
+  deliveryIcon: { backgroundColor: 'rgba(212,175,55,0.12)' },
   pickupIcon: { backgroundColor: 'rgba(212,175,55,0.12)' },
   cardTitles: { flex: 1 },
   cardTitle: {

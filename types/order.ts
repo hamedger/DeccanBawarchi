@@ -1,4 +1,4 @@
-import { Timestamp, GeoPoint } from 'firebase/firestore'
+import { Timestamp } from 'firebase/firestore'
 import { Address } from './user'
 
 export type OrderStatus =
@@ -33,6 +33,7 @@ export interface Order {
   subtotal: number
   tax: number
   deliveryFee: number
+  deliveryDistanceMiles?: number
   serviceFee: number
   tip: number
   promoCode: string
@@ -51,14 +52,6 @@ export interface Order {
   cloverMerchantId?: string
   cloverCheckoutSessionId?: string
   cloverPaymentId?: string
-  doordashQuoteId: string
-  doordashDeliveryId: string
-  doordashSupportId: string
-  doordashTrackingUrl: string
-  doordashPickupTime?: string
-  doordashDispatchError?: string
-  driverLocation: GeoPoint | null
-  estimatedDeliveryTime: Timestamp | null
   notes: string
   createdAt: Timestamp
   updatedAt: Timestamp

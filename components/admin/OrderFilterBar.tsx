@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Order, OrderStatus } from '../../types/order'
-import { ORDER_STATUS_LABELS, isPaidOrder } from '../../lib/admin/orderAdmin'
+import { ORDER_STATUS_LABELS, isOrderActive, isPaidOrder } from '../../lib/admin/orderAdmin'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 export type OrderFilter = OrderStatus | 'active' | 'all'
@@ -26,8 +26,7 @@ interface OrderFilterBarProps {
 function countForFilter(orders: Order[], filter: OrderFilter): number {
   if (filter === 'all') return orders.filter(isPaidOrder).length
   if (filter === 'active') {
-    return orders.filter((o) => isPaidOrder(o) && !['delivered', 'cancelled'].includes(o.status))
-      .length
+    return orders.filter((o) => isPaidOrder(o) && isOrderActive(o)).length
   }
   return orders.filter((o) => o.status === filter).length
 }

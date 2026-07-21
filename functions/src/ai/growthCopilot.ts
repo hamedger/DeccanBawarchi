@@ -1,6 +1,7 @@
 import * as functions from 'firebase-functions/v2'
 import * as scheduler from 'firebase-functions/v2/scheduler'
 import * as admin from 'firebase-admin'
+import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import OpenAI from 'openai'
 
 if (!admin.apps.length) admin.initializeApp()
@@ -74,7 +75,7 @@ async function aggregateMetrics(locationId: string): Promise<MetricsSnapshot> {
   const ordersSnap = await db
     .collection('orders')
     .where('locationId', '==', locationId)
-    .where('createdAt', '>=', admin.firestore.Timestamp.fromDate(priorWeekStart))
+    .where('createdAt', '>=', Timestamp.fromDate(priorWeekStart))
     .orderBy('createdAt', 'desc')
     .limit(500)
     .get()
@@ -304,7 +305,7 @@ Provide 3-5 insights and 2-4 concrete growth actions. Be specific to Hyderabadi 
 async function writeInsights(locationId: string, brief: GrowthBrief, metrics: MetricsSnapshot) {
   await db.collection('admin_insights').doc(locationId).set({
     locationId,
-    generatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    generatedAt: FieldValue.serverTimestamp(),
     headline: brief.headline,
     summary: brief.summary,
     insights: brief.insights,

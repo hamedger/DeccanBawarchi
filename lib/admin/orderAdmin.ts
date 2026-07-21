@@ -1,7 +1,7 @@
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { FirebaseError } from 'firebase/app'
 import app, { isFirebaseConfigured } from '../firebase'
-import { Order, OrderStatus } from '../../types/order'
+import { FulfillmentType, Order, OrderStatus } from '../../types/order'
 
 export type OrderCustomerProfile = {
   displayName: string
@@ -30,6 +30,7 @@ export function isPaidOrder(order: {
   return order.status !== 'pending' && order.status !== 'cancelled'
 }
 
+/** Every status a pickup or delivery order can pass through, used for filter tabs/labels. */
 export const ORDER_STATUS_FLOW: OrderStatus[] = [
   'pending',
   'placed',
@@ -39,6 +40,21 @@ export const ORDER_STATUS_FLOW: OrderStatus[] = [
   'picked_up',
   'delivered',
 ]
+
+/** Pickup ends at 'picked_up' — the customer already has the food, there's no separate delivery event. */
+const PICKUP_STATUS_FLOW: OrderStatus[] = ['pending', 'placed', 'confirmed', 'preparing', 'ready', 'picked_up']
+const DELIVERY_STATUS_FLOW: OrderStatus[] = ORDER_STATUS_FLOW
+
+/** True once an order has reached its final fulfillment state for its type (not cancelled). */
+export function isOrderFulfilled(order: { status: OrderStatus; fulfillmentType: FulfillmentType }): boolean {
+  if (order.status === 'delivered') return true
+  return order.fulfillmentType === 'pickup' && order.status === 'picked_up'
+}
+
+/** Order is still in progress: not cancelled, and not yet fulfilled for its type. */
+export function isOrderActive(order: { status: OrderStatus; fulfillmentType: FulfillmentType }): boolean {
+  return order.status !== 'cancelled' && !isOrderFulfilled(order)
+}
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   pending: 'Pending',
@@ -62,10 +78,11 @@ export async function updateAdminOrderStatus(orderId: string, status: OrderStatu
   })
 }
 
-export function nextOrderStatus(current: OrderStatus): OrderStatus | null {
-  const idx = ORDER_STATUS_FLOW.indexOf(current)
-  if (idx < 0 || idx >= ORDER_STATUS_FLOW.length - 1) return null
-  return ORDER_STATUS_FLOW[idx + 1]
+export function nextOrderStatus(current: OrderStatus, fulfillmentType: FulfillmentType): OrderStatus | null {
+  const flow = fulfillmentType === 'pickup' ? PICKUP_STATUS_FLOW : DELIVERY_STATUS_FLOW
+  const idx = flow.indexOf(current)
+  if (idx < 0 || idx >= flow.length - 1) return null
+  return flow[idx + 1]
 }
 
 export function getCallableErrorMessage(error: unknown): string {

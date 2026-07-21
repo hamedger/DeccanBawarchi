@@ -4,8 +4,6 @@ import { useRouter } from 'expo-router'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { useDeliveryQuote } from '../../hooks/useDeliveryQuote'
-import { useCart } from '../../hooks/useCart'
-import { formatDropoffAddress } from '../../lib/deliveryUtils'
 import { colors, spacing } from '../../constants/theme'
 
 export default function DeliveryScreen() {
@@ -15,30 +13,15 @@ export default function DeliveryScreen() {
   const [zip, setZip] = useState('')
   const [phone, setPhone] = useState('')
   const { quote, loading, error, fetchQuote } = useDeliveryQuote()
-  const cart = useCart()
 
   const handleGetQuote = () => {
     if (!street || !city || !zip) return
     void fetchQuote({
-      dropoffAddress: formatDropoffAddress({
-        street,
-        city,
-        state: 'MI',
-        zip,
-        country: 'US',
-      }),
       dropoffStreet: street,
       dropoffCity: city,
       dropoffState: 'MI',
       dropoffZip: zip,
-      orderValue: cart.subtotal(),
-      dropoffPhoneNumber: phone,
-      dropoffContactGivenName: 'Guest',
-      items: cart.items.map((item) => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-      })),
+      locationId: 'northville-mi',
     })
   }
 

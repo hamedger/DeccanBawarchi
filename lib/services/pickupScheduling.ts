@@ -190,6 +190,18 @@ export function getPickupDateOptions(): PickupDateOption[] {
   })
 }
 
+/** ASAP only makes sense if starting prep right now would land within the fulfillment window. */
+function isAsapWithinHours(
+  prepBufferMinutes: number,
+  fulfillmentHours?: OrderFulfillmentHours,
+): boolean {
+  const nowPlusBuffer = detroitMinutesNow() + prepBufferMinutes
+  return (
+    nowPlusBuffer >= getOpenMinutes(fulfillmentHours) &&
+    nowPlusBuffer <= getCloseMinutes(fulfillmentHours)
+  )
+}
+
 export function getPickupTimeSlotsForDate(
   dateValue: string,
   prepBufferMinutes: number = PICKUP_PREP_BUFFER_MINUTES,
@@ -200,7 +212,7 @@ export function getPickupTimeSlotsForDate(
   const resolvedHours = resolveFulfillmentHours(fulfillmentHours)
   const closeMinutes = getCloseMinutes(resolvedHours)
 
-  if (isToday(date)) {
+  if (isToday(date) && isAsapWithinHours(prepBufferMinutes, resolvedHours)) {
     slots.push(PICKUP_ASAP)
   }
 
@@ -243,7 +255,7 @@ export function isPickupScheduleValid(
 
   if (timeValue === PICKUP_ASAP) {
     const date = parse(dateValue, 'yyyy-MM-dd', detroitNow())
-    return isToday(date)
+    return isToday(date) && isAsapWithinHours(prepBufferMinutes, fulfillmentHours)
   }
   if (isPresetPickupTime(timeValue, fulfillmentHours)) {
     const available = getPickupTimeSlotsForDate(dateValue, prepBufferMinutes, fulfillmentHours)

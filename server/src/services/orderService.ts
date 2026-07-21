@@ -1,6 +1,7 @@
 import { FieldValue } from 'firebase-admin/firestore'
 import { calculateTotal, calculateTax, calculateServiceFee } from '../lib/cartTotals'
 import { calculateEarnedPoints, loyaltyDiscountCents, validateRedemption } from '../lib/loyalty'
+import { computeDeliveryFee, DELIVERY_MINIMUM_SUBTOTAL_CENTS } from '../lib/deliveryPricing'
 import { db } from '../lib/firebase'
 import { CloverLineItem } from './cloverClient'
 import { trySendStaffOrderNotification } from './orderNotification'
@@ -57,7 +58,6 @@ export interface CreatePendingOrderInput {
   notes?: string
   pickupDate?: string
   pickupTime?: string
-  doordashQuoteId?: string
 }
 
 export interface CreatePendingOrderResult {
@@ -129,6 +129,8 @@ export async function createPendingOrder(
     throw new Error('Cart is empty')
   }
 
+  let deliveryDistanceMiles: number | undefined
+
   if (input.fulfillmentType === 'delivery') {
     const phoneDigits = (input.customerPhone ?? '').replace(/\D/g, '')
     if (phoneDigits.length < 10) {
@@ -137,8 +139,20 @@ export async function createPendingOrder(
     if (!input.deliveryAddress?.street?.trim() || !input.deliveryAddress?.city?.trim()) {
       throw new Error('Complete delivery address is required')
     }
-    if (!String(input.doordashQuoteId ?? '').trim()) {
-      throw new Error('A live DoorDash delivery quote is required before checkout')
+    if (input.subtotal < DELIVERY_MINIMUM_SUBTOTAL_CENTS) {
+      throw new Error(
+        `Minimum order for delivery is $${(DELIVERY_MINIMUM_SUBTOTAL_CENTS / 100).toFixed(2)}`,
+      )
+    }
+
+    const { feeCents, distanceMiles } = await computeDeliveryFee({
+      locationId: input.locationId,
+      deliveryAddress: input.deliveryAddress,
+    })
+    deliveryDistanceMiles = distanceMiles
+
+    if (feeCents !== input.deliveryFee) {
+      throw new Error('Delivery fee does not match server calculation. Please refresh your delivery quote.')
     }
   }
 
@@ -233,6 +247,7 @@ export async function createPendingOrder(
       subtotal: input.subtotal,
       tax,
       deliveryFee: input.deliveryFee,
+      ...(deliveryDistanceMiles != null ? { deliveryDistanceMiles } : {}),
       serviceFee,
       tip: input.tip,
       promoCode: input.promoCode ?? '',
@@ -251,13 +266,6 @@ export async function createPendingOrder(
       cloverMerchantId: input.cloverMerchantId ?? '',
       cloverCheckoutSessionId: '',
       cloverPaymentId: '',
-      doordashQuoteId: String(input.doordashQuoteId ?? '').trim(),
-      doordashDeliveryId: '',
-      doordashSupportId: '',
-      doordashTrackingUrl: '',
-      doordashPickupTime: '',
-      driverLocation: null,
-      estimatedDeliveryTime: null,
       notes: input.notes ?? '',
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -381,17 +389,48 @@ function buildCustomer(input: CreatePendingOrderInput) {
   }
 }
 
+function formatDeliveryAddressForTicket(addr: DeliveryAddressInput): string {
+  const street = addr.unit?.trim() ? `${addr.street}, ${addr.unit}` : addr.street
+  return `${street}, ${addr.city}, ${addr.state} ${addr.zip}`
+}
+
+/** Printed as the first line item so a driver can grab the ticket and immediately see where it's going. */
+function buildFulfillmentHeaderLineItem(input: CreatePendingOrderInput): CloverLineItem {
+  if (input.fulfillmentType === 'delivery' && input.deliveryAddress) {
+    const addressLine = formatDeliveryAddressForTicket(input.deliveryAddress)
+    const instructions = input.deliveryAddress.instructions?.trim()
+    const phone = input.customerPhone?.trim()
+    const noteParts = [
+      addressLine,
+      instructions ? `Note: ${instructions}` : null,
+      phone ? `Ph: ${phone}` : null,
+    ].filter(Boolean)
+
+    return {
+      name: '*** DELIVERY ORDER ***',
+      price: 0,
+      unitQty: 1,
+      note: noteParts.join(' | '),
+    }
+  }
+
+  return { name: '*** PICKUP ORDER ***', price: 0, unitQty: 1 }
+}
+
 function buildCloverLineItems(
   input: CreatePendingOrderInput,
   tax: number,
   serviceFee: number,
 ): CloverLineItem[] {
-  const lineItems: CloverLineItem[] = input.items.map((item) => ({
-    name: item.name,
-    price: item.price,
-    unitQty: item.quantity,
-    ...(item.instructions ? { note: item.instructions } : {}),
-  }))
+  const lineItems: CloverLineItem[] = [
+    buildFulfillmentHeaderLineItem(input),
+    ...input.items.map((item) => ({
+      name: item.name,
+      price: item.price,
+      unitQty: item.quantity,
+      ...(item.instructions ? { note: item.instructions } : {}),
+    })),
+  ]
 
   if (serviceFee > 0) {
     lineItems.push({ name: 'Service fee', price: serviceFee, unitQty: 1 })

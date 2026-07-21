@@ -18,7 +18,11 @@ import {
 } from '../../lib/services/cloverCheckout'
 import { Button } from '../../components/ui/Button'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
-import { DELIVERY_ENABLED } from '../../constants/config'
+import {
+  DELIVERY_ENABLED,
+  DELIVERY_FULFILLMENT_HOURS,
+  DELIVERY_MINIMUM_SUBTOTAL_CENTS,
+} from '../../constants/config'
 import { isApiConfigured } from '../../constants/api'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
@@ -37,12 +41,7 @@ import {
 import { CHECKOUT_RETURN_PATH } from '../../lib/authReturnTo'
 import { useLiveDeliveryQuote } from '../../hooks/useLiveDeliveryQuote'
 import { DeliveryQuote } from '../../types/delivery'
-import {
-  DropoffAddressInput,
-  extractFirstName,
-  isValidUSPhone,
-  toPickupTimeIso,
-} from '../../lib/deliveryUtils'
+import { DropoffAddressInput, isValidUSPhone } from '../../lib/deliveryUtils'
 
 function hasCheckoutAuth(firebaseUser: FirebaseUser | null, userProfile: User | null) {
   const email = userProfile?.email?.trim() || firebaseUser?.email?.trim()
@@ -73,9 +72,10 @@ export default function CheckoutIndex() {
   const [error, setError] = useState<string | null>(null)
   const autoPayStarted = useRef(false)
   const prepBufferMinutes = getPickupPrepBufferMinutes(location)
-  const fulfillmentHours = getOrderFulfillmentHours(location)
-
   const isDelivery = DELIVERY_ENABLED && cart.fulfillmentType === 'delivery'
+  const fulfillmentHours = isDelivery
+    ? DELIVERY_FULFILLMENT_HOURS
+    : getOrderFulfillmentHours(location)
   const dropoffAddress = useMemo<DropoffAddressInput | null>(() => {
     if (!street.trim() || !city.trim() || !zip.trim()) return null
     return {
@@ -91,7 +91,6 @@ export default function CheckoutIndex() {
 
   const customerDisplayName =
     userProfile?.displayName?.trim() || firebaseUser?.displayName?.trim() || ''
-  const dropoffContactGivenName = extractFirstName(customerDisplayName)
   const deliveryPhoneValid = isValidUSPhone(deliveryPhone)
 
   useEffect(() => {
@@ -109,7 +108,7 @@ export default function CheckoutIndex() {
       setDeliveryQuote({
         fee: quote.fee,
         etaMinutes: quote.etaMinutes,
-        externalDeliveryId: quote.externalDeliveryId,
+        distanceMiles: quote.distanceMiles,
       })
     },
     [setDeliveryQuote],
@@ -120,27 +119,16 @@ export default function CheckoutIndex() {
   }, [clearDeliveryQuote])
 
   const isAuthed = hasCheckoutAuth(firebaseUser, userProfile)
-
-  const pickupTimeIso = useMemo(
-    () =>
-      isDelivery
-        ? toPickupTimeIso(cart.pickupDate, cart.pickupTime, prepBufferMinutes)
-        : undefined,
-    [isDelivery, cart.pickupDate, cart.pickupTime, prepBufferMinutes],
-  )
+  const meetsDeliveryMinimum = !isDelivery || cartSubtotal >= DELIVERY_MINIMUM_SUBTOTAL_CENTS
 
   const {
     loading: quoteLoading,
     error: quoteError,
     refreshQuote,
   } = useLiveDeliveryQuote({
-    enabled: isDelivery && isAuthed && deliveryPhoneValid,
+    enabled: isDelivery && isAuthed && deliveryPhoneValid && meetsDeliveryMinimum,
     dropoffAddress,
-    orderValue: cartSubtotal,
-    items: cart.items,
-    dropoffPhoneNumber: deliveryPhone,
-    dropoffContactGivenName,
-    pickupTimeIso,
+    locationId,
     onQuote: handleQuote,
     onClear: handleClearQuote,
   })
@@ -149,10 +137,10 @@ export default function CheckoutIndex() {
     isPickupScheduleValid(cart.pickupDate, cart.pickupTime, prepBufferMinutes, fulfillmentHours) &&
     (isDelivery
       ? Boolean(
-          dropoffAddress &&
+          meetsDeliveryMinimum &&
+            dropoffAddress &&
             deliveryPhoneValid &&
             cart.deliveryQuoteReady &&
-            cart.externalDeliveryId &&
             !quoteLoading &&
             !quoteError,
         )
@@ -186,6 +174,12 @@ export default function CheckoutIndex() {
       if (isDelivery) {
         if (!deliveryPhoneValid) {
           setError('A valid US phone number is required for delivery.')
+          return
+        }
+        if (cartSubtotal < DELIVERY_MINIMUM_SUBTOTAL_CENTS) {
+          setError(
+            `Minimum order for delivery is $${(DELIVERY_MINIMUM_SUBTOTAL_CENTS / 100).toFixed(2)}.`,
+          )
           return
         }
         await refreshQuote()
@@ -257,7 +251,6 @@ export default function CheckoutIndex() {
           customerEmail,
           pickupDate: latestCart.pickupDate,
           pickupTime: latestCart.pickupTime,
-          doordashQuoteId: isDelivery ? latestCart.externalDeliveryId ?? '' : undefined,
         })
 
         saveCheckoutContext({
@@ -288,6 +281,7 @@ export default function CheckoutIndex() {
       dropoffAddress,
       deliveryPhone,
       deliveryPhoneValid,
+      cartSubtotal,
       quoteError,
       refreshQuote,
       customerDisplayName,
@@ -395,18 +389,28 @@ export default function CheckoutIndex() {
             />
             <View style={styles.quoteCard}>
               <View style={styles.quoteRow}>
-                <Ionicons name="bicycle" size={18} color="#FF3008" />
-                <Text style={styles.quoteLabel}>DoorDash Drive quote</Text>
+                <Ionicons name="bicycle" size={18} color={colors.gold} />
+                <Text style={styles.quoteLabel}>Delivery fee</Text>
               </View>
               {!isAuthed && !authLoading ? (
                 <Text style={styles.quotePending}>Sign in to get a live delivery quote</Text>
+              ) : !meetsDeliveryMinimum ? (
+                <Text style={styles.quoteError}>
+                  Add ${((DELIVERY_MINIMUM_SUBTOTAL_CENTS - cartSubtotal) / 100).toFixed(2)} more
+                  to meet the ${(DELIVERY_MINIMUM_SUBTOTAL_CENTS / 100).toFixed(2)} delivery
+                  minimum
+                </Text>
               ) : quoteLoading ? (
                 <Text style={styles.quotePending}>Getting live delivery quote…</Text>
               ) : quoteError ? (
                 <Text style={styles.quoteError}>{quoteError}</Text>
               ) : cart.deliveryQuoteReady ? (
                 <Text style={styles.quoteValue}>
-                  ${(cart.deliveryFee / 100).toFixed(2)} · ~{cart.deliveryEtaMinutes} min
+                  ${(cart.deliveryFee / 100).toFixed(2)}
+                  {cart.deliveryDistanceMiles != null
+                    ? ` · ${cart.deliveryDistanceMiles.toFixed(1)} mi`
+                    : ''}{' '}
+                  · ~{cart.deliveryEtaMinutes} min
                 </Text>
               ) : (
                 <Text style={styles.quotePending}>Enter your address for a live quote</Text>
@@ -434,6 +438,7 @@ export default function CheckoutIndex() {
             tip={cart.tip}
             fulfillmentType={cart.fulfillmentType}
             onSelectPercent={cart.setTipPercent}
+            onSelectCustom={cart.setTip}
           />
         </View>
 
@@ -456,10 +461,10 @@ export default function CheckoutIndex() {
             <SummaryLine label={TAXES_AND_FEES_LABEL} value={cart.tax + cart.serviceFee} />
             {isDelivery &&
               (cart.deliveryQuoteReady ? (
-                <SummaryLine label="DoorDash Delivery" value={cart.deliveryFee} />
+                <SummaryLine label="Delivery Fee" value={cart.deliveryFee} />
               ) : (
                 <View style={styles.summaryRow}>
-                  <Text style={styles.label}>DoorDash Delivery</Text>
+                  <Text style={styles.label}>Delivery Fee</Text>
                   <Text style={[styles.value, { color: colors.whiteMuted }]}>Pending quote</Text>
                 </View>
               ))}
@@ -490,15 +495,19 @@ export default function CheckoutIndex() {
             {!hasSelection
               ? 'Select a restaurant location to continue.'
               : isDelivery
-                ? !deliveryPhoneValid
-                  ? 'Enter a valid US phone number for delivery.'
-                  : quoteError
-                    ? 'Fix the delivery address or try again.'
-                    : quoteLoading
-                      ? 'Waiting for DoorDash delivery quote…'
-                      : !cart.deliveryQuoteReady
-                        ? 'Enter your delivery address for a live quote.'
-                        : ''
+                ? !meetsDeliveryMinimum
+                  ? `Add $${((DELIVERY_MINIMUM_SUBTOTAL_CENTS - cartSubtotal) / 100).toFixed(2)} more to meet the $${(DELIVERY_MINIMUM_SUBTOTAL_CENTS / 100).toFixed(2)} delivery minimum.`
+                  : !deliveryPhoneValid
+                    ? 'Enter a valid US phone number for delivery.'
+                    : quoteError
+                      ? 'Fix the delivery address or try again.'
+                      : quoteLoading
+                        ? 'Waiting for delivery quote…'
+                        : !cart.deliveryQuoteReady
+                          ? 'Enter your delivery address for a live quote.'
+                          : !isPickupScheduleValid(cart.pickupDate, cart.pickupTime, prepBufferMinutes, fulfillmentHours)
+                            ? 'Delivery is available 5:00pm–11:30pm. Choose a time in that window.'
+                            : ''
                 : 'Choose a pickup date and time to continue.'}
           </Text>
         ) : null}

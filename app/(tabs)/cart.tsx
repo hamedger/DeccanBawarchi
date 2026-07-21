@@ -233,16 +233,17 @@ export default function CartScreen() {
               tip={cart.tip}
               fulfillmentType={cart.fulfillmentType}
               onSelectPercent={cart.setTipPercent}
+              onSelectCustom={cart.setTip}
             />
 
             <SummaryRow label="Subtotal" value={cart.subtotal()} />
             <SummaryRow label={TAXES_AND_FEES_LABEL} value={cart.tax + cart.serviceFee} />
             {DELIVERY_ENABLED && cart.fulfillmentType === 'delivery' &&
               (cart.deliveryQuoteReady ? (
-                <SummaryRow label="DoorDash Delivery" value={cart.deliveryFee} muted />
+                <SummaryRow label="Delivery Fee" value={cart.deliveryFee} muted />
               ) : (
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>DoorDash Delivery</Text>
+                  <Text style={styles.summaryLabel}>Delivery Fee</Text>
                   <Text style={[styles.summaryValue, { color: colors.whiteMuted }]}>
                     Quoted at checkout
                   </Text>

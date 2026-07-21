@@ -2,7 +2,7 @@ import { startOfDay, subDays } from 'date-fns'
 import { toZonedTime, fromZonedTime } from 'date-fns-tz'
 import { Timestamp } from 'firebase/firestore'
 import { Order } from '../../types/order'
-import { isPaidOrder } from './orderAdmin'
+import { isOrderActive, isPaidOrder } from './orderAdmin'
 import { TIMEZONE } from '../../constants/config'
 
 export interface AdminStats {
@@ -32,8 +32,6 @@ function startOfWeekAgoTz(): Date {
   return subDays(today, 7)
 }
 
-const ACTIVE_STATUSES = new Set(['pending', 'placed', 'confirmed', 'preparing', 'ready', 'picked_up'])
-
 export function computeAdminStats(orders: Order[]): AdminStats {
   const todayStart = startOfTodayTz()
   const weekStart = startOfWeekAgoTz()
@@ -53,7 +51,7 @@ export function computeAdminStats(orders: Order[]): AdminStats {
     const created = toDate(order.createdAt)
     if (!created) continue
 
-    if (ACTIVE_STATUSES.has(order.status)) activeOrders += 1
+    if (isOrderActive(order)) activeOrders += 1
 
     if (created >= weekStart) {
       revenueWeekCents += order.total

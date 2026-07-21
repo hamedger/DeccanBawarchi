@@ -104,13 +104,22 @@ export const confirmCloverOrder = functions.https.onCall(
       const needsPaymentBackfill = !String(order.cloverPaymentId ?? '').trim() && !!paymentId
       const needsStaffNotify = order.staffNotified !== true
 
+      const summary = {
+        fulfillmentType: order.fulfillmentType,
+        total: order.total,
+        deliveryFee: order.deliveryFee,
+        deliveryAddress: order.deliveryAddress ?? null,
+        scheduledFor: order.scheduledFor ?? null,
+        pickupTime: order.pickupTime ?? null,
+      }
+
       if (status === 'pending') {
         tx.update(orderRef, {
           status: 'placed',
           cloverPaymentId: paymentId,
           updatedAt: FieldValue.serverTimestamp(),
         })
-        return { orderId, status: 'placed' as const, needsStaffNotify: true }
+        return { orderId, status: 'placed' as const, needsStaffNotify: true, ...summary }
       }
 
       if (POST_PAYMENT_STATUSES.has(status)) {
@@ -124,6 +133,7 @@ export const confirmCloverOrder = functions.https.onCall(
           orderId,
           status,
           needsStaffNotify: needsStaffNotify && (needsPaymentBackfill || hasOrderPayment(order)),
+          ...summary,
         }
       }
 
@@ -149,6 +159,15 @@ export const confirmCloverOrder = functions.https.onCall(
       }
     }
 
-    return { orderId: confirmResult.orderId, status: confirmResult.status }
+    return {
+      orderId: confirmResult.orderId,
+      status: confirmResult.status,
+      fulfillmentType: confirmResult.fulfillmentType,
+      total: confirmResult.total,
+      deliveryFee: confirmResult.deliveryFee,
+      deliveryAddress: confirmResult.deliveryAddress,
+      scheduledFor: confirmResult.scheduledFor,
+      pickupTime: confirmResult.pickupTime,
+    }
   },
 )
