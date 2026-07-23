@@ -5,6 +5,7 @@ import { useAdminOrders } from '../../hooks/useAdminOrders'
 import { useAllLocations } from '../../hooks/useLocations'
 import { resolveOrderLocationLabel } from '../../lib/locationUtils'
 import { useAdminLocationStore } from '../../store/adminLocationStore'
+import { useAdminNavAlertStore } from '../../store/adminNavAlertStore'
 import { AdminLocationFilter } from '../../components/admin/AdminLocationFilter'
 import {
   isOrderActive,
@@ -98,10 +99,15 @@ export default function AdminDeliveryScreen() {
   const filterLocationId = useAdminLocationStore((s) => s.filterLocationId)
   const hasHydrated = useAdminLocationStore((s) => s.hasHydrated)
   const { locations } = useAllLocations()
+  const markDeliveriesVisited = useAdminNavAlertStore((s) => s.markDeliveriesVisited)
 
   useEffect(() => {
     hydrate()
   }, [hydrate])
+
+  useEffect(() => {
+    markDeliveriesVisited()
+  }, [markDeliveriesVisited])
 
   const activeLocationId = filterLocationId ?? undefined
   const { orders, customerProfiles, loading: ordersLoading } = useAdminOrders(150, activeLocationId)

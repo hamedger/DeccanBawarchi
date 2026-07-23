@@ -13,6 +13,7 @@ import { useAdminOrders } from '../../hooks/useAdminOrders'
 import { useAllLocations } from '../../hooks/useLocations'
 import { resolveOrderLocationLabel } from '../../lib/locationUtils'
 import { useAdminLocationStore } from '../../store/adminLocationStore'
+import { useAdminNavAlertStore } from '../../store/adminNavAlertStore'
 import { AdminLocationFilter } from '../../components/admin/AdminLocationFilter'
 import {
   isOrderActive,
@@ -184,10 +185,15 @@ export default function AdminOrdersScreen() {
   const setFilterLocationId = useAdminLocationStore((s) => s.setFilterLocationId)
   const hasHydrated = useAdminLocationStore((s) => s.hasHydrated)
   const { locations } = useAllLocations()
+  const markOrdersVisited = useAdminNavAlertStore((s) => s.markOrdersVisited)
 
   useEffect(() => {
     hydrate()
   }, [hydrate])
+
+  useEffect(() => {
+    markOrdersVisited()
+  }, [markOrdersVisited])
 
   useEffect(() => {
     if (typeof locationParam === 'string' && locationParam.trim()) {

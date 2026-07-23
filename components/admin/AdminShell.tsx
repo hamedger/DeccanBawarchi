@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import {
   View,
   Text,
@@ -12,10 +12,18 @@ import { Ionicons } from '@expo/vector-icons'
 import { signOutAdmin } from '../../lib/adminAuth'
 import { useRevenueAccessStore } from '../../store/revenueAccessStore'
 import { useAdminLocationStore } from '../../store/adminLocationStore'
+import { useAdminNavAlertStore } from '../../store/adminNavAlertStore'
 import { useAdminOrders } from '../../hooks/useAdminOrders'
+import { isPaidOrder } from '../../lib/admin/orderAdmin'
+import { Order } from '../../types/order'
 import { AdminOrderAlerts } from './AdminOrderAlerts'
 import { AdminBuffetRefillAlerts } from './AdminBuffetRefillAlerts'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
+
+function orderCreatedAtMillis(order: Order): number {
+  const date = order.createdAt?.toDate?.()
+  return date ? date.getTime() : 0
+}
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: 'grid-outline' as const, exact: true },
@@ -44,6 +52,10 @@ export function AdminShell({ children }: AdminShellProps) {
   const hydrateLocationFilter = useAdminLocationStore((s) => s.hydrate)
   const filterLocationId = useAdminLocationStore((s) => s.filterLocationId)
   const { orders, customerProfiles, loading } = useAdminOrders(150, filterLocationId ?? undefined)
+  const hydrateNavAlerts = useAdminNavAlertStore((s) => s.hydrate)
+  const lastVisitedOrdersAt = useAdminNavAlertStore((s) => s.lastVisitedOrdersAt)
+  const lastVisitedDeliveriesAt = useAdminNavAlertStore((s) => s.lastVisitedDeliveriesAt)
+  const navAlertsHydrated = useAdminNavAlertStore((s) => s.hasHydrated)
 
   useEffect(() => {
     hydrateRevenueAccess()
@@ -52,6 +64,36 @@ export function AdminShell({ children }: AdminShellProps) {
   useEffect(() => {
     hydrateLocationFilter()
   }, [hydrateLocationFilter])
+
+  useEffect(() => {
+    hydrateNavAlerts()
+  }, [hydrateNavAlerts])
+
+  const newOrdersCount = useMemo(() => {
+    if (!navAlertsHydrated) return 0
+    return orders.filter(
+      (o) =>
+        isPaidOrder(o) &&
+        o.status !== 'cancelled' &&
+        orderCreatedAtMillis(o) > lastVisitedOrdersAt,
+    ).length
+  }, [orders, lastVisitedOrdersAt, navAlertsHydrated])
+
+  const newDeliveriesCount = useMemo(() => {
+    if (!navAlertsHydrated) return 0
+    return orders.filter(
+      (o) =>
+        o.fulfillmentType === 'delivery' &&
+        isPaidOrder(o) &&
+        o.status !== 'cancelled' &&
+        orderCreatedAtMillis(o) > lastVisitedDeliveriesAt,
+    ).length
+  }, [orders, lastVisitedDeliveriesAt, navAlertsHydrated])
+
+  const navBadges: Record<string, number> = {
+    '/admin/orders': newOrdersCount,
+    '/admin/delivery': newDeliveriesCount,
+  }
 
   const handleSignOut = async () => {
     lockRevenue()
@@ -85,6 +127,7 @@ export function AdminShell({ children }: AdminShellProps) {
       >
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.href, item.exact)
+          const badge = navBadges[item.href] ?? 0
           return (
             <TouchableOpacity
               key={item.href}
@@ -99,6 +142,11 @@ export function AdminShell({ children }: AdminShellProps) {
               <Text style={[styles.navLabel, active && styles.navLabelActive]}>{item.label}</Text>
               {'locked' in item && item.locked && !revenueUnlocked ? (
                 <Ionicons name="lock-closed" size={12} color={colors.whiteMuted} />
+              ) : null}
+              {badge > 0 ? (
+                <View style={styles.navBadge}>
+                  <Text style={styles.navBadgeText}>{badge > 99 ? '99+' : badge}</Text>
+                </View>
               ) : null}
             </TouchableOpacity>
           )
@@ -202,6 +250,20 @@ const styles = StyleSheet.create({
   },
   navLabelActive: {
     color: colors.gold,
+  },
+  navBadge: {
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    borderRadius: 10,
+    backgroundColor: colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navBadgeText: {
+    fontFamily: fonts.sansBold,
+    color: colors.white,
+    fontSize: 11,
   },
   content: {
     flex: 1,
