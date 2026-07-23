@@ -27,11 +27,18 @@ describe('pickupScheduling', () => {
   })
 
   it('includes ASAP for today and filters past slots', () => {
-    const today = getDefaultPickupDate()
-    const slots = getPickupTimeSlotsForDate(today, 30, northvilleHours)
-    expect(slots[0]).toBe(PICKUP_ASAP)
-    expect(slots.length).toBeGreaterThan(1)
-    expect(slots[slots.length - 1]).toBe('10:00 PM')
+    // ASAP is only offered while the restaurant is actually open, so pin "now" to
+    // a fixed time within Northville's hours (2:00 PM EDT) to keep this deterministic.
+    jest.useFakeTimers().setSystemTime(new Date('2099-06-15T18:00:00Z'))
+    try {
+      const today = getDefaultPickupDate()
+      const slots = getPickupTimeSlotsForDate(today, 30, northvilleHours)
+      expect(slots[0]).toBe(PICKUP_ASAP)
+      expect(slots.length).toBeGreaterThan(1)
+      expect(slots[slots.length - 1]).toBe('10:00 PM')
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('builds Farmington Hills slots through 11:30 PM', () => {

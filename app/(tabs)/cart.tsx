@@ -25,7 +25,6 @@ import { OrderItem } from '../../types/order'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { LocationConfirmCard } from '../../components/location/LocationConfirmCard'
 import { PickupScheduler } from '../../components/checkout/PickupScheduler'
-import { formatPickupSchedule } from '../../lib/services/pickupScheduling'
 import { formatLocationAddress, getOrderFulfillmentHours, getPickupPrepBufferMinutes } from '../../lib/locationUtils'
 
 function CartRow({
@@ -126,7 +125,6 @@ export default function CartScreen() {
   const isDelivery = DELIVERY_ENABLED && cart.fulfillmentType === 'delivery'
   const prepBufferMinutes = getPickupPrepBufferMinutes(location)
   const fulfillmentHours = getOrderFulfillmentHours(location)
-  const pickupSchedule = formatPickupSchedule(cart.pickupDate, cart.pickupTime)
 
   if (cart.items.length === 0) {
     return (
@@ -184,7 +182,6 @@ export default function CartScreen() {
             value={cart.fulfillmentType}
             onChange={cart.setFulfillmentType}
             pickupAddress={location ? formatLocationAddress(location.address) : undefined}
-            pickupSchedule={pickupSchedule}
           />
 
           <PickupScheduler

@@ -9,6 +9,8 @@ import { colors, spacing, fonts } from '../../constants/theme'
 export function FeaturedDishes() {
   const router = useRouter()
   const { width } = useWindowDimensions()
+  // Bestsellers are the same signature dishes at every location, so this intentionally
+  // doesn't filter by the selected location (unlike the Menu tab, which does).
   const { data: items = [], isLoading } = useMenu()
   const featured = items.filter((i) => i.tags?.includes('bestseller')).slice(0, 6)
   const cardWidth = getMenuCardWidth(width)

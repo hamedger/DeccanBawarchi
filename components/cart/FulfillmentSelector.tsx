@@ -21,14 +21,12 @@ interface FulfillmentSelectorProps {
   value: FulfillmentType
   onChange: (type: FulfillmentType) => void
   pickupAddress?: string
-  pickupSchedule?: string
 }
 
 export function FulfillmentSelector({
   value,
   onChange,
   pickupAddress,
-  pickupSchedule,
 }: FulfillmentSelectorProps) {
   return (
     <View style={styles.wrap}>
@@ -65,16 +63,11 @@ export function FulfillmentSelector({
           )}
         </View>
         {DELIVERY_ENABLED ? (
-          <>
-            <Text style={styles.cardMeta}>
-              {pickupSchedule ? pickupSchedule : 'Schedule date and time below'}
-            </Text>
-            <Text style={styles.cardHint}>
-              ${(DELIVERY_MINIMUM_SUBTOTAL_CENTS / 100).toFixed(0)} minimum order ·{' '}
-              {formatHour12(DELIVERY_FULFILLMENT_HOURS.open)}–{formatHour12(DELIVERY_FULFILLMENT_HOURS.close)}{' '}
-              daily
-            </Text>
-          </>
+          <Text style={styles.cardHint}>
+            ${(DELIVERY_MINIMUM_SUBTOTAL_CENTS / 100).toFixed(0)} minimum order ·{' '}
+            {formatHour12(DELIVERY_FULFILLMENT_HOURS.open)}–{formatHour12(DELIVERY_FULFILLMENT_HOURS.close)}{' '}
+            daily
+          </Text>
         ) : (
           <Text style={styles.cardHint}>
             Delivery is coming in a future update. Pickup is available now.
@@ -101,9 +94,6 @@ export function FulfillmentSelector({
             <View style={styles.radio} />
           )}
         </View>
-        <Text style={styles.cardMeta}>
-          {pickupSchedule ? pickupSchedule : 'Schedule date and time below'}
-        </Text>
         <Text style={styles.cardHint} numberOfLines={2}>
           {pickupAddress ?? RESTAURANT_ADDRESS}
         </Text>
@@ -178,12 +168,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2,
     borderColor: colors.borderStrong,
-  },
-  cardMeta: {
-    fontFamily: fonts.sansMedium,
-    color: colors.gold,
-    fontSize: 13,
-    marginLeft: 48,
   },
   cardHint: {
     fontFamily: fonts.sans,

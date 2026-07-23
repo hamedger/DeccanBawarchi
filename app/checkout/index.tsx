@@ -348,7 +348,6 @@ export default function CheckoutIndex() {
           value={cart.fulfillmentType}
           onChange={cart.setFulfillmentType}
           pickupAddress={location ? formatLocationAddress(location.address) : undefined}
-          pickupSchedule={formatPickupSchedule(cart.pickupDate, cart.pickupTime)}
         />
 
         {isDelivery ? (
