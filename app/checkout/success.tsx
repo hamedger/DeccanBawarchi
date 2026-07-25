@@ -34,6 +34,7 @@ export default function CheckoutSuccessScreen() {
     total?: string
   }>()
   const [confirmed, setConfirmed] = useState<ConfirmedCloverOrder | null>(null)
+  const [confirmFailed, setConfirmFailed] = useState(false)
 
   useEffect(() => {
     clearCart()
@@ -44,13 +45,43 @@ export default function CheckoutSuccessScreen() {
     const checkoutSessionId = params.session_id?.trim()
     if (!checkoutSessionId) return
 
-    confirmCloverOrderAfterRedirect(checkoutSessionId, params.orderId?.trim())
-      .then((result) => {
-        if (result) setConfirmed(result)
-      })
-      .catch(() => {
-        // Payment already succeeded per Clover's redirect; confirmation is best-effort reconciliation.
-      })
+    let cancelled = false
+    // Retry a few times with backoff: the confirm call can hit a cold Cloud Function
+    // instance, and a single silent failure here means the order may never show up
+    // for staff even though the customer was charged.
+    const delaysMs = [0, 2000, 5000]
+
+    const attempt = async () => {
+      for (let i = 0; i < delaysMs.length; i++) {
+        if (delaysMs[i] > 0) await new Promise((resolve) => setTimeout(resolve, delaysMs[i]))
+        if (cancelled) return
+        try {
+          const result = await confirmCloverOrderAfterRedirect(
+            checkoutSessionId,
+            params.orderId?.trim(),
+          )
+          if (cancelled) return
+          if (result) {
+            setConfirmed(result)
+            setConfirmFailed(false)
+            return
+          }
+        } catch (error) {
+          console.error('[checkout/success] confirmCloverOrder attempt failed', {
+            attempt: i + 1,
+            checkoutSessionId,
+            orderId: params.orderId,
+            error,
+          })
+        }
+      }
+      if (!cancelled) setConfirmFailed(true)
+    }
+
+    void attempt()
+    return () => {
+      cancelled = true
+    }
   }, [params.orderId, params.session_id])
 
   const saved = readCheckoutContext()
@@ -82,6 +113,17 @@ export default function CheckoutSuccessScreen() {
 
         <Text style={styles.title}>Payment Confirmed!</Text>
         <Text style={styles.orderId}>Order #{displayOrderId}</Text>
+
+        {confirmFailed ? (
+          <View style={styles.confirmErrorBanner}>
+            <Ionicons name="alert-circle-outline" size={18} color={colors.error} />
+            <Text style={styles.confirmErrorText}>
+              Your payment went through, but we had trouble syncing this order automatically.
+              Please call {RESTAURANT_PHONE} with your order number above to make sure the
+              restaurant has it.
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.detailCard}>
           <DetailRow
@@ -207,6 +249,25 @@ const styles = StyleSheet.create({
     color: colors.whiteMuted,
     fontSize: 14,
     marginBottom: spacing.lg,
+  },
+  confirmErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    width: '100%',
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.error,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  confirmErrorText: {
+    flex: 1,
+    fontFamily: fonts.sans,
+    color: colors.error,
+    fontSize: 12,
+    lineHeight: 18,
   },
   detailCard: {
     width: '100%',
