@@ -16,22 +16,46 @@ export async function reconcilePendingCloverOrders(): Promise<void> {
 
   const snapshot = await db.collection('orders').where('status', '==', 'pending').get()
 
+  let checked = 0
+  let recovered = 0
+  let skipped = 0
+
   for (const doc of snapshot.docs) {
     const order = doc.data()
     const checkoutSessionId = String(order.cloverCheckoutSessionId ?? '').trim()
-    if (!checkoutSessionId) continue
+    if (!checkoutSessionId) {
+      skipped++
+      continue
+    }
 
     const createdAt = order.createdAt?.toDate?.() ?? null
-    if (createdAt && createdAt < cutoff) continue
+    if (createdAt && createdAt < cutoff) {
+      skipped++
+      continue
+    }
 
     const locationId = String(order.locationId ?? '').trim()
-    if (!locationId) continue
+    if (!locationId) {
+      skipped++
+      continue
+    }
+
+    checked++
 
     try {
       const clover = getCloverLocationConfig(locationId)
       const status = await getCheckoutSessionStatus(clover, checkoutSessionId)
 
+      console.log('[cloverReconcile] Checked order', {
+        orderId: doc.id,
+        checkoutSessionId,
+        paid: status?.paid ?? null,
+        paymentId: status?.paymentId ?? null,
+        raw: status?.raw ?? null,
+      })
+
       if (status?.paid) {
+        recovered++
         console.log('[cloverReconcile] Recovering payment confirmation via poll', {
           orderId: doc.id,
           checkoutSessionId,
@@ -46,9 +70,20 @@ export async function reconcilePendingCloverOrders(): Promise<void> {
       })
     }
   }
+
+  console.log('[cloverReconcile] Poll cycle complete', {
+    totalPending: snapshot.size,
+    checked,
+    recovered,
+    skipped,
+  })
 }
 
 export function startCloverReconciliationPoller(intervalMs = 60_000): NodeJS.Timeout {
+  reconcilePendingCloverOrders().catch((err) => {
+    console.error('[cloverReconcile] Initial poll failed', err)
+  })
+
   return setInterval(() => {
     reconcilePendingCloverOrders().catch((err) => {
       console.error('[cloverReconcile] Poll cycle failed', err)
