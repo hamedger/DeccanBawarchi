@@ -53,29 +53,3 @@ export function formatOrderAlertBody(order: Order, customerName?: string): strin
   return parts.join(' · ')
 }
 
-export function showBrowserOrderNotification(
-  order: Order,
-  customerName?: string,
-): Notification | null {
-  if (typeof window === 'undefined' || !('Notification' in window)) return null
-  if (Notification.permission !== 'granted') return null
-
-  return new Notification(formatOrderAlertTitle(order), {
-    body: formatOrderAlertBody(order, customerName),
-    tag: `order-${order.id}`,
-    requireInteraction: true,
-  })
-}
-
-export type BrowserNotificationPermission = NotificationPermission | 'unsupported'
-
-export function getBrowserNotificationPermission(): BrowserNotificationPermission {
-  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported'
-  return Notification.permission
-}
-
-export async function requestBrowserNotificationPermission(): Promise<BrowserNotificationPermission> {
-  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported'
-  if (Notification.permission !== 'default') return Notification.permission
-  return Notification.requestPermission()
-}

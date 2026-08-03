@@ -1,15 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react'
-import { Platform, Text, TouchableOpacity, View, StyleSheet } from 'react-native'
+import React, { useEffect, useRef } from 'react'
+import { Modal, Platform, Text, TouchableOpacity, View, StyleSheet } from 'react-native'
 import { useAdminOrderAlerts } from '../../hooks/useAdminOrderAlerts'
 import { playKitchenChime } from '../../lib/admin/kitchenChime'
-import {
-  BrowserNotificationPermission,
-  getBrowserNotificationPermission,
-  requestBrowserNotificationPermission,
-} from '../../lib/admin/orderAlerts'
-import { OrderCustomerProfile } from '../../lib/admin/orderAdmin'
+import { formatOrderAlertBody, formatOrderAlertTitle } from '../../lib/admin/orderAlerts'
+import { resolveOrderCustomerInfo, OrderCustomerProfile } from '../../lib/admin/orderAdmin'
 import { Order } from '../../types/order'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
+
+const CHIME_REPEAT_MS = 8000
 
 interface AdminOrderAlertsProps {
   orders: Order[]
@@ -17,138 +15,112 @@ interface AdminOrderAlertsProps {
   customerProfiles: Map<string, OrderCustomerProfile>
 }
 
-function readPermission(): BrowserNotificationPermission {
-  return Platform.OS === 'web' ? getBrowserNotificationPermission() : 'unsupported'
-}
-
 /**
- * Listens for newly paid orders across admin pages and plays a kitchen chime
- * plus a browser notification (web only). Always shows alert status on web.
+ * Listens for newly paid orders across admin pages and blocks with a popup +
+ * repeating chime until staff acknowledges it. Deliberately not dismissible
+ * except via the OK button (no backdrop tap, no Escape/back) — autoprint at
+ * Clover isn't reliable, so this is the fallback for staff actually noticing
+ * a new order came in.
  */
 export function AdminOrderAlerts({ orders, loading, customerProfiles }: AdminOrderAlertsProps) {
-  const [permission, setPermission] = useState<BrowserNotificationPermission>(readPermission)
-
   const enabled = Platform.OS === 'web'
+  const { queue, dismissCurrent } = useAdminOrderAlerts(orders, loading, enabled)
+  const current = queue[0] ?? null
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    if (!enabled) return
-    setPermission(getBrowserNotificationPermission())
+    if (!current) return
 
-    const onFocus = () => setPermission(getBrowserNotificationPermission())
-    window.addEventListener('focus', onFocus)
-    return () => window.removeEventListener('focus', onFocus)
-  }, [enabled])
+    playKitchenChime()
+    intervalRef.current = setInterval(playKitchenChime, CHIME_REPEAT_MS)
 
-  useAdminOrderAlerts(orders, loading, customerProfiles, enabled)
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }, [current])
 
-  const enableNotifications = useCallback(async () => {
-    const next = await requestBrowserNotificationPermission()
-    setPermission(next)
-    if (next === 'granted') playKitchenChime()
-  }, [])
+  if (!enabled || !current) return null
 
-  if (!enabled) return null
-
-  if (permission === 'unsupported') {
-    return (
-      <View style={[styles.banner, styles.bannerWarn]}>
-        <Text style={styles.bannerText}>
-          Browser notifications are not available in this browser. Use Chrome or Safari over HTTPS.
-        </Text>
-      </View>
-    )
-  }
-
-  if (permission === 'granted') {
-    return (
-      <View style={[styles.banner, styles.bannerOk]}>
-        <Text style={styles.bannerText}>
-          Kitchen alerts on — chime + notifications for new orders and buffet refills.
-        </Text>
-        <TouchableOpacity style={styles.buttonSecondary} onPress={() => playKitchenChime()}>
-          <Text style={styles.buttonSecondaryText}>Test chime</Text>
-        </TouchableOpacity>
-      </View>
-    )
-  }
-
-  if (permission === 'denied') {
-    return (
-      <View style={[styles.banner, styles.bannerDenied]}>
-        <Text style={styles.bannerText}>
-          Notifications are blocked. Open site settings from the address bar → Notifications → Allow,
-          then reload this page.
-        </Text>
-      </View>
-    )
-  }
+  const customer = resolveOrderCustomerInfo(current, customerProfiles)
 
   return (
-    <View style={styles.banner}>
-      <Text style={styles.bannerText}>
-        Tap Enable to allow kitchen chimes and browser notifications for new paid orders and buffet
-        refills.
-      </Text>
-      <TouchableOpacity style={styles.button} onPress={() => void enableNotifications()}>
-        <Text style={styles.buttonText}>Enable</Text>
-      </TouchableOpacity>
-    </View>
+    <Modal visible transparent animationType="fade" onRequestClose={() => {}}>
+      <View style={styles.backdrop}>
+        <View style={styles.card}>
+          <Text style={styles.eyebrow}>New Order</Text>
+          <Text style={styles.title}>{formatOrderAlertTitle(current)}</Text>
+          <Text style={styles.body}>{formatOrderAlertBody(current, customer.name)}</Text>
+          {queue.length > 1 ? (
+            <Text style={styles.queueNote}>{queue.length - 1} more waiting</Text>
+          ) : null}
+          <TouchableOpacity style={styles.button} onPress={dismissCurrent}>
+            <Text style={styles.buttonText}>OK</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
   )
 }
 
 const styles = StyleSheet.create({
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.sm,
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    backgroundColor: 'rgba(212,175,55,0.08)',
-  },
-  bannerOk: {
-    borderColor: 'rgba(76,175,80,0.45)',
-    backgroundColor: 'rgba(76,175,80,0.1)',
-  },
-  bannerWarn: {
-    borderColor: 'rgba(255,193,7,0.45)',
-    backgroundColor: 'rgba(255,193,7,0.1)',
-  },
-  bannerDenied: {
-    borderColor: 'rgba(239,83,80,0.45)',
-    backgroundColor: 'rgba(239,83,80,0.1)',
-  },
-  bannerText: {
+  backdrop: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: colors.backgroundCard,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.gold,
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  eyebrow: {
+    fontFamily: fonts.sansMedium,
+    color: colors.gold,
+    fontSize: 12,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+  },
+  title: {
+    fontFamily: fonts.sansBold,
+    color: colors.white,
+    fontSize: 22,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  body: {
     fontFamily: fonts.sans,
     color: colors.whiteMuted,
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  queueNote: {
+    fontFamily: fonts.sans,
+    color: colors.gold,
     fontSize: 12,
-    lineHeight: 18,
+    marginTop: spacing.sm,
   },
   button: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: borderRadius.sm,
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
     backgroundColor: colors.gold,
+    minWidth: 140,
+    alignItems: 'center',
   },
   buttonText: {
     fontFamily: fonts.sansBold,
     color: colors.background,
-    fontSize: 12,
-  },
-  buttonSecondary: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-  },
-  buttonSecondaryText: {
-    fontFamily: fonts.sansBold,
-    color: colors.gold,
-    fontSize: 12,
+    fontSize: 16,
   },
 })

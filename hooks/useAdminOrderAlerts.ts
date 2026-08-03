@@ -1,22 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
-import { playKitchenChime } from '../lib/admin/kitchenChime'
 import {
   OrderAlertSnapshot,
   shouldAlertForNewPaidOrder,
-  showBrowserOrderNotification,
   snapshotOrderForAlerts,
 } from '../lib/admin/orderAlerts'
-import { resolveOrderCustomerInfo } from '../lib/admin/orderAdmin'
 import { Order } from '../types/order'
-import { OrderCustomerProfile } from '../lib/admin/orderAdmin'
 
-export function useAdminOrderAlerts(
-  orders: Order[],
-  loading: boolean,
-  customerProfiles: Map<string, OrderCustomerProfile>,
-  enabled: boolean,
-) {
+export function useAdminOrderAlerts(orders: Order[], loading: boolean, enabled: boolean) {
+  const [queue, setQueue] = useState<Order[]>([])
   const readyRef = useRef(false)
   const previousRef = useRef<Map<string, OrderAlertSnapshot>>(new Map())
   const alertedRef = useRef<Set<string>>(new Set())
@@ -34,6 +26,8 @@ export function useAdminOrderAlerts(
       return
     }
 
+    const newlyAlerted: Order[] = []
+
     for (const order of orders) {
       if (alertedRef.current.has(order.id)) {
         previousRef.current.set(order.id, snapshotOrderForAlerts(order))
@@ -48,10 +42,17 @@ export function useAdminOrderAlerts(
 
       alertedRef.current.add(order.id)
       previousRef.current.set(order.id, snapshotOrderForAlerts(order))
-
-      playKitchenChime()
-      const customer = resolveOrderCustomerInfo(order, customerProfiles)
-      showBrowserOrderNotification(order, customer.name)
+      newlyAlerted.push(order)
     }
-  }, [orders, loading, enabled, customerProfiles])
+
+    if (newlyAlerted.length > 0) {
+      setQueue((current) => [...current, ...newlyAlerted])
+    }
+  }, [orders, loading, enabled])
+
+  const dismissCurrent = useCallback(() => {
+    setQueue((current) => current.slice(1))
+  }, [])
+
+  return { queue, dismissCurrent }
 }
