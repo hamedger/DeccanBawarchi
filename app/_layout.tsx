@@ -149,6 +149,7 @@ export default function RootLayout() {
           <Stack.Screen name="loyalty" options={{ title: 'My Rewards' }} />
           <Stack.Screen name="admin" options={{ headerShown: false }} />
           <Stack.Screen name="kitchen/[locationId]" options={{ headerShown: false }} />
+          <Stack.Screen name="kitchen/buffet-refill/[locationId]" options={{ headerShown: false }} />
         </Stack>
         </AuthReadyGate>
       </View>
