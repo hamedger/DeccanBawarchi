@@ -44,10 +44,12 @@ describe('buffetService', () => {
   })
 
   describe('isWeekendDay', () => {
-    it('returns true only for Saturday', () => {
+    it('returns true for Saturday and Sunday', () => {
       const saturday = new Date('2026-06-06T12:00:00')
+      const sunday = new Date('2026-06-07T12:00:00')
       const friday = new Date('2026-06-05T12:00:00')
       expect(isWeekendDay(saturday)).toBe(true)
+      expect(isWeekendDay(sunday)).toBe(true)
       expect(isWeekendDay(friday)).toBe(false)
     })
   })
@@ -77,6 +79,31 @@ describe('buffetService', () => {
       expect(status.dinnerPrice).toBe(2499)
     })
 
+    it('reports open with weekend pricing on Sunday', () => {
+      const sundayNoon = new Date('2026-06-07T12:00:00')
+      const status = computeBuffetStatus({
+        config: null,
+        now: sundayNoon,
+        timezone: RESTAURANT_TIMEZONE,
+      })
+      expect(status.isOpen).toBe(true)
+      expect(status.isWeekend).toBe(true)
+      expect(status.lunchPrice).toBe(2499)
+      expect(status.dinnerPrice).toBe(2499)
+    })
+
+    it('uses weekday dinner pricing on a weekday evening', () => {
+      const mondayEvening = new Date('2026-06-08T18:00:00')
+      const status = computeBuffetStatus({
+        config: null,
+        now: mondayEvening,
+        timezone: RESTAURANT_TIMEZONE,
+      })
+      expect(status.isOpen).toBe(true)
+      expect(status.currentSession).toBe('dinner')
+      expect(status.currentPrice).toBe(2499)
+    })
+
     it('uses Firestore weekday and weekend prices for display cards', () => {
       const fridayNoon = new Date('2026-06-12T12:00:00')
       const status = computeBuffetStatus({
@@ -94,17 +121,6 @@ describe('buffetService', () => {
       expect(status.weekendPrice).toBe(2499)
       expect(status.lunchPrice).toBe(1799)
       expect(status.dinnerPrice).toBe(1799)
-    })
-
-    it('reports closed on Sunday', () => {
-      const sunday = new Date('2026-06-07T12:00:00')
-      const status = computeBuffetStatus({
-        config: null,
-        now: sunday,
-        timezone: RESTAURANT_TIMEZONE,
-      })
-      expect(status.isOpen).toBe(false)
-      expect(status.nextSessionLabel).toContain('Monday')
     })
 
     it('includes paused dishes on the customer buffet list', () => {

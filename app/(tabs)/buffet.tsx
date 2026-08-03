@@ -32,6 +32,7 @@ export default function BuffetScreen() {
     isOpen,
     currentSession,
     weekdayPrice,
+    weekdayDinnerPrice,
     weekendPrice,
     nextSessionLabel,
     countdownMinutes,
@@ -74,9 +75,18 @@ export default function BuffetScreen() {
         <View style={styles.priceCard}>
           <Text style={styles.priceEyebrow}>Weekday</Text>
           <Text style={styles.priceDays}>Monday – Friday</Text>
-          <Text style={styles.priceValue}>{formatCents(weekdayPrice)}</Text>
-          <Text style={styles.priceUnit}>per guest</Text>
-          <Text style={styles.priceHours}>11 AM – 3 PM · 5 PM – 9 PM</Text>
+          <View style={styles.priceSessionBlock}>
+            <Text style={styles.priceSessionTitle}>Lunch Buffet</Text>
+            <Text style={styles.priceSessionValue}>{formatCents(weekdayPrice)}</Text>
+            <Text style={styles.priceUnit}>per guest</Text>
+            <Text style={styles.priceHours}>11 AM – 3 PM</Text>
+          </View>
+          <View style={styles.priceSessionBlock}>
+            <Text style={styles.priceSessionTitle}>Dinner Buffet</Text>
+            <Text style={styles.priceSessionValue}>{formatCents(weekdayDinnerPrice)}</Text>
+            <Text style={styles.priceUnit}>per guest</Text>
+            <Text style={styles.priceHours}>5 PM – 9 PM</Text>
+          </View>
           <TouchableOpacity style={styles.outlineBtn} onPress={() => router.push('/reservation' as never)}>
             <Text style={styles.outlineBtnText}>Reserve</Text>
           </TouchableOpacity>
@@ -85,7 +95,7 @@ export default function BuffetScreen() {
         <View style={[styles.priceCard, styles.priceCardFeatured]}>
           <Text style={styles.featuredTag}>Popular</Text>
           <Text style={styles.priceEyebrow}>Weekend</Text>
-          <Text style={styles.priceDays}>Saturday</Text>
+          <Text style={styles.priceDays}>Saturday and Sunday</Text>
           <Text style={[styles.priceValue, styles.priceValueGold]}>{formatCents(weekendPrice)}</Text>
           <Text style={styles.priceUnit}>per guest</Text>
           <Text style={styles.priceHours}>11 AM – 3 PM · 5 PM – 9 PM</Text>
@@ -176,6 +186,17 @@ const styles = StyleSheet.create({
   priceDays: { fontFamily: fonts.sans, color: colors.whiteMuted, fontSize: 12, marginTop: 4, marginBottom: spacing.sm },
   priceValue: { fontFamily: fonts.display, color: colors.white, fontSize: 36, lineHeight: 40 },
   priceValueGold: { color: colors.goldBright },
+  priceSessionBlock: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  priceSessionTitle: {
+    fontFamily: fonts.sansMedium,
+    color: colors.whiteMuted,
+    fontSize: 13,
+    marginBottom: 2,
+  },
+  priceSessionValue: { fontFamily: fonts.display, color: colors.white, fontSize: 22, lineHeight: 28 },
   priceUnit: { fontFamily: fonts.sans, color: colors.whiteMuted, fontSize: 12 },
   priceHours: { fontFamily: fonts.sans, color: colors.whiteMuted, fontSize: 11, marginTop: spacing.sm, textAlign: 'center', lineHeight: 16 },
   outlineBtn: {

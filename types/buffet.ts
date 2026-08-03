@@ -40,9 +40,11 @@ export interface BuffetStatus {
   isWeekend: boolean
   lunchPrice: number
   dinnerPrice: number
-  /** Mon–Fri display price for marketing cards */
+  /** Mon–Fri lunch display price for marketing cards */
   weekdayPrice: number
-  /** Saturday display price for marketing cards */
+  /** Mon–Fri dinner display price for marketing cards */
+  weekdayDinnerPrice: number
+  /** Sat/Sun display price for marketing cards (lunch and dinner are the same) */
   weekendPrice: number
   nextSessionLabel: string
   countdownMinutes: number | null

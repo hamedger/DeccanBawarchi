@@ -11,7 +11,8 @@ export function toTimezoneDate(timezone: string, now = new Date()): Date {
 }
 
 export function isWeekendDay(d: Date): boolean {
-  return d.getDay() === 6
+  const day = d.getDay()
+  return day === 6 || day === 0
 }
 
 export function inSession(now: Date, start: string, end: string): boolean {
@@ -111,6 +112,7 @@ export function computeBuffetStatus({
     lunchPrice,
     dinnerPrice,
     weekdayPrice: weekdayLunchPrice,
+    weekdayDinnerPrice,
     weekendPrice: weekendLunchPrice,
     nextSessionLabel,
     countdownMinutes,
