@@ -8,7 +8,7 @@ import {
   orderNotificationInputFromDoc,
 } from '../email/orderNotificationInput'
 import { getResendMailConfig, resendApiKey } from '../email/resendConfig'
-import { hasOrderPayment, orderPaymentJustRecorded } from './orderPayment'
+import { orderConfirmed, orderPaymentJustRecorded, resolveCloverPaymentId } from './orderPayment'
 
 if (!admin.apps.length) admin.initializeApp()
 const db = admin.firestore()
@@ -30,7 +30,7 @@ export const notifyStaffOnOrder = onDocumentUpdated(
 
     if (!orderPaymentJustRecorded(before, after)) return
     if (after.staffNotified === true) return
-    if (!hasOrderPayment(after)) return
+    if (!orderConfirmed(after)) return
 
     const orderId = event.params.orderId
     const orderRef = event.data!.after.ref
@@ -39,10 +39,16 @@ export const notifyStaffOnOrder = onDocumentUpdated(
       const snap = await tx.get(orderRef)
       if (!snap.exists) return null
       const current = snap.data()!
-      if (current.staffNotified === true || !hasOrderPayment(current)) return null
+      if (current.staffNotified === true || !orderConfirmed(current)) return null
       if (current.status === 'cancelled') return null
+      // Backfill a fallback payment id when Clover never delivered one, so the
+      // order record is consistent and the customer-confirmation trigger fires.
+      const paymentBackfill = !String(current.cloverPaymentId ?? '').trim()
+        ? { cloverPaymentId: resolveCloverPaymentId(null, current.cloverCheckoutSessionId as string) }
+        : {}
       tx.update(orderRef, {
         staffNotified: true,
+        ...paymentBackfill,
         updatedAt: FieldValue.serverTimestamp(),
       })
       return current

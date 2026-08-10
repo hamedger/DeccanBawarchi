@@ -4,7 +4,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import * as functions from 'firebase-functions/v2'
 import { sendCustomerOrderConfirmationEmail } from '../email/customerOrderConfirmationEmail'
 import { getResendMailConfig, resendApiKey } from '../email/resendConfig'
-import { hasOrderPayment, orderPaymentJustRecorded } from './orderPayment'
+import { orderConfirmed, orderPaymentJustRecorded } from './orderPayment'
 
 if (!admin.apps.length) admin.initializeApp()
 const db = admin.firestore()
@@ -38,7 +38,7 @@ export const notifyCustomerOnOrderConfirmed = onDocumentUpdated(
 
     if (!orderPaymentJustRecorded(before, after)) return
     if (after.customerOrderConfirmationSent === true) return
-    if (!hasOrderPayment(after)) return
+    if (!orderConfirmed(after)) return
 
     const toEmail = String(after.guestEmail ?? '').trim()
     if (!toEmail) return
@@ -50,7 +50,7 @@ export const notifyCustomerOnOrderConfirmed = onDocumentUpdated(
       const snap = await tx.get(orderRef)
       if (!snap.exists) return null
       const current = snap.data()!
-      if (current.customerOrderConfirmationSent === true || !hasOrderPayment(current)) return null
+      if (current.customerOrderConfirmationSent === true || !orderConfirmed(current)) return null
       if (current.status === 'cancelled') return null
       tx.update(orderRef, {
         customerOrderConfirmationSent: true,
