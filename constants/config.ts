@@ -36,8 +36,8 @@ export const BUSINESS_HOURS = buildWeeklyLocationHours(
 
 /** Per-location pickup/delivery hours (24h HH:mm). */
 export const LOCATION_ORDER_FULFILLMENT_HOURS: Record<string, HourRange> = {
-  'northville-mi': { open: '11:30', close: '22:00' },
-  'farmington-hills-mi': { open: '11:30', close: '23:30' },
+  'northville-mi': { open: '12:00', close: '22:00' },
+  'farmington-hills-mi': { open: '12:00', close: '23:30' },
 }
 
 /** Max distance self-delivery drivers will travel; beyond this, delivery is declined. */

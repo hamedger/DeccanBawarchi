@@ -43,7 +43,7 @@ describe('pickupScheduling', () => {
 
   it('builds Farmington Hills slots through 11:30 PM', () => {
     const slots = buildPickupTimeSlots(farmingtonHours)
-    expect(slots[0]).toBe('11:30 AM')
+    expect(slots[0]).toBe('12:00 PM')
     expect(slots[slots.length - 1]).toBe('11:30 PM')
   })
 
@@ -73,7 +73,7 @@ describe('pickupScheduling', () => {
 
   it('provides input bounds for custom time picker', () => {
     const bounds = getCustomPickupTimeInputBounds('2099-06-15', 30, northvilleHours)
-    expect(bounds.min).toBe('11:30')
+    expect(bounds.min).toBe('12:00')
     expect(bounds.max).toBe('22:00')
     expect(pickupTimeFromInputValue('18:15')).toBe('6:15 PM')
   })
