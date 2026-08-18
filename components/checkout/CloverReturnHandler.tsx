@@ -27,6 +27,7 @@ export function CloverReturnHandler() {
   const clearCart = useCartStore((s) => s.clearCart)
   const handledRef = useRef<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [confirming, setConfirming] = useState(false)
 
   useEffect(() => {
     const checkoutSessionId = params.session_id?.trim()
@@ -35,6 +36,13 @@ export function CloverReturnHandler() {
     handledRef.current = checkoutSessionId
 
     const orderIdParam = params.orderId?.trim()
+
+    // Show this the instant we detect the redirect back, before the confirm
+    // call resolves — otherwise the cart still looks untouched while the
+    // webhook may already be confirming payment and sending the order email,
+    // which reads to the customer as "did my order go through?"
+    setConfirming(true)
+    setMessage('Confirming your payment…')
 
     void (async () => {
       let confirmedOrderId = orderIdParam ?? ''
@@ -48,6 +56,7 @@ export function CloverReturnHandler() {
       clearCart()
       clearCheckoutContext()
 
+      setConfirming(false)
       if (confirmedOrderId) {
         setMessage(`Payment confirmed! Order #${formatOrderShortId(confirmedOrderId)}`)
       } else {
@@ -66,7 +75,11 @@ export function CloverReturnHandler() {
 
   return (
     <View style={styles.banner} accessibilityRole="alert">
-      <Ionicons name="checkmark-circle" size={20} color={colors.background} />
+      <Ionicons
+        name={confirming ? 'time-outline' : 'checkmark-circle'}
+        size={20}
+        color={colors.background}
+      />
       <Text style={styles.bannerText}>{message}</Text>
     </View>
   )
