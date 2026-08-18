@@ -572,7 +572,7 @@ EXPO_PUBLIC_USE_AUTH_EMULATOR=true        # auto when functions emulator on
 | Script | Purpose |
 |--------|---------|
 | `npm run test:doordash-local` | Smoke-test quote via emulator + auth |
-| `npm run test:doordash-dispatch-e2e` | Full flow: create order → dispatch accept → webhook status |
+|    | Full flow: create order → dispatch accept → webhook status |
 | `npm run screenshot:doordash-ui` | Playwright browser screenshots of checkout quote UI |
 
 **Quote test env vars:**
