@@ -101,7 +101,6 @@ export function filterMenuForDisplay(
   return items
     .map((item) => withLocationAvailability(item, locationId))
     .filter((i) => itemAvailableAtLocation(i, locationId))
-    .filter((i) => isMenuItemOrderable(i, locationId))
     .filter((i) => !category || i.category === category)
     .sort((a, b) => {
       const avail = Number(isMenuItemOrderable(b, locationId)) - Number(isMenuItemOrderable(a, locationId))

@@ -46,7 +46,7 @@ describe('menuMerge location stock', () => {
     expect(isMenuItemOrderable(item, 'farmington-hills-mi')).toBe(false)
   })
 
-  it('hides unavailable items for a location in customer menu', () => {
+  it('keeps unavailable items visible but marked out of stock, sorted last', () => {
     const items: MenuItem[] = [
       baseItem,
       {
@@ -57,7 +57,8 @@ describe('menuMerge location stock', () => {
     ]
 
     const visible = filterMenuForDisplay(items, 'northville-mi')
-    expect(visible.map((i) => i.id)).toEqual(['test-item'])
+    expect(visible.map((i) => i.id)).toEqual(['test-item', 'sold-out-here'])
+    expect(isMenuItemOrderable(visible[1], 'northville-mi')).toBe(false)
   })
 
   it('applies location availability onto the item object', () => {
