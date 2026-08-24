@@ -58,8 +58,14 @@ export async function getCheckoutSessionStatus(
   )
 
   if (!response.ok) {
-    if (response.status === 404) return null
     const body = await response.text().catch(() => '')
+    if (response.status === 404) {
+      console.warn('[cloverCheckoutStatus] Status lookup 404 — endpoint may not exist for this session', {
+        checkoutSessionId,
+        body,
+      })
+      return null
+    }
     throw new Error(`Clover checkout status lookup failed (${response.status}): ${body}`)
   }
 
