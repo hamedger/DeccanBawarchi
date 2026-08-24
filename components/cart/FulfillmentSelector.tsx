@@ -6,6 +6,7 @@ import {
   DELIVERY_ENABLED,
   DELIVERY_FULFILLMENT_HOURS,
   DELIVERY_MINIMUM_SUBTOTAL_CENTS,
+  MAX_DELIVERY_RADIUS_MILES,
   RESTAURANT_ADDRESS,
 } from '../../constants/config'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
@@ -66,7 +67,7 @@ export function FulfillmentSelector({
           <Text style={styles.cardHint}>
             ${(DELIVERY_MINIMUM_SUBTOTAL_CENTS / 100).toFixed(0)} minimum order ·{' '}
             {formatHour12(DELIVERY_FULFILLMENT_HOURS.open)}–{formatHour12(DELIVERY_FULFILLMENT_HOURS.close)}{' '}
-            daily
+            daily · within {MAX_DELIVERY_RADIUS_MILES} miles of the restaurant
           </Text>
         ) : (
           <Text style={styles.cardHint}>

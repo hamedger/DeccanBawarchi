@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { View, Text, ScrollView, StyleSheet } from 'react-native'
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
 import { useCart } from '../../hooks/useCart'
@@ -402,7 +402,17 @@ export default function CheckoutIndex() {
               ) : quoteLoading ? (
                 <Text style={styles.quotePending}>Getting live delivery quote…</Text>
               ) : quoteError ? (
-                <Text style={styles.quoteError}>{quoteError}</Text>
+                <>
+                  <Text style={styles.quoteError}>{quoteError}</Text>
+                  {quoteError.includes('delivery range') ? (
+                    <TouchableOpacity
+                      style={styles.switchToPickupBtn}
+                      onPress={() => cart.setFulfillmentType('pickup')}
+                    >
+                      <Text style={styles.switchToPickupText}>Switch to Pickup</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </>
               ) : cart.deliveryQuoteReady ? (
                 <Text style={styles.quoteValue}>
                   ${(cart.deliveryFee / 100).toFixed(2)}
@@ -611,6 +621,20 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: 13,
     lineHeight: 18,
+  },
+  switchToPickupBtn: {
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.gold,
+  },
+  switchToPickupText: {
+    fontFamily: fonts.sansMedium,
+    color: colors.gold,
+    fontSize: 12,
   },
   summaryCard: {
     backgroundColor: colors.backgroundCard,

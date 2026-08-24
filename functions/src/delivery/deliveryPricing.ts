@@ -1,6 +1,6 @@
 export const FREE_DELIVERY_RADIUS_MILES = 1
 export const DELIVERY_RATE_CENTS_PER_MILE = 100
-export const MAX_DELIVERY_RADIUS_MILES = 10
+export const MAX_DELIVERY_RADIUS_MILES = 5
 
 export const STORE_COORDINATES: Record<string, { lat: number; lng: number }> = {
   'northville-mi': { lat: 42.415478, lng: -83.432717 },

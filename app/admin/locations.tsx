@@ -27,6 +27,7 @@ const EMPTY_FORM = {
   isActive: true,
   acceptsDelivery: true,
   acceptsPickup: true,
+  acceptsBuffet: true,
   pickupPrepBufferMinutes: '30',
 }
 
@@ -59,6 +60,7 @@ export default function AdminLocationsScreen() {
       isActive: location.isActive,
       acceptsDelivery: location.acceptsDelivery,
       acceptsPickup: location.acceptsPickup,
+      acceptsBuffet: location.acceptsBuffet ?? true,
       pickupPrepBufferMinutes: String(location.pickupPrepBufferMinutes ?? 30),
     })
   }
@@ -89,6 +91,7 @@ export default function AdminLocationsScreen() {
         isActive: form.isActive,
         acceptsDelivery: form.acceptsDelivery,
         acceptsPickup: form.acceptsPickup,
+        acceptsBuffet: form.acceptsBuffet,
         pickupPrepBufferMinutes,
         acceptsReservations: true,
         acceptsCatering: true,
@@ -217,6 +220,11 @@ export default function AdminLocationsScreen() {
                 label="Accepts pickup"
                 value={form.acceptsPickup}
                 onValueChange={(acceptsPickup) => setForm((f) => ({ ...f, acceptsPickup }))}
+              />
+              <ToggleRow
+                label="Runs the buffet"
+                value={form.acceptsBuffet}
+                onValueChange={(acceptsBuffet) => setForm((f) => ({ ...f, acceptsBuffet }))}
               />
               <View style={styles.formActions}>
                 <Button label="Cancel" variant="ghost" onPress={cancelEdit} />

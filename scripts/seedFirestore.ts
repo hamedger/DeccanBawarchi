@@ -356,7 +356,7 @@ async function seed() {
       weekendDinnerPrice: 2499,
       lunchStart: '11:30',
       lunchEnd: '15:00',
-      dinnerStart: '17:00',
+      dinnerStart: '18:00',
       dinnerEnd: '21:00',
       buffetDays: [0, 1, 2, 3, 4, 5, 6],
       todaysDishes: createDefaultBuffetDishes(STATIC_MENU),

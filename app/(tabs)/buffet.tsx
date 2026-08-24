@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { useRouter } from 'expo-router'
 import { useBuffet } from '../../hooks/useBuffet'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
+import { useLocationStore } from '../../store/locationStore'
 import { formatLocationShort } from '../../lib/locationUtils'
 import { HalalBadge } from '../../components/brand/HalalBadge'
 import { PageIntro } from '../../components/layout/PageIntro'
@@ -27,7 +28,13 @@ function StatusBadge({ isOpen, label }: { isOpen: boolean; label: string }) {
 
 export default function BuffetScreen() {
   const router = useRouter()
-  const { location } = useSelectedLocation()
+  const { location, locations } = useSelectedLocation()
+  const setSelectedLocationId = useLocationStore((s) => s.setSelectedLocationId)
+  const locationAcceptsBuffet = location?.acceptsBuffet ?? true
+  const buffetLocation = useMemo(
+    () => locations.find((l) => (l.acceptsBuffet ?? true) && l.id !== location?.id) ?? null,
+    [locations, location?.id],
+  )
   const {
     isOpen,
     currentSession,
@@ -50,6 +57,48 @@ export default function BuffetScreen() {
     : countdownMinutes
     ? `Opens in ${Math.floor(countdownMinutes / 60)}h ${countdownMinutes % 60}m`
     : nextSessionLabel
+
+  if (location && !locationAcceptsBuffet) {
+    return (
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        <View style={styles.halalBar}>
+          <HalalBadge size="sm" />
+          <Text style={styles.halalText}>
+            100% Zabiha Halal · {formatLocationShort(location)}
+          </Text>
+        </View>
+
+        <PageIntro
+          eyebrow="Daily Royal Feast"
+          title="The Buffet"
+          subtitle={`No buffet at ${formatLocationShort(location)}.`}
+        />
+
+        <View style={styles.noBuffetCard}>
+          <Text style={styles.noBuffetTitle}>No Buffet at This Location</Text>
+          <Text style={styles.noBuffetText}>
+            {location.name} doesn&apos;t offer the buffet.
+            {buffetLocation ? ` It's served at ${buffetLocation.name}.` : ''} You can still order
+            à la carte from our full menu here.
+          </Text>
+          {buffetLocation ? (
+            <TouchableOpacity
+              style={styles.goldBtnWide}
+              onPress={() => setSelectedLocationId(buffetLocation.id)}
+            >
+              <Text style={styles.goldBtnText}>Switch to {buffetLocation.name}</Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity
+            style={styles.outlineBtn}
+            onPress={() => router.push('/(tabs)/menu' as never)}
+          >
+            <Text style={styles.outlineBtnText}>Order From Menu</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    )
+  }
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -85,7 +134,7 @@ export default function BuffetScreen() {
             <Text style={styles.priceSessionTitle}>Dinner Buffet</Text>
             <Text style={styles.priceSessionValue}>{formatCents(weekdayDinnerPrice)}</Text>
             <Text style={styles.priceUnit}>per guest</Text>
-            <Text style={styles.priceHours}>5 PM – 9 PM</Text>
+            <Text style={styles.priceHours}>6 PM – 9 PM</Text>
           </View>
           <TouchableOpacity style={styles.outlineBtn} onPress={() => router.push('/reservation' as never)}>
             <Text style={styles.outlineBtnText}>Reserve</Text>
@@ -98,7 +147,7 @@ export default function BuffetScreen() {
           <Text style={styles.priceDays}>Saturday and Sunday</Text>
           <Text style={[styles.priceValue, styles.priceValueGold]}>{formatCents(weekendPrice)}</Text>
           <Text style={styles.priceUnit}>per guest</Text>
-          <Text style={styles.priceHours}>11 AM – 3 PM · 5 PM – 9 PM</Text>
+          <Text style={styles.priceHours}>11 AM – 3 PM · 6 PM – 9 PM</Text>
           <TouchableOpacity style={styles.goldBtn} onPress={() => router.push('/reservation' as never)}>
             <Text style={styles.goldBtnText}>Reserve</Text>
           </TouchableOpacity>
@@ -149,6 +198,30 @@ const styles = StyleSheet.create({
   },
   halalText: { fontFamily: fonts.sans, color: colors.whiteMuted, fontSize: 12 },
   statusWrap: { alignItems: 'center', paddingBottom: spacing.lg },
+  noBuffetCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: borderRadius.sm,
+    backgroundColor: 'rgba(212,175,55,0.06)',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  noBuffetTitle: {
+    fontFamily: fonts.display,
+    color: colors.gold,
+    fontSize: 22,
+    textAlign: 'center',
+  },
+  noBuffetText: {
+    fontFamily: fonts.sans,
+    color: colors.whiteMuted,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',

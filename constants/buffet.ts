@@ -15,7 +15,7 @@ export const BUFFET_PRICING = {
 
 export const BUFFET_HOURS = {
   lunch: { start: '11:00', end: '15:00' },
-  dinner: { start: '17:00', end: '21:00' },
+  dinner: { start: '18:00', end: '21:00' },
 }
 
 // 0=Sun, 1=Mon ... 6=Sat — buffet runs every day; Sat/Sun use weekend pricing

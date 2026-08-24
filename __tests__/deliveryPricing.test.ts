@@ -20,8 +20,8 @@ describe('deliveryPricing', () => {
   })
 
   it('flags distances beyond the max delivery radius for the caller to reject', () => {
-    expect(MAX_DELIVERY_RADIUS_MILES).toBe(10)
-    expect(11 > MAX_DELIVERY_RADIUS_MILES).toBe(true)
+    expect(MAX_DELIVERY_RADIUS_MILES).toBe(5)
+    expect(6 > MAX_DELIVERY_RADIUS_MILES).toBe(true)
   })
 
   it('computes zero distance between identical coordinates', () => {

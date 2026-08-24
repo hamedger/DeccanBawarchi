@@ -9,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { useRouter } from 'expo-router'
 import { useBuffet } from '../../hooks/useBuffet'
+import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 function formatCents(cents: number) {
@@ -17,7 +18,11 @@ function formatCents(cents: number) {
 
 export function BuffetBanner() {
   const router = useRouter()
-  const { isOpen, currentPrice, nextSessionLabel, countdownMinutes, isLoading } = useBuffet()
+  const { location } = useSelectedLocation()
+  const acceptsBuffet = location?.acceptsBuffet ?? true
+  const { isOpen, currentPrice, nextSessionLabel, countdownMinutes, isLoading } = useBuffet(
+    location?.id,
+  )
 
   const pulse = useSharedValue(1)
 
@@ -35,7 +40,7 @@ export function BuffetBanner() {
 
   const dotStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }))
 
-  if (isLoading) return null
+  if (isLoading || !acceptsBuffet) return null
 
   const label = isOpen
     ? `Buffet Open Now — ${formatCents(currentPrice)}/person`

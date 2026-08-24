@@ -28,6 +28,8 @@ export interface Location {
   acceptsPickup: boolean
   acceptsReservations: boolean
   acceptsCatering: boolean
+  /** Whether this location runs the buffet. Missing/undefined defaults to true. */
+  acceptsBuffet?: boolean
   deliveryRadius: number
   timezone: string
   /** Minutes before earliest same-day pickup slot (ASAP still uses checkout ETA). */

@@ -19,7 +19,7 @@ export function defaultBuffetConfigFields(
     weekendDinnerPrice: BUFFET_PRICING.weekend.dinner,
     lunchStart: '11:00',
     lunchEnd: '15:00',
-    dinnerStart: '17:00',
+    dinnerStart: '18:00',
     dinnerEnd: '21:00',
     buffetDays: [1, 2, 3, 4, 5, 6],
     todaysDishes: createDefaultBuffetDishes(menuItems),

@@ -41,7 +41,7 @@ export const LOCATION_ORDER_FULFILLMENT_HOURS: Record<string, HourRange> = {
 }
 
 /** Max distance self-delivery drivers will travel; beyond this, delivery is declined. */
-export const MAX_DELIVERY_RADIUS_MILES = 10
+export const MAX_DELIVERY_RADIUS_MILES = 5
 /** Delivery is free up to this distance from the ordering location. */
 export const FREE_DELIVERY_RADIUS_MILES = 1
 export const DELIVERY_RATE_CENTS_PER_MILE = 100
