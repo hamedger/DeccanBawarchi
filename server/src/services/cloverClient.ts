@@ -77,19 +77,30 @@ export async function createCheckoutSession(
     }
   }
 
-  const response = await fetch(
-    `${config.clover.apiBaseUrl}/invoicingcheckoutservice/v1/checkouts`,
-    {
-      method: 'POST',
-      headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        'X-Clover-Merchant-Id': merchantId,
-        Authorization: `Bearer ${privateKey}`,
+  let response: Response
+  try {
+    response = await fetch(
+      `${config.clover.apiBaseUrl}/invoicingcheckoutservice/v1/checkouts`,
+      {
+        method: 'POST',
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+          'X-Clover-Merchant-Id': merchantId,
+          Authorization: `Bearer ${privateKey}`,
+        },
+        body: JSON.stringify(body),
+        // Without a timeout, a slow/hanging Clover response hangs the whole checkout
+        // request indefinitely instead of failing fast with a retryable message.
+        signal: AbortSignal.timeout(15_000),
       },
-      body: JSON.stringify(body),
-    },
-  )
+    )
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      throw new Error('Clover is taking too long to respond. Please try again in a moment.')
+    }
+    throw error
+  }
 
   const payload = (await response.json().catch(() => ({}))) as CloverCheckoutSession & {
     message?: string
