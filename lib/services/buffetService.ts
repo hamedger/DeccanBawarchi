@@ -63,14 +63,18 @@ export function computeBuffetStatus({
   let currentPrice = 0
 
   if (isBuffetDay) {
-    const lunchActive =
-      config?.isLunchActive ??
-      inSession(detroitNow, BUFFET_HOURS.lunch.start, BUFFET_HOURS.lunch.end)
-    const dinnerActive =
-      config?.isDinnerActive ??
-      inSession(detroitNow, BUFFET_HOURS.dinner.start, BUFFET_HOURS.dinner.end)
+    const inLunchWindow = inSession(detroitNow, BUFFET_HOURS.lunch.start, BUFFET_HOURS.lunch.end)
+    const inDinnerWindow = inSession(detroitNow, BUFFET_HOURS.dinner.start, BUFFET_HOURS.dinner.end)
+    const lunchActive = config?.isLunchActive ?? inLunchWindow
+    const dinnerActive = config?.isDinnerActive ?? inDinnerWindow
 
-    if (lunchActive) {
+    // Prefer whichever session's actual clock window we're in, so a stale/forced flag
+    // for the other session (e.g. both left on) can't override the real time of day.
+    if (inDinnerWindow && dinnerActive) {
+      currentSession = 'dinner'
+      isOpen = true
+      currentPrice = dinnerPrice
+    } else if (inLunchWindow && lunchActive) {
       currentSession = 'lunch'
       isOpen = true
       currentPrice = lunchPrice
@@ -78,6 +82,10 @@ export function computeBuffetStatus({
       currentSession = 'dinner'
       isOpen = true
       currentPrice = dinnerPrice
+    } else if (lunchActive) {
+      currentSession = 'lunch'
+      isOpen = true
+      currentPrice = lunchPrice
     }
   }
 

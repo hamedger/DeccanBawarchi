@@ -2,19 +2,28 @@ import * as functions from 'firebase-functions/v2/scheduler'
 import * as admin from 'firebase-admin'
 
 const db = admin.firestore()
-const LOCATION_ID = 'northville-mi'
 const TIMEZONE = 'America/Detroit'
 
-function isSunday(): boolean {
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: TIMEZONE }))
-  return now.getDay() === 0
+/** Every location currently running the buffet — mirrors the client's acceptsBuffet gating. */
+async function buffetLocationIds(): Promise<string[]> {
+  const snap = await db.collection('locations').get()
+  return snap.docs
+    .filter((doc) => doc.data().acceptsBuffet !== false)
+    .map((doc) => doc.id)
 }
 
-// 11:00 AM Detroit — open lunch (Mon–Sat)
+async function updateBuffetLocations(fields: Record<string, boolean>): Promise<void> {
+  const locationIds = await buffetLocationIds()
+  await Promise.all(
+    locationIds.map((id) => db.collection('buffet').doc(id).update(fields)),
+  )
+}
+
+// 11:00 AM Detroit — open lunch (Mon–Sat). Keep in sync with BUFFET_HOURS.lunch in constants/buffet.ts.
 export const openLunch = functions.onSchedule(
   { schedule: '0 11 * * 1-6', timeZone: TIMEZONE },
   async () => {
-    await db.collection('buffet').doc(LOCATION_ID).update({ isLunchActive: true })
+    await updateBuffetLocations({ isLunchActive: true })
   },
 )
 
@@ -22,16 +31,15 @@ export const openLunch = functions.onSchedule(
 export const closeLunch = functions.onSchedule(
   { schedule: '0 15 * * 1-6', timeZone: TIMEZONE },
   async () => {
-    await db.collection('buffet').doc(LOCATION_ID).update({ isLunchActive: false })
+    await updateBuffetLocations({ isLunchActive: false })
   },
 )
 
-// 5:00 PM Detroit — open dinner (Mon–Sat)
+// 6:00 PM Detroit — open dinner (Mon–Sat). Keep in sync with BUFFET_HOURS.dinner in constants/buffet.ts.
 export const openDinner = functions.onSchedule(
-  { schedule: '0 17 * * 1-6', timeZone: TIMEZONE },
+  { schedule: '0 18 * * 1-6', timeZone: TIMEZONE },
   async () => {
-    if (isSunday()) return
-    await db.collection('buffet').doc(LOCATION_ID).update({ isDinnerActive: true })
+    await updateBuffetLocations({ isDinnerActive: true })
   },
 )
 
@@ -39,6 +47,6 @@ export const openDinner = functions.onSchedule(
 export const closeDinner = functions.onSchedule(
   { schedule: '0 21 * * 1-6', timeZone: TIMEZONE },
   async () => {
-    await db.collection('buffet').doc(LOCATION_ID).update({ isDinnerActive: false })
+    await updateBuffetLocations({ isDinnerActive: false })
   },
 )
