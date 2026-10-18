@@ -48,3 +48,7 @@ services:
         value: orders@deccanbawarchi.com
       - key: ORDERS_NOTIFICATION_EMAIL
         sync: false
+      - key: CLOVER_ORDERS_API_TOKEN
+        sync: false
+      - key: CLOVER_ORDERS_IMPORT_ORDER_TYPES
+        sync: false

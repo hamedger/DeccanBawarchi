@@ -98,6 +98,11 @@ function OrderCard({
           <Text style={styles.orderTime}>{formatOrderTime(order.createdAt)}</Text>
         </View>
         <View style={styles.headerBadges}>
+          {order.source === 'clover_online' ? (
+            <View style={[styles.statusPill, { borderColor: colors.gold }]}>
+              <Text style={[styles.statusText, { color: colors.gold }]}>CLOVER ONLINE</Text>
+            </View>
+          ) : null}
           <View
             style={[
               styles.fulfillmentBadge,

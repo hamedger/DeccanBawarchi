@@ -1,6 +1,7 @@
 import './env'
 import { createApp } from './app'
 import { config } from './config'
+import { startCloverOrderImportPoller } from './services/cloverOrderImport'
 import { startCloverReconciliationPoller } from './services/cloverReconcile'
 
 const app = createApp()
@@ -10,3 +11,4 @@ app.listen(config.port, () => {
 })
 
 startCloverReconciliationPoller()
+startCloverOrderImportPoller()

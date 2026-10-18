@@ -53,6 +53,9 @@ export interface Order {
   cloverCheckoutSessionId?: string
   cloverPaymentId?: string
   notes: string
+  /** 'clover_online' = imported from the Clover Online Ordering storefront; absent = placed in-app. */
+  source?: 'clover_online'
+  cloverOrderId?: string
   createdAt: Timestamp
   updatedAt: Timestamp
 }
