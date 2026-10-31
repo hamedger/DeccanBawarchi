@@ -3,9 +3,9 @@ import { DEFAULT_LOCATION_ID } from '../constants/config'
 import { STATIC_LOCATIONS } from '../constants/staticLocations'
 import { useLocationStore } from '../store/locationStore'
 import { useLocations } from './useLocations'
-import { isLocationActive, normalizeLocationId } from '../lib/locationUtils'
+import { isWebsiteLocation, normalizeLocationId } from '../lib/locationUtils'
 
-const PICKABLE_LOCATIONS = STATIC_LOCATIONS.filter(isLocationActive)
+const PICKABLE_LOCATIONS = STATIC_LOCATIONS.filter(isWebsiteLocation)
 
 export function useSelectedLocation() {
   const hydrate = useLocationStore((s) => s.hydrate)

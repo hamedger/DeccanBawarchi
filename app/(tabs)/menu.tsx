@@ -1,12 +1,29 @@
 import React from 'react'
 import { View, StyleSheet, Platform } from 'react-native'
+import { CloverOrderButtons } from '../../components/menu/CloverOrderButtons'
 import { MenuCatalog } from '../../components/menu/MenuCatalog'
-import { colors } from '../../constants/theme'
+import { colors, spacing } from '../../constants/theme'
+import { useSelectedLocation } from '../../hooks/useSelectedLocation'
+import { usesCloverOnlineOrdering } from '../../lib/locationUtils'
+
+const ORDER_BAR_MAX = 640
 
 export default function MenuScreen() {
+  const { location } = useSelectedLocation()
+  const cloverOrdering = usesCloverOnlineOrdering(location)
+
   return (
     <View style={styles.root}>
-      <MenuCatalog />
+      <View style={styles.catalog}>
+        <MenuCatalog />
+      </View>
+      {cloverOrdering && location?.onlineOrderingUrl ? (
+        <View style={styles.orderBar}>
+          <View style={styles.orderBarInner}>
+            <CloverOrderButtons orderingUrl={location.onlineOrderingUrl} />
+          </View>
+        </View>
+      ) : null}
     </View>
   )
 }
@@ -16,5 +33,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     ...(Platform.OS === 'web' ? { minHeight: 0, height: '100%' as const } : null),
+  },
+  catalog: {
+    flex: 1,
+    minHeight: 0,
+  },
+  orderBar: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    alignItems: 'center',
+  },
+  orderBarInner: {
+    width: '100%',
+    maxWidth: ORDER_BAR_MAX,
   },
 })

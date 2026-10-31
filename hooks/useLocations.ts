@@ -4,15 +4,15 @@ import { db, isFirebaseConfigured } from '../lib/firebase'
 import { handleFirestoreListenerError } from '../lib/firestoreErrors'
 import { STATIC_LOCATIONS } from '../constants/staticLocations'
 import { Location } from '../types/location'
-import { isLocationActive, mergePickableLocations, mergeAllLocations } from '../lib/locationUtils'
+import { isWebsiteLocation, mergePickableLocations, mergeAllLocations } from '../lib/locationUtils'
 
 export function useLocations() {
-  const [locations, setLocations] = useState<Location[]>(STATIC_LOCATIONS)
+  const [locations, setLocations] = useState<Location[]>(() => STATIC_LOCATIONS.filter(isWebsiteLocation))
   const [loading, setLoading] = useState(isFirebaseConfigured)
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
-      setLocations(STATIC_LOCATIONS.filter(isLocationActive))
+      setLocations(STATIC_LOCATIONS.filter(isWebsiteLocation))
       setLoading(false)
       return
     }
@@ -22,7 +22,7 @@ export function useLocations() {
       q,
       (snap) => {
         if (snap.empty) {
-          setLocations(STATIC_LOCATIONS.filter(isLocationActive))
+          setLocations(STATIC_LOCATIONS.filter(isWebsiteLocation))
         } else {
           const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Location))
           setLocations(mergePickableLocations(docs))
@@ -31,7 +31,7 @@ export function useLocations() {
       },
       (error) => {
         handleFirestoreListenerError(error, 'locations listener')
-        setLocations(STATIC_LOCATIONS.filter(isLocationActive))
+        setLocations(STATIC_LOCATIONS.filter(isWebsiteLocation))
         setLoading(false)
       },
     )

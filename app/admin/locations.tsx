@@ -28,6 +28,8 @@ const EMPTY_FORM = {
   acceptsDelivery: true,
   acceptsPickup: true,
   acceptsBuffet: true,
+  onlineOrderingUrl: '',
+  onlineOrderingEnabled: false,
   pickupPrepBufferMinutes: '30',
 }
 
@@ -61,6 +63,8 @@ export default function AdminLocationsScreen() {
       acceptsDelivery: location.acceptsDelivery,
       acceptsPickup: location.acceptsPickup,
       acceptsBuffet: location.acceptsBuffet ?? true,
+      onlineOrderingUrl: location.onlineOrderingUrl ?? '',
+      onlineOrderingEnabled: location.onlineOrderingEnabled ?? false,
       pickupPrepBufferMinutes: String(location.pickupPrepBufferMinutes ?? 30),
     })
   }
@@ -92,6 +96,8 @@ export default function AdminLocationsScreen() {
         acceptsDelivery: form.acceptsDelivery,
         acceptsPickup: form.acceptsPickup,
         acceptsBuffet: form.acceptsBuffet,
+        onlineOrderingUrl: form.onlineOrderingUrl.trim(),
+        onlineOrderingEnabled: form.onlineOrderingEnabled,
         pickupPrepBufferMinutes,
         acceptsReservations: true,
         acceptsCatering: true,
@@ -225,6 +231,20 @@ export default function AdminLocationsScreen() {
                 label="Runs the buffet"
                 value={form.acceptsBuffet}
                 onValueChange={(acceptsBuffet) => setForm((f) => ({ ...f, acceptsBuffet }))}
+              />
+              <Input
+                label="Clover Online Ordering URL"
+                value={form.onlineOrderingUrl}
+                onChangeText={(onlineOrderingUrl) => setForm((f) => ({ ...f, onlineOrderingUrl }))}
+                placeholder="https://your-store.cloveronline.com"
+                autoCapitalize="none"
+              />
+              <ToggleRow
+                label="Redirect ordering to Clover (instead of in-app cart)"
+                value={form.onlineOrderingEnabled}
+                onValueChange={(onlineOrderingEnabled) =>
+                  setForm((f) => ({ ...f, onlineOrderingEnabled }))
+                }
               />
               <View style={styles.formActions}>
                 <Button label="Cancel" variant="ghost" onPress={cancelEdit} />

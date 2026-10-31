@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { useDeliveryQuote } from '../../hooks/useDeliveryQuote'
+import { DEFAULT_LOCATION_ID } from '../../constants/config'
 import { colors, spacing } from '../../constants/theme'
 
 export default function DeliveryScreen() {
@@ -21,7 +22,7 @@ export default function DeliveryScreen() {
       dropoffCity: city,
       dropoffState: 'MI',
       dropoffZip: zip,
-      locationId: 'northville-mi',
+      locationId: DEFAULT_LOCATION_ID,
     })
   }
 
@@ -29,7 +30,7 @@ export default function DeliveryScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Delivery Address</Text>
       <Input label="Street Address" value={street} onChangeText={setStreet} placeholder="123 Main St" />
-      <Input label="City" value={city} onChangeText={setCity} placeholder="Northville" />
+      <Input label="City" value={city} onChangeText={setCity} placeholder="Farmington Hills" />
       <Input label="ZIP Code" value={zip} onChangeText={setZip} keyboardType="number-pad" placeholder="48167" />
       <Input label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="(248) 555-0100" />
 

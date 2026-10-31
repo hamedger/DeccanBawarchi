@@ -164,6 +164,11 @@ export default function OrderTrackingScreen() {
               Requested: {order.scheduledFor} {String(order.pickupTime)}
             </Text>
           ) : null}
+          {order.deliveryTrackingUrl ? (
+            <TouchableOpacity onPress={() => Linking.openURL(order.deliveryTrackingUrl!)}>
+              <Text style={[styles.deliveryMeta, styles.trackLink]}>Track your driver</Text>
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity onPress={() => Linking.openURL(`tel:${RESTAURANT_PHONE}`)}>
             <Text style={styles.deliveryMeta}>Restaurant: {RESTAURANT_PHONE}</Text>
           </TouchableOpacity>
@@ -262,6 +267,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 4,
   },
+  trackLink: { color: colors.gold, fontWeight: '700' },
   itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: colors.border },
   itemQty: { color: colors.gold, fontWeight: '700', marginRight: 8, width: 24 },
   itemName: { flex: 1, color: colors.white, fontSize: 14 },

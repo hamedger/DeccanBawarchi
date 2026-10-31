@@ -3,12 +3,15 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { FulfillmentType } from '../../types/order'
 import {
+  ACTIVE_DELIVERY_PROVIDER,
   DELIVERY_ENABLED,
   DELIVERY_FULFILLMENT_HOURS,
   DELIVERY_MINIMUM_SUBTOTAL_CENTS,
   MAX_DELIVERY_RADIUS_MILES,
   RESTAURANT_ADDRESS,
 } from '../../constants/config'
+
+const USES_DISPATCHED_COURIER = ACTIVE_DELIVERY_PROVIDER !== 'self'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 function formatHour12(hhmm: string): string {
@@ -52,7 +55,9 @@ export function FulfillmentSelector({
               Delivery
             </Text>
             {DELIVERY_ENABLED ? (
-              <Text style={styles.cardBadge}>Free within 1 mile · $1/mile after</Text>
+              <Text style={styles.cardBadge}>
+                {USES_DISPATCHED_COURIER ? 'Fee shown after entering your address' : 'Free within 1 mile · $1/mile after'}
+              </Text>
             ) : (
               <Text style={styles.comingSoonBadge}>Coming Soon</Text>
             )}
@@ -67,7 +72,8 @@ export function FulfillmentSelector({
           <Text style={styles.cardHint}>
             ${(DELIVERY_MINIMUM_SUBTOTAL_CENTS / 100).toFixed(0)} minimum order ·{' '}
             {formatHour12(DELIVERY_FULFILLMENT_HOURS.open)}–{formatHour12(DELIVERY_FULFILLMENT_HOURS.close)}{' '}
-            daily · within {MAX_DELIVERY_RADIUS_MILES} miles of the restaurant
+            daily
+            {USES_DISPATCHED_COURIER ? '' : ` · within ${MAX_DELIVERY_RADIUS_MILES} miles of the restaurant`}
           </Text>
         ) : (
           <Text style={styles.cardHint}>

@@ -19,6 +19,7 @@ import {
 import { Button } from '../../components/ui/Button'
 import { CONTENT_MAX_WIDTH } from '../../constants/checkout'
 import {
+  ACTIVE_DELIVERY_PROVIDER,
   DELIVERY_ENABLED,
   DELIVERY_FULFILLMENT_HOURS,
   DELIVERY_MINIMUM_SUBTOTAL_CENTS,
@@ -64,7 +65,7 @@ export default function CheckoutIndex() {
     useSelectedLocation()
   const [street, setStreet] = useState('123 Main St')
   const [unit, setUnit] = useState('')
-  const [city, setCity] = useState('Northville')
+  const [city, setCity] = useState('Farmington Hills')
   const [zip, setZip] = useState('48167')
   const [deliveryPhone, setDeliveryPhone] = useState('')
   const [deliveryInstructions, setDeliveryInstructions] = useState('')
@@ -109,6 +110,7 @@ export default function CheckoutIndex() {
         fee: quote.fee,
         etaMinutes: quote.etaMinutes,
         distanceMiles: quote.distanceMiles,
+        externalQuoteId: quote.externalQuoteId,
       })
     },
     [setDeliveryQuote],
@@ -131,6 +133,11 @@ export default function CheckoutIndex() {
     locationId,
     onQuote: handleQuote,
     onClear: handleClearQuote,
+    // Unused by self-delivery; only read server-side if a dispatched courier is the active provider.
+    dropoffPhoneNumber: deliveryPhone,
+    dropoffContactGivenName: customerDisplayName,
+    orderValue: cartSubtotal,
+    items: cart.items.map((item) => ({ name: item.name, quantity: item.quantity, price: item.price })),
   })
   const canPlace =
     hasSelection &&
@@ -244,6 +251,9 @@ export default function CheckoutIndex() {
                 instructions: dropoffAddress.instructions,
               }
             : null,
+          deliveryProvider: isDelivery ? ACTIVE_DELIVERY_PROVIDER : 'self',
+          deliveryExternalQuoteId:
+            isDelivery && ACTIVE_DELIVERY_PROVIDER !== 'self' ? latestCart.deliveryExternalQuoteId ?? undefined : undefined,
           notes: latestCart.notes,
           locationId,
           customerName: customerDisplayName,
@@ -365,7 +375,7 @@ export default function CheckoutIndex() {
               onChangeText={setUnit}
               placeholder="Apt 4B"
             />
-            <Input label="City" value={city} onChangeText={setCity} placeholder="Northville" />
+            <Input label="City" value={city} onChangeText={setCity} placeholder="Farmington Hills" />
             <Input
               label="ZIP"
               value={zip}

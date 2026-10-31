@@ -10,9 +10,13 @@ import { useCartStore } from '../../store/cartStore'
 import { CartBadge } from '../../components/cart/CartBadge'
 import { LocationGate } from '../../components/location/LocationGate'
 import { HeaderPhones } from '../../components/navigation/HeaderPhones'
+import { useSelectedLocation } from '../../hooks/useSelectedLocation'
+import { usesCloverOnlineOrdering } from '../../lib/locationUtils'
 
 export default function TabLayout() {
   const itemCount = useCartStore((s) => s.itemCount())
+  const { location } = useSelectedLocation()
+  const cloverOrdering = usesCloverOnlineOrdering(location)
   const { width } = useWindowDimensions()
   const logoHeight =
     Platform.OS === 'web' ? Math.min(76, Math.max(60, Math.round(width * 0.05) + 4)) : 56
@@ -83,6 +87,7 @@ export default function TabLayout() {
         name="cart"
         options={{
           title: 'Cart',
+          ...(cloverOrdering ? { href: null } : null),
           tabBarIcon: ({ color, size }) => (
             <View>
               <Ionicons name="cart" size={size} color={color} />

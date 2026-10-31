@@ -3,10 +3,10 @@ import { DEFAULT_LOCATION_ID } from '../../constants/config'
 import { STATIC_LOCATIONS } from '../../constants/staticLocations'
 import { useLocationStore } from '../../store/locationStore'
 import { useLocationSelection } from '../../hooks/useLocationSelection'
-import { isLocationActive, normalizeLocationId } from '../../lib/locationUtils'
+import { isWebsiteLocation, normalizeLocationId } from '../../lib/locationUtils'
 import { LocationPickerModal } from './LocationPickerModal'
 
-const PICKABLE_LOCATIONS = STATIC_LOCATIONS.filter(isLocationActive)
+const PICKABLE_LOCATIONS = STATIC_LOCATIONS.filter(isWebsiteLocation)
 
 interface LocationGateProps {
   children: React.ReactNode

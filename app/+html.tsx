@@ -21,11 +21,11 @@ export default function Root({ children }: PropsWithChildren) {
 
         {/* SEO */}
         <title>Deccan Bawarchi — Authentic Hyderabadi Cuisine</title>
-        <meta name="description" content="Order Dum Biryani, Haleem & Marag online. Daily Buffet. 100% Zabiha Halal. Northville, MI." />
+        <meta name="description" content="Order Dum Biryani, Haleem & Marag online. Daily Buffet. 100% Zabiha Halal. Farmington Hills, MI." />
 
         {/* Open Graph */}
         <meta property="og:title" content="Deccan Bawarchi — Authentic Hyderabadi Cuisine" />
-        <meta property="og:description" content="Order Dum Biryani, Haleem & Marag online. Daily Buffet. 100% Zabiha Halal. Northville, MI." />
+        <meta property="og:description" content="Order Dum Biryani, Haleem & Marag online. Daily Buffet. 100% Zabiha Halal. Farmington Hills, MI." />
         <meta property="og:image" content="https://www.bawarchi.io/assets/og-image.png" />
         <meta property="og:url" content="https://www.bawarchi.io" />
         <meta property="og:type" content="website" />
@@ -33,7 +33,7 @@ export default function Root({ children }: PropsWithChildren) {
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Deccan Bawarchi — Authentic Hyderabadi Cuisine" />
-        <meta name="twitter:description" content="Order Dum Biryani, Haleem & Marag online. Daily Buffet. 100% Zabiha Halal. Northville, MI." />
+        <meta name="twitter:description" content="Order Dum Biryani, Haleem & Marag online. Daily Buffet. 100% Zabiha Halal. Farmington Hills, MI." />
         <meta name="twitter:image" content="https://www.bawarchi.io/assets/og-image.png" />
 
         <link rel="preconnect" href="https://fonts.googleapis.com" />

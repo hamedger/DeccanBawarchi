@@ -7,6 +7,8 @@ import { MenuItem } from '../../types/menu'
 import { resolveMenuItemImage } from '../../lib/menuImages'
 import { isMenuItemOrderable } from '../../lib/menuMerge'
 import { useCartStore } from '../../store/cartStore'
+import { useSelectedLocation } from '../../hooks/useSelectedLocation'
+import { usesCloverOnlineOrdering } from '../../lib/locationUtils'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 interface MenuDishCardProps {
@@ -16,6 +18,8 @@ interface MenuDishCardProps {
 
 export function MenuDishCard({ item, width }: MenuDishCardProps) {
   const router = useRouter()
+  const { location } = useSelectedLocation()
+  const cloverOrdering = usesCloverOnlineOrdering(location)
   const quantity = useCartStore(
     (s) => s.items.find((i) => i.menuItemId === item.id)?.quantity ?? 0,
   )
@@ -77,7 +81,7 @@ export function MenuDishCard({ item, width }: MenuDishCardProps) {
         </View>
       </Pressable>
 
-      {!orderable && quantity === 0 ? (
+      {cloverOrdering ? null : !orderable && quantity === 0 ? (
         <View style={styles.qtyBar}>
           <Text style={styles.unavailableLabel}>Unavailable</Text>
         </View>

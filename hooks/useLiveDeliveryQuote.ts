@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getDeliveryQuote } from '../lib/delivery'
-import { DeliveryQuote } from '../types/delivery'
+import { DeliveryQuote, DeliveryQuoteItem } from '../types/delivery'
 import { DropoffAddressInput } from '../lib/deliveryUtils'
 
 const QUOTE_REFRESH_MS = 5 * 60 * 1000
@@ -12,6 +12,11 @@ interface UseLiveDeliveryQuoteOptions {
   debounceMs?: number
   onQuote: (quote: DeliveryQuote) => void
   onClear: () => void
+  /** Unused by self-delivery; sent along in case a dispatched courier is the active provider. */
+  dropoffPhoneNumber?: string
+  dropoffContactGivenName?: string
+  orderValue?: number
+  items?: DeliveryQuoteItem[]
 }
 
 export function useLiveDeliveryQuote({
@@ -21,6 +26,10 @@ export function useLiveDeliveryQuote({
   debounceMs = 600,
   onQuote,
   onClear,
+  dropoffPhoneNumber,
+  dropoffContactGivenName,
+  orderValue,
+  items,
 }: UseLiveDeliveryQuoteOptions) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +58,12 @@ export function useLiveDeliveryQuote({
         dropoffCity: dropoffAddress.city.trim(),
         dropoffState: dropoffAddress.state.trim() || 'MI',
         dropoffZip: dropoffAddress.zip.trim(),
+        dropoffUnit: dropoffAddress.unit?.trim() || undefined,
         locationId,
+        dropoffPhoneNumber,
+        dropoffContactGivenName,
+        orderValue,
+        items,
       })
       if (id !== requestId.current) return
       onQuote(result.data as DeliveryQuote)
@@ -62,7 +76,17 @@ export function useLiveDeliveryQuote({
     } finally {
       if (id === requestId.current) setLoading(false)
     }
-  }, [enabled, dropoffAddress, locationId, onQuote, onClear])
+  }, [
+    enabled,
+    dropoffAddress,
+    locationId,
+    onQuote,
+    onClear,
+    dropoffPhoneNumber,
+    dropoffContactGivenName,
+    orderValue,
+    items,
+  ])
 
   useEffect(() => {
     if (!enabled) {

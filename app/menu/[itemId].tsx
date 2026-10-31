@@ -16,6 +16,7 @@ import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { isMenuItemOrderable } from '../../lib/menuMerge'
 import { useCartStore } from '../../store/cartStore'
 import { resolveMenuItemImage } from '../../lib/menuImages'
+import { usesCloverOnlineOrdering } from '../../lib/locationUtils'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 import { Badge } from '../../components/ui/Badge'
 import { HalalBadge } from '../../components/brand/HalalBadge'
@@ -23,6 +24,7 @@ import { Button } from '../../components/ui/Button'
 import { BackButton } from '../../components/navigation/BackButton'
 import { CartNavButton } from '../../components/navigation/CartNavButton'
 import { DishPhotoDisclaimer } from '../../components/menu/DishPhotoDisclaimer'
+import { CloverOrderButtons } from '../../components/menu/CloverOrderButtons'
 
 const CONTENT_MAX = 640
 const SPICE_ICONS = ['', '🌶️', '🌶️🌶️', '🌶️🌶️🌶️']
@@ -31,7 +33,8 @@ export default function ItemDetailScreen() {
   const { itemId } = useLocalSearchParams<{ itemId: string }>()
   const router = useRouter()
   const { width: windowWidth } = useWindowDimensions()
-  const { locationId } = useSelectedLocation()
+  const { location, locationId } = useSelectedLocation()
+  const cloverOrdering = usesCloverOnlineOrdering(location)
   const { data: item, isLoading } = useMenuItem(itemId, locationId)
   const { data: menuItems = [] } = useMenu(locationId)
 
@@ -68,7 +71,7 @@ export default function ItemDetailScreen() {
     <View style={[styles.navBar, { maxWidth: CONTENT_MAX }]}>
       <BackButton label="Menu" />
       <View style={styles.navBarSpacer} />
-      <CartNavButton />
+      {cloverOrdering ? null : <CartNavButton />}
     </View>
   )
 
@@ -224,7 +227,9 @@ export default function ItemDetailScreen() {
 
       <View style={styles.footer}>
         <View style={[styles.footerInner, { maxWidth: CONTENT_MAX }]}>
-          {orderable ? (
+          {orderable && cloverOrdering && location?.onlineOrderingUrl ? (
+            <CloverOrderButtons orderingUrl={location.onlineOrderingUrl} />
+          ) : orderable ? (
             <>
               <View style={styles.qtyRow}>
                 <TouchableOpacity

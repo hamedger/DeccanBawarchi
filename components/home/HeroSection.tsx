@@ -35,7 +35,7 @@ export function HeroSection() {
           </Text>
           <Text style={styles.subtitle}>
             Authentic dum biryani, haleem, and royal feasts — crafted the traditional way in
-            Northville and Farmington Hills.
+            Farmington Hills.
           </Text>
           <LocationSelector />
           <View style={styles.ctaRow}>

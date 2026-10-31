@@ -30,6 +30,10 @@ export interface Location {
   acceptsCatering: boolean
   /** Whether this location runs the buffet. Missing/undefined defaults to true. */
   acceptsBuffet?: boolean
+  /** Clover Online Ordering page URL for this location (separate Clover merchant account per location). */
+  onlineOrderingUrl?: string
+  /** When true (and onlineOrderingUrl is set), ordering redirects to Clover instead of the in-app cart/checkout. */
+  onlineOrderingEnabled?: boolean
   deliveryRadius: number
   timezone: string
   /** Minutes before earliest same-day pickup slot (ASAP still uses checkout ETA). */

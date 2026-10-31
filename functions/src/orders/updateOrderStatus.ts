@@ -2,13 +2,38 @@ import * as functions from 'firebase-functions/v2'
 import * as admin from 'firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { isAdminUser } from '../admin/isAdmin'
+import { getAdapterForProvider } from '../delivery/activeProvider'
+import { doordashSecrets } from '../delivery/doordashConfig'
+import { uberDirectSecrets } from '../delivery/uberDirectConfig'
 
 if (!admin.apps.length) admin.initializeApp()
 const db = admin.firestore()
 
 const USER_CANCELLABLE_STATUSES = ['pending', 'placed', 'confirmed', 'preparing']
 
-export const updateOrderStatus = functions.https.onCall(async (request) => {
+async function cancelDispatchedDelivery(order: {
+  deliveryProvider?: string
+  deliveryExternalId?: string
+  deliveryExternalQuoteId?: string
+}): Promise<void> {
+  if (order.deliveryProvider !== 'doordash' && order.deliveryProvider !== 'uber_direct') return
+  const externalId = String(order.deliveryExternalId ?? order.deliveryExternalQuoteId ?? '').trim()
+  if (!externalId) return
+
+  try {
+    await getAdapterForProvider(order.deliveryProvider).cancel(externalId)
+  } catch (err) {
+    functions.logger.warn('Delivery provider cancel failed; proceeding with local cancel', {
+      provider: order.deliveryProvider,
+      externalId,
+      err,
+    })
+  }
+}
+
+export const updateOrderStatus = functions.https.onCall(
+  { secrets: [...doordashSecrets, ...uberDirectSecrets] },
+  async (request) => {
   const { auth, data } = request
   if (!auth) throw new functions.https.HttpsError('unauthenticated', 'Must be signed in')
 
@@ -30,6 +55,9 @@ export const updateOrderStatus = functions.https.onCall(async (request) => {
     userId?: string
     status?: string
     fulfillmentType?: string
+    deliveryProvider?: string
+    deliveryExternalId?: string
+    deliveryExternalQuoteId?: string
   }
 
   if (!isAdmin) {
@@ -46,6 +74,11 @@ export const updateOrderStatus = functions.https.onCall(async (request) => {
       )
     }
   }
+
+  if (status === 'cancelled' && order.fulfillmentType === 'delivery') {
+    await cancelDispatchedDelivery(order)
+  }
+
   await db.collection('orders').doc(orderId).update({
     status,
     updatedAt: FieldValue.serverTimestamp(),
@@ -54,4 +87,5 @@ export const updateOrderStatus = functions.https.onCall(async (request) => {
   // Loyalty points are awarded by the awardLoyaltyOnDelivery Firestore trigger.
 
   return { success: true }
-})
+  },
+)

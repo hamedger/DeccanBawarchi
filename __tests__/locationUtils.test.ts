@@ -55,7 +55,7 @@ describe('mergePickableLocations', () => {
     const merged = mergePickableLocations(remote)
     const farmington = merged.filter((l) => l.address.city === 'Farmington Hills')
 
-    expect(merged).toHaveLength(2)
+    expect(merged).toHaveLength(1)
     expect(farmington).toHaveLength(1)
     expect(farmington[0].id).toBe('farmington-hills-mi')
     expect(farmington[0].phone).toBe('+1 947-286-8794')
@@ -92,5 +92,13 @@ describe('resolveOrderLocationLabel', () => {
 
   it('falls back when locationId is missing', () => {
     expect(resolveOrderLocationLabel(undefined)).toBe('Unknown location')
+  })
+})
+
+describe('isWebsiteLocation', () => {
+  it('hides Northville from the website even when Firestore marks it active', () => {
+    const remote = [{ id: 'northville-mi', name: 'Deccan Bawarchi — Northville', isActive: true } as Location]
+    expect(mergePickableLocations(remote).map((l) => l.id)).toEqual(['farmington-hills-mi'])
+    expect(mergeAllLocations(remote).map((l) => l.id)).toContain('northville-mi')
   })
 })

@@ -5,14 +5,14 @@ import { STATIC_LOCATIONS } from '../../constants/staticLocations'
 import { DEFAULT_LOCATION_ID } from '../../constants/config'
 import { useSelectedLocation } from '../../hooks/useSelectedLocation'
 import { useLocationSelection } from '../../hooks/useLocationSelection'
-import { formatLocationShort, isLocationActive } from '../../lib/locationUtils'
+import { formatLocationShort, isWebsiteLocation } from '../../lib/locationUtils'
 import { colors, spacing, borderRadius, fonts } from '../../constants/theme'
 
 interface LocationSelectorProps {
   label?: string
 }
 
-const HERO_LOCATIONS = STATIC_LOCATIONS.filter(isLocationActive)
+const HERO_LOCATIONS = STATIC_LOCATIONS.filter(isWebsiteLocation)
 
 export function LocationSelector({ label = 'Order from' }: LocationSelectorProps) {
   const { selectedLocationId, hasHydrated } = useSelectedLocation()

@@ -29,6 +29,8 @@ function defaultLocationPayload(id: string, input: Partial<LocationInput>): Loca
     acceptsReservations: input.acceptsReservations ?? true,
     acceptsCatering: input.acceptsCatering ?? true,
     acceptsBuffet: input.acceptsBuffet ?? true,
+    onlineOrderingUrl: input.onlineOrderingUrl?.trim() ?? '',
+    onlineOrderingEnabled: input.onlineOrderingEnabled ?? false,
     deliveryRadius: input.deliveryRadius ?? 5,
     timezone: input.timezone ?? 'America/Detroit',
     pickupPrepBufferMinutes: input.pickupPrepBufferMinutes ?? DEFAULT_PICKUP_PREP_BUFFER_MINUTES,

@@ -152,15 +152,29 @@ export function isLocationActive(location: Location): boolean {
   return location.isActive !== false
 }
 
+/** Locations kept in Admin but never shown on the customer website, even if Firestore marks them active. */
+const WEBSITE_HIDDEN_LOCATION_IDS = new Set(['northville-mi'])
+
+/** True when a location should appear on the customer website (pickers, header, ordering). */
+export function isWebsiteLocation(location: Location): boolean {
+  return isLocationActive(location) && !WEBSITE_HIDDEN_LOCATION_IDS.has(normalizeLocationId(location.id))
+}
+
+/** True when ordering for this location should redirect to Clover Online Ordering
+ * instead of the in-app cart/checkout. Single source of truth for that gate. */
+export function usesCloverOnlineOrdering(location: Location | null | undefined): boolean {
+  return Boolean(location?.onlineOrderingEnabled && location?.onlineOrderingUrl)
+}
+
 /** Keep all static pickable locations; overlay Firestore fields when present. */
 export function mergePickableLocations(remote: Location[]): Location[] {
   const byId = new Map<string, Location>()
 
-  for (const loc of STATIC_LOCATIONS.filter(isLocationActive)) {
+  for (const loc of STATIC_LOCATIONS.filter(isWebsiteLocation)) {
     byId.set(loc.id, loc)
   }
 
-  for (const loc of remote.filter(isLocationActive)) {
+  for (const loc of remote.filter(isWebsiteLocation)) {
     const canonicalId = normalizeLocationId(loc.id)
     const base = byId.get(canonicalId)
     const remoteLoc = canonicalId === loc.id ? loc : { ...loc, id: canonicalId }

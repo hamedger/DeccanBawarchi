@@ -9,6 +9,8 @@ export interface CloverCheckoutInput extends SubmitOrderInput {
   customerEmail?: string
   pickupDate?: string
   pickupTime?: string
+  deliveryProvider?: 'self' | 'doordash' | 'uber_direct'
+  deliveryExternalQuoteId?: string
 }
 
 export interface CloverCheckoutResult {
@@ -47,6 +49,8 @@ export async function startCloverCheckout(
       total: input.total,
       fulfillmentType: input.fulfillmentType,
       deliveryAddress: input.deliveryAddress,
+      deliveryProvider: input.deliveryProvider,
+      deliveryExternalQuoteId: input.deliveryExternalQuoteId,
       locationId: input.locationId,
       notes: input.notes,
       customerName: input.customerName,

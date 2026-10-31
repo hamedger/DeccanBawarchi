@@ -2,6 +2,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { calculateTotal, calculateTax, calculateServiceFee } from '../lib/cartTotals'
 import { calculateEarnedPoints, loyaltyDiscountCents, validateRedemption } from '../lib/loyalty'
 import { computeDeliveryFee, DELIVERY_MINIMUM_SUBTOTAL_CENTS } from '../lib/deliveryPricing'
+import { verifyDispatchedDeliveryQuote } from '../lib/deliveryQuoteVerification'
 import { db } from '../lib/firebase'
 import { CloverLineItem } from './cloverClient'
 import { trySendStaffOrderNotification } from './orderNotification'
@@ -54,6 +55,10 @@ export interface CreatePendingOrderInput {
   total: number
   fulfillmentType: 'delivery' | 'pickup'
   deliveryAddress?: DeliveryAddressInput | null
+  /** Which courier is fulfilling this delivery order. Absent/'self' means in-house delivery. */
+  deliveryProvider?: 'self' | 'doordash' | 'uber_direct'
+  /** Required when deliveryProvider is a dispatched courier — the quote id from deliveryQuote. */
+  deliveryExternalQuoteId?: string
   locationId: string
   notes?: string
   pickupDate?: string
@@ -130,6 +135,8 @@ export async function createPendingOrder(
   }
 
   let deliveryDistanceMiles: number | undefined
+  const deliveryProvider = input.deliveryProvider ?? 'self'
+  const isDispatchedDelivery = deliveryProvider === 'doordash' || deliveryProvider === 'uber_direct'
 
   if (input.fulfillmentType === 'delivery') {
     const phoneDigits = (input.customerPhone ?? '').replace(/\D/g, '')
@@ -145,14 +152,27 @@ export async function createPendingOrder(
       )
     }
 
-    const { feeCents, distanceMiles } = await computeDeliveryFee({
-      locationId: input.locationId,
-      deliveryAddress: input.deliveryAddress,
-    })
-    deliveryDistanceMiles = distanceMiles
+    if (isDispatchedDelivery) {
+      const externalQuoteId = String(input.deliveryExternalQuoteId ?? '').trim()
+      if (!externalQuoteId) {
+        throw new Error('A live delivery quote is required before checkout')
+      }
+      await verifyDispatchedDeliveryQuote({
+        provider: deliveryProvider,
+        externalQuoteId,
+        locationId: input.locationId,
+        deliveryFeeCents: input.deliveryFee,
+      })
+    } else {
+      const { feeCents, distanceMiles } = await computeDeliveryFee({
+        locationId: input.locationId,
+        deliveryAddress: input.deliveryAddress,
+      })
+      deliveryDistanceMiles = distanceMiles
 
-    if (feeCents !== input.deliveryFee) {
-      throw new Error('Delivery fee does not match server calculation. Please refresh your delivery quote.')
+      if (feeCents !== input.deliveryFee) {
+        throw new Error('Delivery fee does not match server calculation. Please refresh your delivery quote.')
+      }
     }
   }
 
@@ -261,6 +281,9 @@ export async function createPendingOrder(
       scheduledFor: input.pickupDate || null,
       pickupTime: input.pickupTime || null,
       deliveryAddress: input.deliveryAddress ?? null,
+      ...(isDispatchedDelivery
+        ? { deliveryProvider, deliveryExternalQuoteId: String(input.deliveryExternalQuoteId ?? '').trim() }
+        : {}),
       status: 'pending',
       stripePaymentIntentId: '',
       cloverMerchantId: input.cloverMerchantId ?? '',

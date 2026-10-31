@@ -6,6 +6,7 @@ import app from '../../lib/firebase'
 import { useCart } from '../../hooks/useCart'
 import { useAuthStore } from '../../store/authStore'
 import { Button } from '../../components/ui/Button'
+import { DEFAULT_LOCATION_ID } from '../../constants/config'
 import { colors, spacing, borderRadius } from '../../constants/theme'
 
 export default function PaymentScreen() {
@@ -32,7 +33,7 @@ export default function PaymentScreen() {
         loyaltyPointsUsed: cart.loyaltyPointsToRedeem,
         giftCardAmount: cart.giftCardAmount,
         fulfillmentType: 'delivery',
-        locationId: 'northville-mi',
+        locationId: DEFAULT_LOCATION_ID,
         notes: cart.notes,
       })
       cart.clearCart()

@@ -1,14 +1,16 @@
+import type { DeliveryProviderId } from '../types/order'
+
 export const APP_NAME = 'Deccan Bawarchi'
 export const APP_TAGLINE = 'Authentic Hyderabadi Cuisine'
-export const RESTAURANT_PHONE = '+12489857209'
-export const RESTAURANT_ADDRESS = '17933 Haggerty Rd, Township of Northville, MI 48168'
+export const RESTAURANT_PHONE = '+19472868794'
+export const RESTAURANT_ADDRESS = '24234 Orchard Lake Rd, Farmington Hills, MI 48336'
 export const RESTAURANT_WEBSITE = 'https://www.bawarchi.io'
 export const SUPPORT_EMAIL = 'support@deccanbawarchi.com'
 export const ORDERS_EMAIL = 'orders@deccanbawarchi.com'
 /** Staff inbox for new paid order alerts (Cloud Functions). */
 export const ORDERS_NOTIFICATION_EMAIL = 'mjalaluddin63@gmail.com'
 
-export const DEFAULT_LOCATION_ID = 'northville-mi'
+export const DEFAULT_LOCATION_ID = 'farmington-hills-mi'
 
 type HourRange = { open: string; close: string }
 
@@ -50,10 +52,19 @@ export const DELIVERY_MINIMUM_SUBTOTAL_CENTS = 2000
 export const DELIVERY_FULFILLMENT_HOURS = { open: '17:00', close: '23:30' }
 
 /**
- * Self-delivery UI + checkout flow.
+ * Delivery UI + checkout flow (self-delivery or a dispatched courier — see ACTIVE_DELIVERY_PROVIDER).
  * Off by default in production; set EXPO_PUBLIC_DELIVERY_ENABLED=true in .env for local/staging tests.
  */
 export const DELIVERY_ENABLED = process.env.EXPO_PUBLIC_DELIVERY_ENABLED === 'true'
+
+/**
+ * Which courier actually fulfills delivery orders. Exactly one provider is active at a time —
+ * this is not a per-order customer choice. Defaults to in-house self-delivery everywhere it
+ * isn't explicitly overridden. The client doesn't branch on this (the deliveryQuote/checkout
+ * flow is identical either way); it only matters server-side and for provider-specific copy.
+ */
+export const ACTIVE_DELIVERY_PROVIDER: DeliveryProviderId =
+  (process.env.EXPO_PUBLIC_DELIVERY_PROVIDER as DeliveryProviderId) || 'self'
 
 export const LOYALTY = {
   pointsPerDollar: 1,
