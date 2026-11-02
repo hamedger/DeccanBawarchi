@@ -4,6 +4,7 @@ import {
   DEFAULT_LOCATION_ID,
   DEFAULT_PICKUP_PREP_BUFFER_MINUTES,
   LOCATION_DINE_IN_HOURS,
+  RESTAURANT_CLOSED_DAYS,
   LOCATION_ORDER_FULFILLMENT_HOURS,
 } from '../constants/config'
 import { STATIC_LOCATIONS } from '../constants/staticLocations'
@@ -24,7 +25,8 @@ function formatHourMinuteLabel(hhmm: string): string {
 }
 
 export function formatDineInHoursLabel(hours: LocationHours): string {
-  return `Open Daily · ${formatHourMinuteLabel(hours.open)} – ${formatHourMinuteLabel(hours.close)}`
+  const range = `${formatHourMinuteLabel(hours.open)} – ${formatHourMinuteLabel(hours.close)}`
+  return RESTAURANT_CLOSED_DAYS.includes(1) ? `Tue – Sun · ${range} · Closed Mondays` : `Open Daily · ${range}`
 }
 
 /** Dine-in hours for a store. */

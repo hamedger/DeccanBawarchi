@@ -55,11 +55,22 @@ describe('buffetService', () => {
   })
 
   describe('computeBuffetStatus', () => {
-    it('reports open during weekday lunch with default config', () => {
+    it('reports closed all day Monday even if session flags are on', () => {
       const mondayNoon = new Date('2026-06-08T12:00:00')
       const status = computeBuffetStatus({
-        config: null,
+        config: { isLunchActive: true, isDinnerActive: true } as never,
         now: mondayNoon,
+        timezone: RESTAURANT_TIMEZONE,
+      })
+      expect(status.isOpen).toBe(false)
+      expect(status.nextSessionLabel).toBe('Closed today · Opens tomorrow 11:00 AM')
+    })
+
+    it('reports open during weekday lunch with default config', () => {
+      const tuesdayNoon = new Date('2026-06-09T12:00:00')
+      const status = computeBuffetStatus({
+        config: null,
+        now: tuesdayNoon,
         timezone: RESTAURANT_TIMEZONE,
       })
       expect(status.isOpen).toBe(true)
@@ -93,10 +104,10 @@ describe('buffetService', () => {
     })
 
     it('uses weekday dinner pricing on a weekday evening', () => {
-      const mondayEvening = new Date('2026-06-08T18:00:00')
+      const tuesdayEvening = new Date('2026-06-09T18:00:00')
       const status = computeBuffetStatus({
         config: null,
-        now: mondayEvening,
+        now: tuesdayEvening,
         timezone: RESTAURANT_TIMEZONE,
       })
       expect(status.isOpen).toBe(true)
@@ -124,7 +135,7 @@ describe('buffetService', () => {
     })
 
     it('includes paused dishes on the customer buffet list', () => {
-      const mondayNoon = new Date('2026-06-08T12:00:00')
+      const tuesdayNoon = new Date('2026-06-09T12:00:00')
       const status = computeBuffetStatus({
         config: {
           todaysDishes: [
@@ -153,7 +164,7 @@ describe('buffetService', () => {
             },
           ],
         } as never,
-        now: mondayNoon,
+        now: tuesdayNoon,
         timezone: RESTAURANT_TIMEZONE,
       })
 

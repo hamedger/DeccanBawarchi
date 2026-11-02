@@ -18,7 +18,7 @@ export const BUFFET_HOURS = {
   dinner: { start: '18:00', end: '21:00' },
 }
 
-// 0=Sun, 1=Mon ... 6=Sat — buffet runs every day; Sat/Sun use weekend pricing
-export const BUFFET_DAYS = [0, 1, 2, 3, 4, 5, 6]
+// 0=Sun, 1=Mon ... 6=Sat — restaurant closed Mondays; Sat/Sun use weekend pricing
+export const BUFFET_DAYS = [0, 2, 3, 4, 5, 6]
 
 export const RESTAURANT_TIMEZONE = 'America/Detroit'

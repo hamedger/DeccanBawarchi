@@ -8,5 +8,5 @@ export const BUFFET_HOURS = {
   dinner: { start: '17:00', end: '21:00' },
 }
 
-// 0=Sun … 6=Sat; Sunday closed
-export const BUFFET_DAYS = [1, 2, 3, 4, 5, 6]
+// 0=Sun … 6=Sat; Monday closed
+export const BUFFET_DAYS = [0, 2, 3, 4, 5, 6]

@@ -112,7 +112,7 @@ export default function BuffetScreen() {
       <PageIntro
         eyebrow="Daily Royal Feast"
         title="The Buffet"
-        subtitle="Twenty authentic Hyderabadi dishes, refreshed daily. Lunch and dinner service, seven days a week."
+        subtitle="Twenty authentic Hyderabadi dishes, refreshed daily. Lunch and dinner service, Tuesday through Sunday. Closed Mondays."
       />
 
       <View style={styles.statusWrap}>
@@ -123,7 +123,7 @@ export default function BuffetScreen() {
       <View style={styles.pricingRow}>
         <View style={styles.priceCard}>
           <Text style={styles.priceEyebrow}>Weekday</Text>
-          <Text style={styles.priceDays}>Monday – Friday</Text>
+          <Text style={styles.priceDays}>Tuesday – Friday</Text>
           <View style={styles.priceSessionBlock}>
             <Text style={styles.priceSessionTitle}>Lunch Buffet</Text>
             <Text style={styles.priceSessionValue}>{formatCents(weekdayPrice)}</Text>

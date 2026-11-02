@@ -106,8 +106,10 @@ export function computeBuffetStatus({
       nextSessionLabel = 'Closed for today'
     }
   } else if (!isBuffetDay) {
-    nextSessionLabel =
-      dayOfWeek === 0 ? 'Opens Monday 11:00 AM' : 'Next Buffet: Tomorrow Lunch 11 AM'
+    const lunchLabel = formatBuffetTime(BUFFET_HOURS.lunch.start)
+    nextSessionLabel = BUFFET_DAYS.includes((dayOfWeek + 1) % 7)
+      ? `Closed today · Opens tomorrow ${lunchLabel}`
+      : 'Closed today'
   }
 
   const todaysDishes = config?.todaysDishes ?? []

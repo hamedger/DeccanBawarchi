@@ -14,7 +14,10 @@ export const DEFAULT_LOCATION_ID = 'farmington-hills-mi'
 
 type HourRange = { open: string; close: string }
 
-/** Per-location dine-in hours (24h HH:mm), open daily. */
+/** Restaurant is closed all day on these weekdays (0=Sun … 6=Sat). */
+export const RESTAURANT_CLOSED_DAYS = [1]
+
+/** Per-location dine-in hours (24h HH:mm), open every day except RESTAURANT_CLOSED_DAYS. */
 export const LOCATION_DINE_IN_HOURS: Record<string, HourRange> = {
   'northville-mi': { open: '11:30', close: '22:00' },
   'farmington-hills-mi': { open: '11:30', close: '23:30' },

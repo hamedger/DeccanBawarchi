@@ -19,9 +19,9 @@ async function updateBuffetLocations(fields: Record<string, boolean>): Promise<v
   )
 }
 
-// 11:00 AM Detroit — open lunch (Mon–Sat). Keep in sync with BUFFET_HOURS.lunch in constants/buffet.ts.
+// 11:00 AM Detroit — open lunch (Tue–Sun; closed Mondays). Keep in sync with BUFFET_HOURS.lunch in constants/buffet.ts.
 export const openLunch = functions.onSchedule(
-  { schedule: '0 11 * * 1-6', timeZone: TIMEZONE },
+  { schedule: '0 11 * * 0,2-6', timeZone: TIMEZONE },
   async () => {
     await updateBuffetLocations({ isLunchActive: true })
   },
@@ -29,15 +29,15 @@ export const openLunch = functions.onSchedule(
 
 // 3:00 PM Detroit — close lunch
 export const closeLunch = functions.onSchedule(
-  { schedule: '0 15 * * 1-6', timeZone: TIMEZONE },
+  { schedule: '0 15 * * 0,2-6', timeZone: TIMEZONE },
   async () => {
     await updateBuffetLocations({ isLunchActive: false })
   },
 )
 
-// 6:00 PM Detroit — open dinner (Mon–Sat). Keep in sync with BUFFET_HOURS.dinner in constants/buffet.ts.
+// 6:00 PM Detroit — open dinner (Tue–Sun; closed Mondays). Keep in sync with BUFFET_HOURS.dinner in constants/buffet.ts.
 export const openDinner = functions.onSchedule(
-  { schedule: '0 18 * * 1-6', timeZone: TIMEZONE },
+  { schedule: '0 18 * * 0,2-6', timeZone: TIMEZONE },
   async () => {
     await updateBuffetLocations({ isDinnerActive: true })
   },
@@ -45,7 +45,7 @@ export const openDinner = functions.onSchedule(
 
 // 9:00 PM Detroit — close dinner
 export const closeDinner = functions.onSchedule(
-  { schedule: '0 21 * * 1-6', timeZone: TIMEZONE },
+  { schedule: '0 21 * * 0,2-6', timeZone: TIMEZONE },
   async () => {
     await updateBuffetLocations({ isDinnerActive: false })
   },
