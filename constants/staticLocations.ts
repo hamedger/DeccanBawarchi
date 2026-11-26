@@ -58,7 +58,7 @@ export const STATIC_LOCATIONS: Location[] = [
     acceptsReservations: true,
     acceptsCatering: true,
     acceptsBuffet: true,
-    onlineOrderingUrl: 'https://deccan-royal-indian-northville.cloveronline.com',
+    onlineOrderingUrl: 'https://deccan-bawarchi-indian-farmington-hills.cloveronline.com',
     onlineOrderingEnabled: true,
     deliveryRadius: 5,
     timezone: 'America/Detroit',
