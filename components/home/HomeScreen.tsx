@@ -7,6 +7,7 @@ import { StatsStrip } from './StatsStrip'
 import { FeaturedDishes } from './FeaturedDishes'
 import { ConversionSection } from './ConversionSection'
 import { OrynPromoBlock } from './OrynPromoBlock'
+import { WhatsAppOffersSection } from './WhatsAppOffersSection'
 import { DemoBanner } from '../shared/DemoBanner'
 import { colors, spacing } from '../../constants/theme'
 
@@ -28,6 +29,7 @@ export function HomeScreen() {
       <BuffetBanner />
       <StatsStrip />
       <FeaturedDishes />
+      <WhatsAppOffersSection />
       <OrynPromoBlock />
       <ConversionSection />
     </ScrollView>
